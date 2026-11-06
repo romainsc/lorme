@@ -170,25 +170,50 @@ Bloqueur pour publication PyPI.
 **Nouveau nom** : **lorme** (fusion LORE + MCP).
 LORME = Local Offline Retrieval & MCP Engine.
 
+**Déjà fait côté lorme** :
+- Renommage code complet (183 fichiers, 735 tests OK)
+- GitHub repo renommé : github.com/romainsc/lorme
+- Répertoire local renommé : ~/EspacePrivé/lorme/
+- Publié sur PyPI : `pip install lorme` (v0.1.1)
+- ADR-006 documenté
+- Mémoire Claude Code migrée
+
 **Actions requises côté openshift** :
-1. Renommer `sync/lore-mcp.md` → `sync/lorme.md`
-2. Mettre à jour `sync/links.md` :
-   chemin workspace `~/EspacePrivé/lorme/`
-   fichier sync `sync/lorme.md`
-3. Mettre à jour toutes les références à
-   `lore-mcp` dans les docs openshift
-4. Le CLI passe de `lore-mcp` à `lorme`
-5. MCP config : `"command": "lorme"` au lieu de
-   `"command": "lore-mcp"`
 
-**Répertoire local** : sera renommé
-`~/EspacePrivé/lore-mcp/` → `~/EspacePrivé/lorme/`
-après merge sur main.
+1. **Renommer le fichier sync** :
+   ```bash
+   git mv sync/lore-mcp.md sync/lorme.md
+   ```
 
-**GitHub** : repo sera renommé via Settings
-(redirection automatique de l'ancien URL).
+2. **Mettre à jour `sync/links.md`** :
+   - Chemin workspace : `~/EspacePrivé/lorme/`
+   - Fichier sync entrant : `sync/openshift.md`
+   (pas de changement sur le nom du fichier
+   entrant, seulement le chemin)
 
-**PyPI** : publication sous `lorme` (pip install lorme).
+3. **Mettre à jour toutes les références** :
+   ```bash
+   grep -rl "lore-mcp" . --include="*.md" \
+     --include="*.yaml" --include="*.json" \
+     | grep -v .git/ | xargs sed -i 's/lore-mcp/lorme/g'
+   grep -rl "lore_mcp" . --include="*.py" \
+     --include="*.yaml" | grep -v .git/ \
+     | xargs sed -i 's/lore_mcp/lorme/g'
+   ```
+
+4. **MCP config clients** (si applicable) :
+   - CLI : `lorme` au lieu de `lore-mcp`
+   - Config JSON : `"command": "lorme"`
+   - `pip install lorme` (ou `pip install -e .`
+     depuis ~/EspacePrivé/lorme)
+
+5. **Mémoire Claude Code openshift** :
+   Mettre à jour les références à lore-mcp dans
+   les fichiers mémoire projet si applicable.
+
+6. **Scripts IS** (si applicable) :
+   Vérifier les scripts de démarrage des services
+   d'inférence qui référencent lore-mcp.
 
 ## Prochaines étapes
 
