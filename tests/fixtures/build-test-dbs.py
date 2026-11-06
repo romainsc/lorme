@@ -14,9 +14,9 @@ ORIG = FIXTURES / "orig"
 
 def build_minimal():
     """2 markdown sources — fastest fixture."""
-    from lore_mcp.embedder import Embedder
-    from lore_mcp.store import open_db, create_tables
-    from lore_mcp.ingest import ingest_source
+    from lorme.embedder import Embedder
+    from lorme.store import open_db, create_tables
+    from lorme.ingest import ingest_source
 
     db_path = FIXTURES / "test-minimal.db"
     if db_path.exists():
@@ -41,11 +41,11 @@ def build_minimal():
 
 def build_mixed():
     """Markdown + HTML + CSV — tests multi-format without heavy deps."""
-    from lore_mcp.embedder import Embedder
-    from lore_mcp.store import open_db, create_tables
-    from lore_mcp.ingest import ingest_source
-    from lore_mcp.preprocess.parse import parse_to_markdown
-    from lore_mcp.preprocess import clean_text
+    from lorme.embedder import Embedder
+    from lorme.store import open_db, create_tables
+    from lorme.ingest import ingest_source
+    from lorme.preprocess.parse import parse_to_markdown
+    from lorme.preprocess import clean_text
     import tempfile
 
     db_path = FIXTURES / "test-mixed.db"

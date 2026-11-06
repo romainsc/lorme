@@ -1,8 +1,8 @@
-"""Tests for lore_mcp.preprocess.dedup. See docs/studies/grooming-E12.01.md."""
+"""Tests for lorme.preprocess.dedup. See docs/studies/grooming-E12.01.md."""
 
 import pytest
 
-from lore_mcp.preprocess.dedup import find_exact_duplicates, find_near_duplicates, DedupReport
+from lorme.preprocess.dedup import find_exact_duplicates, find_near_duplicates, DedupReport
 
 
 class TestFindExactDuplicates:
@@ -105,7 +105,7 @@ class TestFindNearDuplicates:
         assert report.duplicates == []
 
     def test_uses_academic_defaults(self):
-        from lore_mcp.preprocess.dedup import SHINGLE_K, NUM_PERM, DEFAULT_NEAR_THRESHOLD
+        from lorme.preprocess.dedup import SHINGLE_K, NUM_PERM, DEFAULT_NEAR_THRESHOLD
         assert SHINGLE_K == 5
         assert NUM_PERM == 128
         assert DEFAULT_NEAR_THRESHOLD == 0.8

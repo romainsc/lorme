@@ -6,7 +6,7 @@
 ## Problem
 
 granite-vision retourne 507 sur DUDH dans le
-pipeline lore-mcp mais pas en test IS isolé.
+pipeline lorme mais pas en test IS isolé.
 Le fournisseur IS demande des traces pour
 diagnostiquer l'écart.
 
@@ -16,15 +16,15 @@ diagnostiquer l'écart.
    démarrage)
 2. Taille du payload JSON (octets)
 3. Dimensions et mode de l'image avant encodage
-4. CUDA context du processus lore-mcp
+4. CUDA context du processus lorme
 5. Body de la réponse 507
 
 ## Solution
 
 ### Verbosité debug à deux niveaux
 
-- `--debug` : traces lore-mcp uniquement (tout
-  ce que lore-mcp reçoit et produit). Les
+- `--debug` : traces lorme uniquement (tout
+  ce que lorme reçoit et produit). Les
   loggers tiers restent à WARNING.
 - `--debug --debug` (ou `--debug-all`) : active
   le mode debug de tous les composants
@@ -51,7 +51,7 @@ Dans `preprocess_sources()` :
 
 ### Logging levels
 
-| Mode | lore_mcp logger | Tiers |
+| Mode | lorme logger | Tiers |
 |------|:---:|:---:|
 | default | WARNING | ERROR |
 | --verbose | INFO | ERROR |
@@ -59,7 +59,7 @@ Dans `preprocess_sources()` :
 | --debug --debug | DEBUG | DEBUG |
 
 Le niveau actuel `--debug` dans `progress.py`
-met déjà `lore_mcp` à DEBUG et les tiers à
+met déjà `lorme` à DEBUG et les tiers à
 WARNING. C'est le bon comportement pour le
 premier niveau. Le second niveau (tous en DEBUG)
 est à implémenter.
@@ -72,7 +72,7 @@ est à implémenter.
 3. Image dimensions + mode logguées (debug level)
 4. Body 507 logguée (error level — toujours
    visible)
-5. `--debug` ne montre que les traces lore-mcp
+5. `--debug` ne montre que les traces lorme
 6. `--debug --debug` active le debug de tout
 7. Tests existants passent
 

@@ -1,12 +1,12 @@
 # Container usage (Podman / Docker)
 
-lore-mcp ships a `Containerfile` for building
+lorme ships a `Containerfile` for building
 a standalone OCI image with all dependencies.
 
 ## Build the image
 
 ```bash
-podman build -t lore-mcp .
+podman build -t lorme .
 ```
 
 ## Serve (MCP server)
@@ -16,7 +16,7 @@ podman build -t lore-mcp .
 ```bash
 podman run -i --rm \
   -v ./data:/data:Z \
-  lore-mcp serve --config /data/config.yaml
+  lorme serve --config /data/config.yaml
 ```
 
 Claude Desktop configuration
@@ -29,7 +29,7 @@ Claude Desktop configuration
       "command": "podman",
       "args": ["run", "-i", "--rm",
                "-v", "/path/to/data:/data:Z",
-               "lore-mcp", "serve",
+               "lorme", "serve",
                "--config", "/data/config.yaml"]
     }
   }
@@ -41,7 +41,7 @@ Claude Desktop configuration
 ```bash
 podman run -d -p 8080:8080 \
   -v ./data:/data:Z \
-  lore-mcp serve --transport sse --port 8080
+  lorme serve --transport sse --port 8080
 ```
 
 ## Preprocess
@@ -53,7 +53,7 @@ LLM) on the host via `--network host`.
 podman run --rm --network host \
   -v ./corpus:/data:Z \
   -v ./config.yaml:/app/config.yaml:Z \
-  lore-mcp preprocess /data/manifest.yaml \
+  lorme preprocess /data/manifest.yaml \
     --docs-base-dir /data \
     --config /app/config.yaml \
     --verbose
@@ -65,7 +65,7 @@ podman run --rm --network host \
 podman run --rm --network host \
   -v ./corpus:/data:Z \
   -v ./config.yaml:/app/config.yaml:Z \
-  lore-mcp build /data/manifest.yaml \
+  lorme build /data/manifest.yaml \
     --docs-dir /data/prep \
     --output-dir /data/out \
     --config /app/config.yaml
@@ -76,7 +76,7 @@ podman run --rm --network host \
 ```bash
 podman run --rm \
   -v ./corpus:/data:Z \
-  lore-mcp lint /data/manifest.yaml --docs-dir /data
+  lorme lint /data/manifest.yaml --docs-dir /data
 ```
 
 ## Notes

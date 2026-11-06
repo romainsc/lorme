@@ -72,13 +72,13 @@ def sample_results():
 
 class TestGenerateEvalReportMd:
     def test_creates_file(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         assert Path(path).exists()
 
     def test_contains_questions_chapter(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()
@@ -87,14 +87,14 @@ class TestGenerateEvalReportMd:
         assert "The embedding engine supports GPU" in content
 
     def test_contains_generation_method(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()
         assert "heading" in content.lower() or "before chunking" in content.lower()
 
     def test_contains_model_chapters(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()
@@ -102,7 +102,7 @@ class TestGenerateEvalReportMd:
         assert "## 3. nomic" in content
 
     def test_contains_scores_table(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()
@@ -110,7 +110,7 @@ class TestGenerateEvalReportMd:
         assert "0.92" in content
 
     def test_contains_blockquote_answers(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()
@@ -118,14 +118,14 @@ class TestGenerateEvalReportMd:
         assert "> The embedding engine" in content
 
     def test_best_config_marked(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()
         assert "★" in content
 
     def test_contains_appendix(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()
@@ -134,7 +134,7 @@ class TestGenerateEvalReportMd:
         assert "word_overlap" in content
 
     def test_aggregate_has_min_max(self, tmp_path, sample_questions, sample_results):
-        from lore_mcp.eval import generate_eval_report_md
+        from lorme.eval import generate_eval_report_md
         path = str(tmp_path / "eval-report.md")
         generate_eval_report_md(sample_questions, sample_results, sample_results[1], 42.0, path)
         content = Path(path).read_text()

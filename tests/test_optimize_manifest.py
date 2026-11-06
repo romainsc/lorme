@@ -11,7 +11,7 @@ from conftest import DIMS, make_embedding
 
 
 def _make_mock_embedder():
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name="test-model", mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = DIMS
@@ -36,7 +36,7 @@ def _make_mock_embedder():
 class TestOptimizeWithManifest:
     def test_optimize_uses_manifest(self, tmp_path):
         """E10.04: optimize --manifest preserves biblio metadata."""
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -77,7 +77,7 @@ sources:
         assert len(results["all"]) == 2  # 2 chunk_sizes × 1 overlap × 1 top_k
 
         # Verify biblio metadata preserved in optimized dbs
-        from lore_mcp.store import open_db, get_all_sources
+        from lorme.store import open_db, get_all_sources
         for f in db_dir.glob("*.db"):
             db = open_db(str(f))
             sources = get_all_sources(db)
@@ -88,7 +88,7 @@ sources:
 
     def test_optimize_without_manifest(self, tmp_path):
         """Backward compat: optimize with source-dir still works."""
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -117,7 +117,7 @@ class TestOptimizeDbNaming:
 
     def test_deterministic_db_names(self, tmp_path):
         """Each config gets a unique .db named opt-<size>-<overlap>.db."""
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -145,7 +145,7 @@ class TestOptimizeDbNaming:
 
     def test_manifest_no_collision(self, tmp_path):
         """E10.06: manifest optimize uses opt-<size>-<overlap>.db, not collection name."""
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -182,7 +182,7 @@ sources:
 
     def test_no_glob_mtime_dependency(self, tmp_path):
         """E10.07: optimize doesn't use glob+st_mtime to find .db files."""
-        from lore_mcp.eval import _optimize_ingest
+        from lorme.eval import _optimize_ingest
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()

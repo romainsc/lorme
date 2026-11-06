@@ -1,7 +1,7 @@
 # Trace E2.14 — add_directory FINAL (post E12.123)
 
 Date: 2026-10-06
-Commande: `add_directory(directory="src/lore_mcp", collection="test-dir-final", enrich="none", include_pattern="*.py")`
+Commande: `add_directory(directory="src/lorme", collection="test-dir-final", enrich="none", include_pattern="*.py")`
 Task: 250e1dbe
 
 ## Résultat: PASS

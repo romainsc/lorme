@@ -106,7 +106,7 @@ class FormatRegistry:
 
     def detect(self, filename: str) -> str:
         """Detect backend for a file. Content-based then extension."""
-        from lore_mcp.preprocess.parse import FormatNotSupported
+        from lorme.preprocess.parse import FormatNotSupported
         ext = Path(filename).suffix.lower()
 
         if Path(filename).exists():

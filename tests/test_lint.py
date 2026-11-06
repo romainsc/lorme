@@ -64,7 +64,7 @@ sources:
 
 class TestAnalyzeFile:
     def test_good_file_metrics(self, good_doc):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         report = analyze_file(good_doc)
         assert report["text_density"] > 0.7
         assert report["heading_count"] >= 2
@@ -73,23 +73,23 @@ class TestAnalyzeFile:
         assert report["word_count"] > 30
 
     def test_poor_file_metrics(self, poor_doc):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         report = analyze_file(poor_doc)
         assert report["text_density"] < 0.5
         assert report["noise_sections"] > 0
 
     def test_verdict_good(self, good_doc):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         report = analyze_file(good_doc)
         assert report["verdict"] == "good"
 
     def test_verdict_poor(self, poor_doc):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         report = analyze_file(poor_doc)
         assert report["verdict"] == "poor"
 
     def test_includes_filename(self, good_doc):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         report = analyze_file(good_doc)
         assert report["file"] == str(good_doc)
 
@@ -98,41 +98,41 @@ class TestStructuralMetrics:
     """E6.07: heading hierarchy and structure scoring."""
 
     def test_heading_depth(self, tmp_path):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         f = tmp_path / "doc.md"
         f.write_text("# Title\n## Section\n### Sub\n#### Deep\nContent.\n")
         report = analyze_file(f)
         assert report["heading_depth"] == 4
 
     def test_heading_depth_flat(self, tmp_path):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         f = tmp_path / "doc.md"
         f.write_text("No headings at all, just plain text content.\n")
         report = analyze_file(f)
         assert report["heading_depth"] == 0
 
     def test_heading_ratio(self, good_doc):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         report = analyze_file(good_doc)
         assert "heading_ratio" in report
         assert report["heading_ratio"] > 0
 
     def test_heading_issues_skip(self, tmp_path):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         f = tmp_path / "doc.md"
         f.write_text("# Title\n#### Skipped\nContent.\n")
         report = analyze_file(f)
         assert len(report["heading_issues"]) > 0
 
     def test_heading_issues_clean(self, tmp_path):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         f = tmp_path / "doc.md"
         f.write_text("# Title\n## Section\n### Sub\nContent.\n")
         report = analyze_file(f)
         assert len(report["heading_issues"]) == 0
 
     def test_structure_score_good(self, tmp_path):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         f = tmp_path / "doc.md"
         f.write_text(
             "# Title\n\n## Section A\n\nContent A.\n\n"
@@ -144,14 +144,14 @@ class TestStructuralMetrics:
         assert report["structure_score"] >= 0.7
 
     def test_structure_score_flat(self, tmp_path):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         f = tmp_path / "doc.md"
         f.write_text("Just plain text without any headings.\n" * 10)
         report = analyze_file(f)
         assert report["structure_score"] == 0.0
 
     def test_base64_count(self, tmp_path):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         f = tmp_path / "doc.md"
         f.write_text(
             "## Section\n\nText.\n\n"
@@ -162,14 +162,14 @@ class TestStructuralMetrics:
         assert report["base64_count"] == 2
 
     def test_base64_count_zero(self, good_doc):
-        from lore_mcp.lint import analyze_file
+        from lorme.lint import analyze_file
         report = analyze_file(good_doc)
         assert report["base64_count"] == 0
 
 
 class TestLintSources:
     def test_reads_manifest(self, tmp_path, manifest):
-        from lore_mcp.lint import lint_sources
+        from lorme.lint import lint_sources
         reports = lint_sources(str(tmp_path), str(manifest))
         files = [r["file"] for r in reports]
         assert any("good.md" in f for f in files)
@@ -177,13 +177,13 @@ class TestLintSources:
         assert len(reports) == 2
 
     def test_exit_code_with_poor(self, tmp_path, manifest):
-        from lore_mcp.lint import lint_sources
+        from lorme.lint import lint_sources
         reports = lint_sources(str(tmp_path), str(manifest))
         has_poor = any(r["verdict"] == "poor" for r in reports)
         assert has_poor
 
     def test_sorted_by_density(self, tmp_path, manifest):
-        from lore_mcp.lint import lint_sources
+        from lorme.lint import lint_sources
         reports = lint_sources(str(tmp_path), str(manifest))
         densities = [r["text_density"] for r in reports]
         assert densities == sorted(densities)
@@ -191,7 +191,7 @@ class TestLintSources:
 
 class TestFormatReport:
     def test_table_output(self, tmp_path, manifest):
-        from lore_mcp.lint import lint_sources, format_lint_report
+        from lorme.lint import lint_sources, format_lint_report
         reports = lint_sources(str(tmp_path), str(manifest))
         output = format_lint_report(reports)
         assert "good.md" in output

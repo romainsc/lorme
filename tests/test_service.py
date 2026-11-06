@@ -1,6 +1,6 @@
 """Tests for inference service lifecycle. See E12.25."""
 
-from lore_mcp.preprocess.service import (
+from lorme.preprocess.service import (
     start_service, stop_service, check_service,
     _health_url, _models_url,
 )

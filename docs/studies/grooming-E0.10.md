@@ -2,11 +2,11 @@
 
 ## Context
 
-`lore-mcp` is already taken on PyPI (v1.0.17,
+`lorme` is already taken on PyPI (v1.0.17,
 ctx-stack, Apache 2.0, 15 releases since Dec
 2025). The name cannot be used for PyPI
 publication. Additionally, 8 GitHub repos share
-the exact name `lore-mcp`, two with functional
+the exact name `lorme`, two with functional
 overlap (MCP + semantic search).
 
 This is a **hard blocker** for E4.02 (PyPI
@@ -43,7 +43,7 @@ All verified available on PyPI and GitHub
 
 | Name | Reason |
 |------|--------|
-| lore-mcp | Taken on PyPI (blocker) |
+| lorme | Taken on PyPI (blocker) |
 | lore | Taken on PyPI (ML framework) |
 | lore-ai | Taken on PyPI |
 | cairn-mcp | Taken on PyPI |
@@ -88,12 +88,12 @@ If a rename is decided, the following artifacts
 must be updated:
 
 ### MVP1: Code rename
-- [ ] `src/lore_mcp/` → `src/lorme/`
+- [ ] `src/lorme/` → `src/lorme/`
   (or new name)
-- [ ] All `import lore_mcp` → `import lorme`
+- [ ] All `import lorme` → `import lorme`
 - [ ] `pyproject.toml`: name, entry points,
   package dir
-- [ ] CLI entry point: `lore-mcp` → `lorme`
+- [ ] CLI entry point: `lorme` → `lorme`
 - [ ] Config prefix if any
 
 ### MVP2: Repository + docs

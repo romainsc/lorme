@@ -1,4 +1,4 @@
-# Tutorial — Running lore-mcp
+# Tutorial — Running lorme
 
 This guide covers the full workflow: preprocessing
 sources, building optimized collections, and
@@ -13,14 +13,14 @@ For design rationale, see
 ## 1. Installation
 
 ```bash
-pip install lore-mcp
+pip install lorme
 
 # Multi-format parsing (PDF, HTML, DOCX)
-pip install lore-mcp[parse]
+pip install lorme[parse]
 
 # Or install specific format support
-pip install lore-mcp[html]   # HTML via trafilatura
-pip install lore-mcp[pdf]    # PDF/DOCX via Docling
+pip install lorme[html]   # HTML via trafilatura
+pip install lorme[pdf]    # PDF/DOCX via Docling
 ```
 
 ## 2. Configuration
@@ -77,7 +77,7 @@ runs use the cache (`~/.cache/huggingface/`).
 
 For persistent embedding services, run
 HuggingFace Text Embeddings Inference (TEI)
-containers. lore-mcp connects via API mode.
+containers. lorme connects via API mode.
 
 ### GPU prerequisites
 
@@ -154,7 +154,7 @@ an enriched manifest.
 ### Basic preprocess
 
 ```bash
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
   --orig-dir raw/ \
   --prep-dir clean/ \
@@ -176,7 +176,7 @@ This:
 ### With LLM enrichment
 
 ```bash
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
   --orig-dir raw/ \
   --prep-dir clean/ \
@@ -214,7 +214,7 @@ Frame extraction strategies:
 URL sources require `--allow-download`:
 
 ```bash
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
   --allow-download \
   --config config.yaml
@@ -225,7 +225,7 @@ lore-mcp preprocess manifest.yaml \
 For YouTube and other video platforms, use a URL
 in the manifest — no manual download needed.
 If captions are available (auto-generated or
-manual), lore-mcp downloads them and skips the
+manual), lorme downloads them and skips the
 STT service entirely.
 
 ```yaml
@@ -248,27 +248,27 @@ full title is stored in the enriched manifest.
 ### Pipeline state management
 
 Pipeline state (checkpoint, intermediates) is
-stored in `~/.local/state/lore-mcp/`. Manage
+stored in `~/.local/state/lorme/`. Manage
 with:
 
 ```bash
 # List all states
-lore-mcp state --list
+lorme state --list
 
 # Purge a specific state
-lore-mcp state --purge <hash-prefix>
+lorme state --purge <hash-prefix>
 
 # Purge old states (> 7 days)
-lore-mcp state --purge --older-than 7
+lorme state --purge --older-than 7
 
 # Purge all
-lore-mcp state --purge --all
+lorme state --purge --all
 ```
 
 ### Keep intermediate files
 
 ```bash
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
   --intermediates-dir /corpus/intermediates/ \
   --config config.yaml
@@ -278,7 +278,7 @@ Saves phase files (`.phase1-parse.md`,
 `.caption-*.md`, `.phase3-enrich.md`) to the
 specified directory for diagnosis. Without this
 flag, intermediates go to
-`~/.local/state/lore-mcp/` and are cleaned up
+`~/.local/state/lorme/` and are cleaned up
 after success.
 
 See [preprocessing guide](preprocessing.md) for
@@ -293,7 +293,7 @@ indexing, and metadata generation.
 ### Minimal build (no optimization)
 
 ```bash
-lore-mcp build manifest-prep.yaml \
+lorme build manifest-prep.yaml \
   --docs-dir /corpus/clean/ \
   --output-dir /path/to/output/ \
   --skip-optimize \
@@ -306,7 +306,7 @@ Produces: `.db` + `.json` + `.bib` + `.md` +
 ### Build with optimization
 
 ```bash
-lore-mcp build manifest-prep.yaml \
+lorme build manifest-prep.yaml \
   --docs-dir /corpus/clean/ \
   --output-dir /path/to/output/ \
   --config config.yaml
@@ -342,7 +342,7 @@ Services are auto-started and auto-stopped.
 ### Full pipeline (preprocess + optimize + build)
 
 ```bash
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --docs-dir /corpus/ \
   --output-dir /output/ \
   --preprocess \
@@ -369,13 +369,13 @@ everything.
 
 ```bash
 # Progress bar
-lore-mcp build ... --progress
+lorme build ... --progress
 
 # Verbose (questions, per-iteration scores)
-lore-mcp build ... --verbose
+lorme build ... --verbose
 
 # Debug (HTTP requests, internals)
-lore-mcp build ... --debug
+lorme build ... --debug
 ```
 
 ### Resumability
@@ -387,7 +387,7 @@ skipped. Use `--force` to start fresh.
 ## 6. Quality check
 
 ```bash
-lore-mcp lint manifest-prep.yaml \
+lorme lint manifest-prep.yaml \
   --docs-dir /corpus/clean/
 ```
 
@@ -399,7 +399,7 @@ sections, and verdict (good/warn/poor) per file.
 ### SSE (recommended)
 
 ```bash
-lore-mcp --transport sse --config config.yaml
+lorme --transport sse --config config.yaml
 ```
 
 Client connects to `http://localhost:8000/sse`.
@@ -410,7 +410,7 @@ Client connects to `http://localhost:8000/sse`.
 {
   "mcpServers": {
     "lore": {
-      "command": "/path/to/.venv/bin/lore-mcp",
+      "command": "/path/to/.venv/bin/lorme",
       "args": ["--config", "/path/to/config.yaml"]
     }
   }

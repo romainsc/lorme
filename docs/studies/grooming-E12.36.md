@@ -26,7 +26,7 @@ produce in the same language as the source.
 Add "Respond in the same language as the content"
 to all enrichment prompts. The LLM detects the
 language itself — no detection logic needed in
-lore-mcp.
+lorme.
 
 Current enrich prompts (enrich.py):
 ```
@@ -48,7 +48,7 @@ enrich_meta.
    same language as the content"
 2. French sources get French enrichment
 3. English sources get English enrichment
-4. No language detection logic in lore-mcp
+4. No language detection logic in lorme
 5. Tests pass
 
 ## Provenance

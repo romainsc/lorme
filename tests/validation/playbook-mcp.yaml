@@ -1,5 +1,5 @@
 # E12.97: MCP LLM validation playbook
-# Natural language scenarios for testing lore-mcp via a local LLM.
+# Natural language scenarios for testing lorme via a local LLM.
 # The LLM chooses which MCP tool to call based on the user message.
 #
 # Same questions asked before and after indexing to measure delta.
@@ -10,7 +10,7 @@ playbook:
   - phase: before_indexing
     steps:
       - scenario: "Cold start discovery"
-        user: "What is the status of lore-mcp?"
+        user: "What is the status of lorme?"
         expect_tools: [get_service_status]
 
       - scenario: "Q1 before"

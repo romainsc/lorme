@@ -4,7 +4,7 @@
 
 `prep_cfg = cfg` dans les MCP tools est une
 affectation de référence — tous les threads
-mutent le même objet LoreConfig singleton.
+mutent le même objet LormeConfig singleton.
 5 points de collision pour des tâches
 concurrentes sur la même collection.
 

@@ -1,9 +1,9 @@
 # Trace E2.14 — add_directory "File not found"
 
 Date: 2026-10-06
-Commande: `add_directory(directory="src/lore_mcp", collection="trace-dir", enrich="none", include_pattern="*.py")`
+Commande: `add_directory(directory="src/lorme", collection="trace-dir", enrich="none", include_pattern="*.py")`
 Task: 48453219
-CWD: /home/rchanter/EspacePrivé/lore-mcp
+CWD: /home/rchanter/EspacePrivé/lorme
 
 ## Résultat
 - file_count: 0, chunk_count: 0
@@ -13,7 +13,7 @@ CWD: /home/rchanter/EspacePrivé/lore-mcp
 ## Preprocess : OK (28/28)
 Le preprocess-report.json montre 28 sources OK.
 Les fichiers prep/ existent (19 .md dans workspace-validation/build/trace-dir/prep/).
-Le phase1-report.json montre src_path correct (/home/.../src/lore_mcp/server.py).
+Le phase1-report.json montre src_path correct (/home/.../src/lorme/server.py).
 
 ## Bug identifié : recipe temporaire stale
 
@@ -60,7 +60,7 @@ Mais `collection` est passé à `add_sources` par `add_directory` → vérifier 
 
 ### Test
 ```
-add_source(file="src/lore_mcp/store.py", collection="trace-nonenrich", enrich="none")
+add_source(file="src/lorme/store.py", collection="trace-nonenrich", enrich="none")
 ```
 Result: 52 chunks (vs 100 avec enrich default = -48%)
 

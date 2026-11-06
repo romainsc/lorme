@@ -1,8 +1,8 @@
-# Sync lore-mcp → openshift
+# Sync lorme → openshift
 
 > Dernière MàJ : 2026-10-09 (sync 48)
-> Source : sessions lore-mcp 3-9 oct
-> Ce fichier est maintenu par le dépôt lore-mcp.
+> Source : sessions lorme 3-9 oct
+> Ce fichier est maintenu par le dépôt lorme.
 > Il est lu par le dépôt openshift au `sync`.
 
 ## État du projet
@@ -79,7 +79,7 @@ même titre que TEI, Canary STT, Granite Vision.
 - API : custom (build_transcription_messages +
   generate_transcription), pas OpenAI-compatible
 
-**Utilisation** : lore-mcp appelle le service pour
+**Utilisation** : lorme appelle le service pour
 transcription + diarization en un pass. Remplace
 le pipeline multi-étapes (Canary + pyannote) pour
 les cas multi-speakers.
@@ -112,7 +112,7 @@ Workaround local RGBA en place.
 ### Contexte
 
 Étude study-E12.153-diarization-reconstruction.md
-réalisée dans lore-mcp. Devrait être traitée dans
+réalisée dans lorme. Devrait être traitée dans
 openshift (étude Veille).
 
 ### Recherche effectuée
@@ -125,7 +125,7 @@ Vast.ai, Fora Soft, NVIDIA NeMo, DISPLACE 2024).
 
 **Architecture validée** : per-speaker STT est le
 consensus pour multilingue. L'architecture
-lore-mcp est correcte.
+lorme est correcte.
 
 **3 bugs d'implémentation identifiés** :
 1. Canary ne fait PAS d'auto-détection de langue
@@ -156,7 +156,38 @@ lore-mcp est correcte.
 - Crossfade impact sur qualité STT
 
 Étude source : `docs/studies/study-E12.153-diarization-reconstruction.md`
-dans le repo lore-mcp branche feat/E12-preprocessing-tool.
+dans le repo lorme branche feat/E12-preprocessing-tool.
+
+## NOUVEAU — Renommage lore-mcp → lorme (E0.10)
+
+**Date** : 2026-11-06
+
+**Raison** : `lore-mcp` est pris sur PyPI (v1.0.17,
+ctx-stack, 15 releases). 8 repos GitHub homonymes.
+Bloqueur pour publication PyPI.
+
+**Nouveau nom** : **lorme** (fusion LORE + MCP).
+LORME = Local Offline Retrieval & MCP Engine.
+
+**Actions requises côté openshift** :
+1. Renommer `sync/lore-mcp.md` → `sync/lorme.md`
+2. Mettre à jour `sync/links.md` :
+   chemin workspace `~/EspacePrivé/lorme/`
+   fichier sync `sync/lorme.md`
+3. Mettre à jour toutes les références à
+   `lore-mcp` dans les docs openshift
+4. Le CLI passe de `lore-mcp` à `lorme`
+5. MCP config : `"command": "lorme"` au lieu de
+   `"command": "lore-mcp"`
+
+**Répertoire local** : sera renommé
+`~/EspacePrivé/lore-mcp/` → `~/EspacePrivé/lorme/`
+après merge sur main.
+
+**GitHub** : repo sera renommé via Settings
+(redirection automatique de l'ancien URL).
+
+**PyPI** : publication sous `lorme` (pip install lorme).
 
 ## Prochaines étapes
 

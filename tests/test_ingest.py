@@ -1,11 +1,11 @@
-"""Tests for lore_mcp.ingest. See docs/architecture.md for design context."""
+"""Tests for lorme.ingest. See docs/architecture.md for design context."""
 
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
-from lore_mcp.ingest import chunk_document, ingest_directory, ingest_with_manifest
+from lorme.ingest import chunk_document, ingest_directory, ingest_with_manifest
 
 
 class TestChunkDocument:
@@ -61,7 +61,7 @@ DIMS = 64
 
 
 def _make_mock_embedder():
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
 
     emb = Embedder(model_name="test-model", mode="builtin:cpu")
     mock_model = MagicMock()

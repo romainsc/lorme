@@ -1,6 +1,6 @@
 """Tests for PII detection. See E12.05."""
 
-from lore_mcp.preprocess.pii import detect_pii
+from lorme.preprocess.pii import detect_pii
 
 
 class TestDetectPII:

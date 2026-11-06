@@ -12,8 +12,8 @@ projects. Want to clone a repo and build a .db.
 ## Use case
 
 ```bash
-git clone https://github.com/romainsc/lore-mcp
-lore-mcp build manifest.yaml --docs-dir lore-mcp/ \
+git clone https://github.com/romainsc/lorme
+lorme build manifest.yaml --docs-dir lorme/ \
   --output-dir out/ --preprocess --config config.yaml
 ```
 
@@ -28,7 +28,7 @@ is manifest-driven, not filesystem-driven.
 
 ```yaml
 - orig: README.md
-  title: "lore-mcp README"
+  title: "lorme README"
 ```
 
 **Directory entry**: recursive scan of a subtree.
@@ -59,7 +59,7 @@ files found inside.
 ### Example manifest
 
 ```yaml
-collection: lore-mcp-docs
+collection: lorme-docs
 level: libre
 sources:
   # Directory entry — entire subtree
@@ -98,13 +98,13 @@ CONTRIBUTING.md at root is in no entry → ignored.
 
 ```bash
 # With manifest (directory entries)
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --docs-dir /path/to/repo/ \
   --output-dir out/ --preprocess \
   --config config.yaml
 
 # Without manifest — scan everything
-lore-mcp build --docs-dir /path/to/repo/ \
+lorme build --docs-dir /path/to/repo/ \
   --output-dir out/ --preprocess \
   --config config.yaml
 ```
@@ -118,7 +118,7 @@ lore-mcp build --docs-dir /path/to/repo/ \
 4. No manifest → scan all
 5. Directory defaults inherited (lang, license)
 6. Preserves directory tree (E12.61)
-7. Validated: index lore-mcp's own repo
+7. Validated: index lorme's own repo
 8. Tests
 
 ## Provenance

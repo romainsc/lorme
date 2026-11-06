@@ -1,8 +1,8 @@
-# lore-mcp
+# lorme
 
-[![Tests](https://github.com/romainsc/lore-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/romainsc/lore-mcp/actions/workflows/test.yml)
+[![Tests](https://github.com/romainsc/lorme/actions/workflows/test.yml/badge.svg)](https://github.com/romainsc/lorme/actions/workflows/test.yml)
 
-**LORE — Local Offline Retrieval Engine for MCP**
+**LORME — Local Offline Retrieval & MCP Engine**
 
 An MCP server for semantic search over your local
 documents. Preprocesses, indexes, and serves any
@@ -31,8 +31,8 @@ file on your workstation.
 ### 1. Install
 
 ```bash
-git clone https://github.com/romainsc/lore-mcp.git
-cd lore-mcp
+git clone https://github.com/romainsc/lorme.git
+cd lorme
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[parse]"
@@ -95,14 +95,14 @@ is the source file in its native format. `path`
 
 ```bash
 # Preprocess: convert + clean sources
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --config config.yaml \
   --docs-base-dir /path/to/corpus/ \
   --orig-dir orig \
   --prep-dir prep
 
 # Build: index preprocessed sources
-lore-mcp build manifest-prep.yaml \
+lorme build manifest-prep.yaml \
   --config config.yaml \
   --docs-dir /path/to/corpus/prep/ \
   --output-dir /path/to/output/ \
@@ -112,7 +112,7 @@ lore-mcp build manifest-prep.yaml \
 Or combine both in one step:
 
 ```bash
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --config config.yaml \
   --docs-dir /path/to/corpus/orig/ \
   --output-dir /path/to/output/ \
@@ -124,7 +124,7 @@ lore-mcp build manifest.yaml \
 #### Option A: HTTP server (recommended)
 
 ```bash
-lore-mcp --config config.yaml --transport sse
+lorme --config config.yaml --transport sse
 ```
 
 ```json
@@ -143,7 +143,7 @@ lore-mcp --config config.yaml --transport sse
 {
   "mcpServers": {
     "lore": {
-      "command": "/path/to/.venv/bin/lore-mcp",
+      "command": "/path/to/.venv/bin/lorme",
       "args": ["--config", "/path/to/config.yaml"]
     }
   }
@@ -168,14 +168,14 @@ similarity.
 
 | Command | Purpose |
 |---------|---------|
-| `lore-mcp` | Start MCP server |
-| `lore-mcp preprocess` | Convert and clean sources |
-| `lore-mcp build` | Index sources into .db |
-| `lore-mcp lint` | Analyze source quality |
-| `lore-mcp eval` | Evaluate retrieval quality |
-| `lore-mcp optimize` | Auto-optimize parameters |
-| `lore-mcp enrich` | LLM enrichment (context, Q&A) |
-| `lore-mcp state` | Manage pipeline state (--list, --purge) |
+| `lorme` | Start MCP server |
+| `lorme preprocess` | Convert and clean sources |
+| `lorme build` | Index sources into .db |
+| `lorme lint` | Analyze source quality |
+| `lorme eval` | Evaluate retrieval quality |
+| `lorme optimize` | Auto-optimize parameters |
+| `lorme enrich` | LLM enrichment (context, Q&A) |
+| `lorme state` | Manage pipeline state (--list, --purge) |
 
 All commands accept `--config config.yaml`.
 
@@ -241,7 +241,7 @@ for the full design.
 
 ### Next
 
-- [ ] pip install lore-mcp (PyPI)
+- [ ] pip install lorme (PyPI)
 - [ ] STT post-correction (LLM fix of
   transcription errors)
 - [ ] Detailed eval report (markdown)

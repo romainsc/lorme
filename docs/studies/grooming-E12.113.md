@@ -2,7 +2,7 @@
 
 ## Bug
 
-lore-mcp MCP server (stdio) loses connection
+lorme MCP server (stdio) loses connection
 when add_recipe task completes. Reproduced on
 2 runs. Claude Code reports "MCP server
 disconnected".

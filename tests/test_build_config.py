@@ -8,7 +8,7 @@ import pytest
 
 class TestBuildConfigFromFile:
     def test_parse_full_config(self, tmp_path):
-        from lore_mcp.build_config import BuildConfig
+        from lorme.build_config import BuildConfig
         config_path = tmp_path / "build-config.yaml"
         config_path.write_text("""
 embedding:
@@ -44,7 +44,7 @@ optimize:
         assert config.num_questions == 30
 
     def test_parse_minimal_config(self, tmp_path):
-        from lore_mcp.build_config import BuildConfig
+        from lorme.build_config import BuildConfig
         config_path = tmp_path / "minimal.yaml"
         config_path.write_text("""
 embedding:

@@ -18,7 +18,7 @@ Without flag: error with clear message.
 
 ## DoD
 
-1. allow_download in LoreConfig
+1. allow_download in LormeConfig
 2. _fetch_url checks flag
 3. Clear error if URL-only without flag
 4. --allow-download on preprocess and build CLI

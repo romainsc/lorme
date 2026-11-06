@@ -6,20 +6,20 @@ from unittest.mock import patch
 
 class TestEmbedderVerifySsl:
     def test_default_verify_ssl_true(self):
-        from lore_mcp.embedder import Embedder
+        from lorme.embedder import Embedder
         emb = Embedder(model_name="test", mode="api",
                        api_url="http://localhost:8081/v1/embeddings")
         assert emb.api_verify is True
 
     def test_verify_ssl_false_from_constructor(self):
-        from lore_mcp.embedder import Embedder
+        from lorme.embedder import Embedder
         emb = Embedder(model_name="test", mode="api",
                        api_url="https://tei.internal/v1/embeddings",
                        verify_ssl=False)
         assert emb.api_verify is False
 
     def test_verify_ssl_overrides_env(self):
-        from lore_mcp.embedder import Embedder
+        from lorme.embedder import Embedder
         with patch.dict("os.environ", {"LORE_API_VERIFY": "true"}):
             emb = Embedder(model_name="test", mode="api",
                            api_url="https://tei.internal/v1/embeddings",
@@ -29,7 +29,7 @@ class TestEmbedderVerifySsl:
 
 class TestConfigVerifySsl:
     def test_verify_ssl_in_yaml(self, tmp_path):
-        from lore_mcp.eval import parse_model_configs
+        from lorme.eval import parse_model_configs
         f = tmp_path / "config.yaml"
         f.write_text("""
 embedding:
@@ -48,7 +48,7 @@ embedding:
 
 class TestEmbedderLoading:
     def test_load_embedders_respects_verify_ssl(self):
-        from lore_mcp.embedder import Embedder
+        from lorme.embedder import Embedder
         configs = [
             {"name": "model-a", "mode": "api",
              "api_url": "https://tei.internal/v1/embeddings",

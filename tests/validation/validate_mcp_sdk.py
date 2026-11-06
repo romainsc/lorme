@@ -33,7 +33,7 @@ def check(name, condition, msg=""):
 
 def wait_task(task_id, timeout=60):
     """Poll task until completed or timeout."""
-    from lore_mcp.server import get_task_status
+    from lorme.server import get_task_status
     start = time.time()
     while time.time() - start < timeout:
         result = get_task_status(task_id=task_id)
@@ -49,9 +49,9 @@ def main():
     print("=== E3.17: Exhaustive MCP SDK Validation ===\n")
 
     # Configure
-    import lore_mcp.server as srv
-    from lore_mcp.config import LoreConfig
-    cfg = LoreConfig.from_file("config.yaml") if Path("config.yaml").exists() else LoreConfig.defaults()
+    import lorme.server as srv
+    from lorme.config import LormeConfig
+    cfg = LormeConfig.from_file("config.yaml") if Path("config.yaml").exists() else LormeConfig.defaults()
     cfg.db_dir = str(Path(DB_PATH).parent)
     cfg.default_collection = Path(DB_PATH).stem
     srv._config = cfg
@@ -74,7 +74,7 @@ def main():
     # 1. list_indexed_sources
     # ------------------------------------------------------------------
     print("[1/17] list_indexed_sources")
-    from lore_mcp.server import list_indexed_sources
+    from lorme.server import list_indexed_sources
     result = list_indexed_sources()
     check("returns string", isinstance(result, str))
     check("has files", "file(s)" in result)
@@ -84,7 +84,7 @@ def main():
     # 2. get_service_status
     # ------------------------------------------------------------------
     print("[2/17] get_service_status")
-    from lore_mcp.server import get_service_status
+    from lorme.server import get_service_status
     result = get_service_status()
     check("returns string", isinstance(result, str))
     check("mentions embedder", "embedder" in result.lower())
@@ -93,7 +93,7 @@ def main():
     # 3. lint_source
     # ------------------------------------------------------------------
     print("[3/17] lint_source")
-    from lore_mcp.server import lint_source
+    from lorme.server import lint_source
     result = lint_source("tests/fixtures/orig/test-markdown-sample.md")
     check("returns string", isinstance(result, str))
     check("has verdict", "verdict" in result.lower() or "density" in result.lower())
@@ -109,7 +109,7 @@ def main():
     # 5. list_pipeline_state
     # ------------------------------------------------------------------
     print("[5/17] list_pipeline_state")
-    from lore_mcp.server import list_pipeline_state
+    from lorme.server import list_pipeline_state
     result = list_pipeline_state()
     check("returns string", isinstance(result, str))
 
@@ -117,7 +117,7 @@ def main():
     # 6. list_tasks
     # ------------------------------------------------------------------
     print("[6/17] list_tasks")
-    from lore_mcp.server import list_tasks
+    from lorme.server import list_tasks
     result = list_tasks()
     check("returns string", isinstance(result, str))
 
@@ -125,7 +125,7 @@ def main():
     # 7. list_collections
     # ------------------------------------------------------------------
     print("[7/17] list_collections")
-    from lore_mcp.server import list_collections
+    from lorme.server import list_collections
     result = list_collections()
     check("returns string", isinstance(result, str))
     check("single mode", "single" in result.lower() or "collection" in result.lower())
@@ -135,7 +135,7 @@ def main():
     # ------------------------------------------------------------------
     print("[8/17] search_docs")
     try:
-        from lore_mcp.server import search_docs
+        from lorme.server import search_docs
         result = search_docs("open source AI definition")
         check("returns string", isinstance(result, str))
         check("has results", "result(s)" in result)
@@ -171,7 +171,7 @@ def main():
     # ------------------------------------------------------------------
     print("[11/17] add_source → search → remove cycle")
     try:
-        from lore_mcp.server import add_source, remove_source
+        from lorme.server import add_source, remove_source
 
         doc = Path(tempfile.mkdtemp()) / "platypus-test.md"
         doc.write_text(
@@ -218,7 +218,7 @@ def main():
     # 12. get_task_status — not found
     # ------------------------------------------------------------------
     print("[12/17] get_task_status (not found)")
-    from lore_mcp.server import get_task_status
+    from lorme.server import get_task_status
     result = get_task_status(task_id="nonexistent-id")
     check("not found", "not found" in result.lower())
 
@@ -226,7 +226,7 @@ def main():
     # 13. cancel_task
     # ------------------------------------------------------------------
     print("[13/17] cancel_task")
-    from lore_mcp.server import cancel_task
+    from lorme.server import cancel_task
     result = cancel_task(task_id="nonexistent-id")
     check("cancel not found", "not found" in result.lower() or "cannot" in result.lower())
 
@@ -234,7 +234,7 @@ def main():
     # 14. add_sources (JSON validation)
     # ------------------------------------------------------------------
     print("[14/17] add_sources")
-    from lore_mcp.server import add_sources
+    from lorme.server import add_sources
     result = add_sources(sources="not json")
     check("add_sources rejects bad json", "invalid json" in result.lower())
     result = add_sources(sources="[]")
@@ -245,13 +245,13 @@ def main():
     # ------------------------------------------------------------------
     print("[15/17] add_recipe")
     try:
-        import lore_mcp.build
-        _orig_build = lore_mcp.build.run_build
-        lore_mcp.build.run_build = lambda *a, **kw: {"collection": "mock", "file_count": 0}
-        from lore_mcp.server import add_recipe
+        import lorme.build
+        _orig_build = lorme.build.run_build
+        lorme.build.run_build = lambda *a, **kw: {"collection": "mock", "file_count": 0}
+        from lorme.server import add_recipe
         result = add_recipe(recipe="/fake/recipe.yaml")
         check("add_recipe returns task_id", "started" in result.lower())
-        lore_mcp.build.run_build = _orig_build
+        lorme.build.run_build = _orig_build
     except Exception as e:
         check("add_recipe", False, str(e))
 
@@ -259,7 +259,7 @@ def main():
     # 16. purge_pipeline_state
     # ------------------------------------------------------------------
     print("[16/16] purge_pipeline_state")
-    from lore_mcp.server import purge_pipeline_state
+    from lorme.server import purge_pipeline_state
     result = purge_pipeline_state(hash="nonexistent_hash_1234")
     check("purge not found", "not found" in result.lower())
 

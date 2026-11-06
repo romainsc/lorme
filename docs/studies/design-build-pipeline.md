@@ -8,7 +8,7 @@
 ## Build workflow
 
 ```
-lore-mcp build manifest.yaml --config config.yaml
+lorme build manifest.yaml --config config.yaml
 │
 ├─ 0. [Optional] Preprocess
 │     preprocess_sources() → manifest-prep.yaml

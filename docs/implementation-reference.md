@@ -1,4 +1,4 @@
-# API Reference — lore-mcp
+# API Reference — lorme
 
 Exhaustive documentation of every public and internal
 function, class, and constant. For design rationale,
@@ -651,7 +651,7 @@ exhausted or fatal status code received.
 ## collections.py — Multi-collection management
 
 **Imports:** `os`, `pathlib.Path`,
-`lore_mcp.store` (open_db, list_sources, search).
+`lorme.store` (open_db, list_sources, search).
 
 ### Constants
 
@@ -812,7 +812,7 @@ Missing sections use class-level defaults.
 **Lines 44–51.** Class method. Fallback when no
 config file.
 
-Reads eval configuration from a LoreConfig object.
+Reads eval configuration from a LormeConfig object.
 
 ## server.py
 
@@ -822,17 +822,17 @@ MCP server exposing 18 tools and CLI entry point.
 
 | Name | Value | Purpose |
 |------|-------|---------|
-| `mcp` | `MCPServer("lore-mcp")` | MCP server instance, tools are registered on it via `@mcp.tool()` |
+| `mcp` | `MCPServer("lorme")` | MCP server instance, tools are registered on it via `@mcp.tool()` |
 | `_embedder` | `None` | Cached Embedder singleton, populated by `_get_embedder()` |
 | `_db_cache` | `dict` | Cached SQLite connections per collection |
 | `_init_lock` | `threading.Lock()` | Prevents race condition on lazy init of `_embedder` and `_db_cache` under concurrent SSE requests |
-| `_config` | `None` | Cached LoreConfig, set during `main()` |
+| `_config` | `None` | Cached LormeConfig, set during `main()` |
 | `logger` | `logging.getLogger(__name__)` | Module logger |
 
-### `_get_config() -> LoreConfig`
+### `_get_config() -> LormeConfig`
 
-Returns the loaded LoreConfig (set during
-`main()`). Falls back to `LoreConfig.defaults()`
+Returns the loaded LormeConfig (set during
+`main()`). Falls back to `LormeConfig.defaults()`
 if not initialized.
 
 ### `_get_db(collection: str = "") -> Connection`
@@ -844,7 +844,7 @@ Thread-safe via `_init_lock`.
 
 ### `_get_embedder() -> Embedder`
 
-Lazy-loads the Embedder from LoreConfig. Creates
+Lazy-loads the Embedder from LormeConfig. Creates
 the Embedder singleton on first call. The model
 itself is NOT loaded here (lazy loading in
 Embedder). Thread-safe via `_init_lock`.
@@ -1050,7 +1050,7 @@ consecutive failures trigger the threshold.
 
 ### `get_batch_size(config=None) -> int`
 
-Reads embedding batch size from LoreConfig or
+Reads embedding batch size from LormeConfig or
 falls back to `EMBED_BATCH_SIZE` (32).
 
 Used in `_ingest_file` to control embedding
@@ -1419,7 +1419,7 @@ Dataclass holding evaluation configuration.
 - `verify_ssl: bool = True` — SSL verification for API calls
 
 **`from_config(config) -> EvalConfig`** — classmethod
-that reads eval configuration from a LoreConfig object.
+that reads eval configuration from a LormeConfig object.
 
 ### `generate_questions_from_db(db_path: str, num_questions: int = 50, llm=None) -> list[dict]`
 
@@ -1574,7 +1574,7 @@ Pre-flight validation of all model configurations.
 
 ```python
 def validate_models(configs, embedders=None):
-    from lore_mcp.embedder import _probe_api
+    from lorme.embedder import _probe_api
     errors = []
     for cfg in configs:
         name = cfg["name"]

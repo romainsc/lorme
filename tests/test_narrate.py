@@ -8,7 +8,7 @@ class TestJsonNarration:
     """JSON array of records → markdown with headings."""
 
     def test_adds_collection_heading(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         data = json.dumps({"name": "World Cup 2022", "matches": [
             {"team1": "Qatar", "team2": "Ecuador", "score": "0-2"},
         ]})
@@ -16,7 +16,7 @@ class TestJsonNarration:
         assert "## " in result or "# " in result
 
     def test_records_as_sections(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         data = json.dumps({"items": [
             {"name": "Alpha", "value": 1},
             {"name": "Beta", "value": 2},
@@ -26,14 +26,14 @@ class TestJsonNarration:
         assert "Beta" in result
 
     def test_flat_object_as_key_value(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         data = json.dumps({"title": "Report", "author": "Jane", "year": 2026})
         result = narrate_structured(data, "json")
         assert "Report" in result
         assert "# " in result
 
     def test_passthrough_non_json(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         text = "Just regular markdown text\n\n## Heading\n\nContent."
         result = narrate_structured(text, "json")
         assert result == text
@@ -43,13 +43,13 @@ class TestCsvNarration:
     """CSV/table content → markdown with headings."""
 
     def test_adds_heading_to_table(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         table = "| Name | Score |\n| - | - |\n| Alice | 95 |\n| Bob | 87 |"
         result = narrate_structured(table, "markitdown")
         assert "## " in result or "# " in result
 
     def test_preserves_table_content(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         table = "| Name | Score |\n| - | - |\n| Alice | 95 |"
         result = narrate_structured(table, "markitdown")
         assert "Alice" in result
@@ -60,7 +60,7 @@ class TestXlsxNarration:
     """XLSX Docling output → markdown with headings."""
 
     def test_adds_heading_to_docling_table(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         table = "| Août 2026 Calendrier |\n| - |\n| Lundi | Mardi |"
         result = narrate_structured(table, "docling")
         assert "## " in result or "# " in result
@@ -96,53 +96,53 @@ def validate(path: str) -> bool:
 '''
 
     def test_produces_headings(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "# " in result
         assert "## " in result
 
     def test_extracts_module_docstring(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "Example module for testing" in result
 
     def test_extracts_class(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "Processor" in result
         assert "Process documents" in result
 
     def test_extracts_methods(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "run" in result
         assert "Run processing" in result
 
     def test_extracts_functions(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "validate" in result
         assert "Check if path is valid" in result
 
     def test_preserves_code_in_blocks(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "```python" in result
         assert "self.config = config" in result
 
     def test_extracts_imports(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "import os" in result
         assert "from pathlib import Path" in result
 
     def test_extracts_constants(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         result = narrate_structured(self._SAMPLE_CODE, "code", filename="processor.py")
         assert "TIMEOUT" in result
 
     def test_javascript_narration(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         js_code = """
 class UserService {
   constructor(db) {
@@ -166,7 +166,7 @@ function validateEmail(email) {
         assert "validateEmail" in result
 
     def test_c_narration(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         c_code = """
 #include <stdio.h>
 
@@ -185,8 +185,8 @@ int main() {
         assert "main" in result
 
     def test_java_narration(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
-        from lore_mcp.format_registry import get_format_registry
+        from lorme.preprocess.narrate import narrate_structured
+        from lorme.format_registry import get_format_registry
         java_code = """
 public class Calculator {
     /** Add two numbers. */
@@ -207,8 +207,8 @@ public class Calculator {
             assert "add" in result
 
     def test_bash_narration(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
-        from lore_mcp.format_registry import get_format_registry
+        from lorme.preprocess.narrate import narrate_structured
+        from lorme.format_registry import get_format_registry
         bash_code = """#!/bin/bash
 
 function deploy() {
@@ -229,15 +229,15 @@ deploy
             assert "rollback" in result
 
     def test_unsupported_language_fallback(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         code = "some unknown language code"
         result = narrate_structured(code, "code", filename="script.awk")
         assert "# script" in result
         assert "```" in result
 
     def test_quality_gate_passes(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
-        from lore_mcp.preprocess.validate import quality_gate
+        from lorme.preprocess.narrate import narrate_structured
+        from lorme.preprocess.validate import quality_gate
         import tempfile
         from pathlib import Path as P
 
@@ -252,7 +252,7 @@ deploy
 
 class TestYamlNarration:
     def test_headings_per_section(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         yaml = "database:\n  dir: /data\n\nembedding:\n  model: nomic\n"
         result = narrate_structured(yaml, "code", filename="config.yaml")
         assert "## database" in result or "## Database" in result
@@ -262,7 +262,7 @@ class TestYamlNarration:
 
 class TestTomlNarration:
     def test_headings_per_table(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         toml = '[project]\nname = "lore"\n\n[build-system]\nrequires = ["hatch"]\n'
         result = narrate_structured(toml, "code", filename="pyproject.toml")
         assert "## project" in result or "## Project" in result
@@ -271,7 +271,7 @@ class TestTomlNarration:
 
 class TestDockerfileNarration:
     def test_headings_per_stage(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
+        from lorme.preprocess.narrate import narrate_structured
         df = "FROM python:3.14 AS builder\nRUN pip install .\n\nFROM python:3.14 AS runtime\nCOPY . .\n"
         result = narrate_structured(df, "code", filename="Containerfile")
         assert "builder" in result
@@ -283,8 +283,8 @@ class TestQualityGateImprovement:
     """Narrated output should pass quality gate."""
 
     def test_json_narrated_has_headings(self):
-        from lore_mcp.preprocess.narrate import narrate_structured
-        from lore_mcp.preprocess.validate import quality_gate
+        from lorme.preprocess.narrate import narrate_structured
+        from lorme.preprocess.validate import quality_gate
         import tempfile
         from pathlib import Path
 

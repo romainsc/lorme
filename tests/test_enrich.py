@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from lore_mcp.preprocess.enrich import enrich_context, enrich_meta, enrich_qa
-from lore_mcp.preprocess.llm import LLMConfig, call_llm
+from lorme.preprocess.enrich import enrich_context, enrich_meta, enrich_qa
+from lorme.preprocess.llm import LLMConfig, call_llm
 
 
 class TestCallLLM:
@@ -20,7 +20,7 @@ class TestCallLLM:
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
         mock_resp.__exit__ = MagicMock(return_value=False)
 
-        import lore_mcp.preprocess.llm as llm_mod
+        import lorme.preprocess.llm as llm_mod
         monkeypatch.setattr(llm_mod.urllib.request, "urlopen", lambda *a, **kw: mock_resp)
 
         config = LLMConfig(api_url="http://fake/v1/chat/completions", model="test")
@@ -79,14 +79,14 @@ class TestLLMConfig:
             return FakeResp()
 
         monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
-        monkeypatch.setattr("lore_mcp.preprocess.service.run_with_interrupt", lambda fn: fn())
+        monkeypatch.setattr("lorme.preprocess.service.run_with_interrupt", lambda fn: fn())
 
         config = LLMConfig(
             api_url="http://fake/v1/chat/completions",
             model="test",
             params={"top_p": 0.9, "seed": 42},
         )
-        from lore_mcp.preprocess.llm import call_llm
+        from lorme.preprocess.llm import call_llm
         call_llm(config, "hello")
         assert captured["body"]["top_p"] == 0.9
         assert captured["body"]["seed"] == 42
@@ -107,10 +107,10 @@ class TestLLMConfig:
             return FakeResp()
 
         monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
-        monkeypatch.setattr("lore_mcp.preprocess.service.run_with_interrupt", lambda fn: fn())
+        monkeypatch.setattr("lorme.preprocess.service.run_with_interrupt", lambda fn: fn())
 
         config = LLMConfig(api_url="http://fake/v1/chat/completions", model="test")
-        from lore_mcp.preprocess.llm import call_llm
+        from lorme.preprocess.llm import call_llm
         call_llm(config, "hello")
         assert "top_p" not in captured["body"]
         assert set(captured["body"].keys()) == {"model", "messages", "temperature", "max_tokens"}
@@ -119,7 +119,7 @@ class TestLLMConfig:
 class TestEnrichContext:
 
     def test_adds_context_paragraph(self, monkeypatch):
-        import lore_mcp.preprocess.llm as llm_mod
+        import lorme.preprocess.llm as llm_mod
         monkeypatch.setattr(llm_mod, "call_llm", lambda cfg, prompt: "This section covers authentication setup.")
 
         text = "## Authentication\n\nConfigure SSO with LDAP."
@@ -133,7 +133,7 @@ class TestEnrichContext:
         assert result == ""
 
     def test_with_llm_config(self, monkeypatch):
-        import lore_mcp.preprocess.llm as llm_mod
+        import lorme.preprocess.llm as llm_mod
         monkeypatch.setattr(llm_mod, "call_llm", lambda cfg, prompt: "context added")
 
         config = LLMConfig(api_url="http://fake", model="test", concurrency=4)
@@ -146,7 +146,7 @@ class TestEnrichContext:
 class TestEnrichQA:
 
     def test_appends_questions(self, monkeypatch):
-        import lore_mcp.preprocess.llm as llm_mod
+        import lorme.preprocess.llm as llm_mod
         monkeypatch.setattr(llm_mod, "call_llm", lambda cfg, prompt: "Q: How to configure SSO?\nQ: What is LDAP?")
 
         text = "## Authentication\n\nConfigure SSO with LDAP."
@@ -159,7 +159,7 @@ class TestEnrichQA:
 class TestEnrichMeta:
 
     def test_adds_summary_and_keywords(self, monkeypatch):
-        import lore_mcp.preprocess.llm as llm_mod
+        import lorme.preprocess.llm as llm_mod
         monkeypatch.setattr(
             llm_mod, "call_llm",
             lambda cfg, prompt: "Summary: This section explains SSO configuration.\n\nKeywords: SSO, LDAP",

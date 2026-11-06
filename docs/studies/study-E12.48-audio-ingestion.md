@@ -64,7 +64,7 @@ llm:
     timeout: 600
 ```
 
-## Integration in lore-mcp
+## Integration in lorme
 
 Audio files (.mp3, .wav, .ogg, .m4a, .flac, .wma)
 detected by `detect_format()` → `"audio"` backend.

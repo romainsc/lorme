@@ -6,15 +6,15 @@ from pathlib import Path
 
 from mcp.server import MCPServer
 
-from lore_mcp.embedder import Embedder
-from lore_mcp.store import ChunkStore
+from lorme.embedder import Embedder
+from lorme.store import ChunkStore
 
 logger = logging.getLogger(__name__)
 
 mcp = MCPServer(
-    "lore-mcp",
+    "lorme",
     instructions=(
-        "lore-mcp: semantic search over documents.\n"
+        "lorme: semantic search over documents.\n"
         "- Search: search_docs(query). Instant.\n"
         "- Build index: start_build(recipe, build_dir). Long-running, poll with get_task_status().\n"
         "- Preprocess: start_preprocess(recipe, build_dir). Long-running.\n"
@@ -36,17 +36,17 @@ _config = None
 
 
 def _get_config():
-    """Return the loaded LoreConfig (set during main())."""
+    """Return the loaded LormeConfig (set during main())."""
     global _config
     if _config is None:
-        from lore_mcp.config import LoreConfig
+        from lorme.config import LormeConfig
         from pathlib import Path as _Path
-        xdg = _Path.home() / ".config" / "lore-mcp" / "config.yaml"
+        xdg = _Path.home() / ".config" / "lorme" / "config.yaml"
         if xdg.exists():
-            _config = LoreConfig.from_file(str(xdg))
+            _config = LormeConfig.from_file(str(xdg))
         else:
-            _config = LoreConfig.defaults()
-    from lore_mcp.format_registry import get_format_registry
+            _config = LormeConfig.defaults()
+    from lorme.format_registry import get_format_registry
     get_format_registry(_config)
     return _config
 
@@ -122,7 +122,7 @@ def _get_embedder():
                         pass
                 if not already_healthy:
                     logger.info("_get_embedder: starting service %s", entry.get("name"))
-                    from lore_mcp.preprocess.service import start_service
+                    from lorme.preprocess.service import start_service
                     start_service(entry)
                 else:
                     logger.info("_get_embedder: service already healthy")
@@ -141,7 +141,7 @@ def _get_embedder():
                 logger.info("Auto-configured embedding model from DB: %s", model)
                 cfg.embedding_model = model
 
-            from lore_mcp.embedder import create_embedder
+            from lorme.embedder import create_embedder
             try:
                 _embedder = create_embedder(cfg, entry)
                 _last_embedder_error = ""
@@ -260,7 +260,7 @@ def list_indexed_sources(collection: str = "", detail: bool = False, format: str
     db_path = str(cfg.collection_db(col_name))
 
     if format:
-        from lore_mcp.metadata import generate_collection_json, generate_collection_bib, generate_collection_md
+        from lorme.metadata import generate_collection_json, generate_collection_bib, generate_collection_md
         if format == "json":
             return generate_collection_json(db_path)
         elif format == "bibtex":
@@ -347,7 +347,7 @@ def lint_source(path: str) -> str:
     Returns verdict, text density, heading structure, and
     quality score. Use before indexing to identify poor sources.
     """
-    from lore_mcp.lint import analyze_file
+    from lorme.lint import analyze_file
     p = Path(path)
     if not p.exists():
         return f"Error: file not found — {path}"
@@ -375,7 +375,7 @@ def list_pipeline_state() -> str:
     Shows checkpoint states stored in XDG_STATE_HOME,
     with hash, size, phase count, and source count.
     """
-    from lore_mcp.checkpoint import list_states
+    from lorme.checkpoint import list_states
     states = list_states()
     if not states:
         return "No pipeline states found."
@@ -397,7 +397,7 @@ def purge_pipeline_state(
     Specify hash to purge one state, older_than_days to purge
     old states, or purge_all=true to remove everything.
     """
-    from lore_mcp.checkpoint import purge_state_by_hash, purge_states
+    from lorme.checkpoint import purge_state_by_hash, purge_states
     if hash:
         ok = purge_state_by_hash(hash)
         return f"Purged {hash}" if ok else f"State {hash} not found"
@@ -409,7 +409,7 @@ def purge_pipeline_state(
 _service_start_time = 0
 _last_embedder_error = ""
 
-from lore_mcp.task_manager import TaskManager
+from lorme.task_manager import TaskManager
 _task_manager = TaskManager()
 
 
@@ -475,7 +475,7 @@ def get_service_status() -> str:
     uptime, last error, and embedder state.
     """
     import time
-    from lore_mcp.preprocess.service import _running_services, check_service
+    from lorme.preprocess.service import _running_services, check_service
 
     lines = []
     if _running_services:
@@ -505,16 +505,16 @@ def get_service_status() -> str:
 
 @mcp.tool()
 def get_version(deps: bool = False) -> str:
-    """Return lore-mcp version.
+    """Return lorme version.
 
     deps: include Python and dependency versions
     """
-    from lore_mcp import __version__
+    from lorme import __version__
     if not deps:
         return __version__
     import sys
     import importlib.metadata as _meta
-    lines = [f"lore-mcp {__version__}", f"Python {sys.version.split()[0]}"]
+    lines = [f"lorme {__version__}", f"Python {sys.version.split()[0]}"]
     for pkg in ["sqlite-vec", "puremagic", "sentence-transformers",
                  "docling", "trafilatura", "markitdown", "langdetect",
                  "charset-normalizer", "pyyaml"]:
@@ -613,7 +613,7 @@ def _build_config_yaml(config) -> str:
     if parse_section:
         sections["parse"] = parse_section
 
-    from lore_mcp.format_registry import get_format_registry
+    from lorme.format_registry import get_format_registry
     registry = get_format_registry()
     code_langs = {
         ext: info.get("parser", "fallback")
@@ -628,7 +628,7 @@ def _build_config_yaml(config) -> str:
 
 @mcp.tool()
 def get_config() -> str:
-    """Return active lore-mcp configuration in YAML format.
+    """Return active lorme configuration in YAML format.
 
     Shows: embedding model, chunk params, data directory, search
     defaults, registered LLM models, enrichment and parse settings.
@@ -698,14 +698,14 @@ def add_source(
 
     def _do_add():
         import copy
-        from lore_mcp.ingest import ingest_source
-        from lore_mcp.task_manager import report_progress
+        from lorme.ingest import ingest_source
+        from lorme.task_manager import report_progress
 
         try:
             # Phase 1-3: preprocess (parse, caption, enrich)
             if preprocess:
                 report_progress("Preprocessing (parse, caption, enrich)")
-                from lore_mcp.preprocess import preprocess_sources
+                from lorme.preprocess import preprocess_sources
                 prep_cfg = copy.copy(cfg)
                 prep_cfg.build_dir = str(col_dir)
                 prep_cfg.output_level = "quiet"
@@ -819,8 +819,8 @@ def add_sources(
     def _do_adds():
         try:
             import copy
-            from lore_mcp.preprocess import preprocess_sources
-            from lore_mcp.ingest import ingest_with_manifest
+            from lorme.preprocess import preprocess_sources
+            from lorme.ingest import ingest_with_manifest
 
             col_dir = cfg.collection_dir(col_name)
             db_path = str(cfg.collection_db(col_name))
@@ -896,7 +896,7 @@ def add_recipe(
     optimize: run optimization after indexing
     keep_intermediates: preserve intermediate files
     """
-    from lore_mcp.build import run_build
+    from lorme.build import run_build
 
     cfg = _get_config()
     if collection:
@@ -1008,7 +1008,7 @@ def add_directory(
     if not dir_path.is_dir():
         return f"Error: '{directory}' is not a directory"
 
-    from lore_mcp.format_registry import get_format_registry
+    from lorme.format_registry import get_format_registry
     registry = get_format_registry()
 
     sources = []
@@ -1082,7 +1082,7 @@ def preprocess_source(
 
     def _do_preprocess():
         try:
-            from lore_mcp.preprocess import preprocess_sources
+            from lorme.preprocess import preprocess_sources
             prep_cfg = copy.copy(cfg)
             prep_cfg.build_dir = str(col_dir)
             prep_cfg.output_level = "quiet"
@@ -1159,7 +1159,7 @@ def preprocess_sources_tool(
 
     def _do_preprocess():
         try:
-            from lore_mcp.preprocess import preprocess_sources
+            from lorme.preprocess import preprocess_sources
             col_dir = cfg.collection_dir(col_name)
             col_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1219,7 +1219,7 @@ def preprocess_directory(
     if not dir_path.is_dir():
         return f"Error: '{directory}' is not a directory"
 
-    from lore_mcp.format_registry import get_format_registry
+    from lorme.format_registry import get_format_registry
     registry = get_format_registry()
 
     sources = []
@@ -1260,7 +1260,7 @@ def start_eval(build_dir: str, num_questions: int = 50) -> str:
     build_dir: directory containing the .db to evaluate
     num_questions: number of evaluation questions to generate
     """
-    from lore_mcp.eval import EvalConfig, run_eval
+    from lorme.eval import EvalConfig, run_eval
 
     db_files = list(Path(build_dir).glob("*.db"))
     if not db_files:
@@ -1297,7 +1297,7 @@ def start_optimize(recipe: str, build_dir: str) -> str:
     recipe: path to YAML recipe file
     build_dir: output directory for optimized .db
     """
-    from lore_mcp.eval import run_optimize
+    from lorme.eval import run_optimize
 
     cfg = _get_config()
     prep_dir = Path(build_dir) / "prep"
@@ -1326,7 +1326,7 @@ def start_optimize(recipe: str, build_dir: str) -> str:
 
 
 def main():
-    """Entry point for the lore-mcp CLI command."""
+    """Entry point for the lorme CLI command."""
     import argparse
 
     parser = argparse.ArgumentParser(description="LORE — Local Offline Retrieval Engine for MCP")
@@ -1355,7 +1355,7 @@ def main():
     output_group.add_argument("--quiet", action="store_true", help="No console output")
     output_group.add_argument("--progress", action="store_true", help="Minimal milestone output")
     output_group.add_argument("--verbose", action="store_true", help="Detailed per-file output")
-    common.add_argument("--debug", action="count", default=0, help="Debug lore-mcp (-dd for all components)")
+    common.add_argument("--debug", action="count", default=0, help="Debug lorme (-dd for all components)")
     common.add_argument("--config", default=None, help="Config YAML file (required for models, API keys, etc.)")
     common.add_argument("--allow-download", action="store_true",
                         help="Allow downloads (models from HuggingFace + sources from URLs)")
@@ -1436,7 +1436,7 @@ def main():
     # state subcommand
     sub.add_parser("init", help="Generate a bootstrap config.yaml with all options documented")
 
-    version_parser = sub.add_parser("version", help="Show lore-mcp version")
+    version_parser = sub.add_parser("version", help="Show lorme version")
     version_parser.add_argument("--deps", action="store_true", help="Include dependency versions")
 
     state_parser = sub.add_parser("state", help="Manage pipeline state (intermediates)")
@@ -1449,18 +1449,18 @@ def main():
 
     # Load config
     global _config
-    from lore_mcp.config import LoreConfig
+    from lorme.config import LormeConfig
     config_path = getattr(args, "config", None)
     if config_path:
-        _config = LoreConfig.from_file(config_path)
+        _config = LormeConfig.from_file(config_path)
     else:
-        xdg_config = Path.home() / ".config" / "lore-mcp" / "config.yaml"
+        xdg_config = Path.home() / ".config" / "lorme" / "config.yaml"
         if xdg_config.exists():
-            _config = LoreConfig.from_file(str(xdg_config))
+            _config = LormeConfig.from_file(str(xdg_config))
         else:
-            _config = LoreConfig.defaults()
+            _config = LormeConfig.defaults()
 
-    from lore_mcp.progress import configure_logging, output_level_from_args
+    from lorme.progress import configure_logging, output_level_from_args
     output_level = output_level_from_args(args)
     configure_logging(output_level)
 
@@ -1494,7 +1494,7 @@ def _run_init():
     if target.exists():
         print(f"config.yaml already exists. Remove it first or use a different directory.")
         return
-    bootstrap = importlib.resources.files("lore_mcp").joinpath("bootstrap.yaml")
+    bootstrap = importlib.resources.files("lorme").joinpath("bootstrap.yaml")
     target.write_text(bootstrap.read_text(encoding="utf-8"), encoding="utf-8")
     print(f"Generated {target} with all options documented.")
     print(f"Uncomment and edit the options you need.")
@@ -1502,7 +1502,7 @@ def _run_init():
 
 def _run_state(args):
     """Manage pipeline state directories."""
-    from lore_mcp.checkpoint import list_states, purge_states, purge_state_by_hash
+    from lorme.checkpoint import list_states, purge_states, purge_state_by_hash
 
     if args.purge is not None:
         if getattr(args, "all", False):
@@ -1534,7 +1534,7 @@ def _run_state(args):
 
 def _run_eval(args):
     """Run RAG evaluation."""
-    from lore_mcp.eval import EvalConfig, run_eval
+    from lorme.eval import EvalConfig, run_eval
 
     embedder = _get_embedder()
     cfg = _get_config()
@@ -1556,9 +1556,9 @@ def _run_eval(args):
 
 
 def _load_embedders_from_config_or_args(args):
-    from lore_mcp.eval import parse_model_configs
-    from lore_mcp.build_config import BuildConfig
-    from lore_mcp.embedder import Embedder
+    from lorme.eval import parse_model_configs
+    from lorme.build_config import BuildConfig
+    from lorme.embedder import Embedder
 
     cfg = _get_config()
     build_config = None
@@ -1566,7 +1566,7 @@ def _load_embedders_from_config_or_args(args):
     if getattr(args, "config", None):
         build_config = BuildConfig.from_file(args.config)
 
-    from lore_mcp.embedder import create_embedder
+    from lorme.embedder import create_embedder
     embedders = None
     if cfg.embedding_models:
         embedders = {
@@ -1576,7 +1576,7 @@ def _load_embedders_from_config_or_args(args):
     else:
         entry = cfg.get_embedding_entry()
         if entry:
-            from lore_mcp.preprocess.service import start_service
+            from lorme.preprocess.service import start_service
             start_service(entry)
         emb = create_embedder(cfg, entry)
         embedders = {emb.model_name: emb}
@@ -1586,7 +1586,7 @@ def _load_embedders_from_config_or_args(args):
 
 def _run_optimize(args, output_level="default"):
     """Run chunking parameter optimization."""
-    from lore_mcp.eval import run_optimize
+    from lorme.eval import run_optimize
 
     docs_dir = args.docs_dir or (args.source_dir if args.source_dir else None)
     embedders, build_config = _load_embedders_from_config_or_args(args)
@@ -1628,7 +1628,7 @@ def _run_optimize(args, output_level="default"):
 
 def _run_build(args, output_level="default"):
     """Run the full build workflow."""
-    from lore_mcp.build import run_build, validate_models
+    from lorme.build import run_build, validate_models
 
     has_preprocess = getattr(args, "preprocess", False)
 
@@ -1636,7 +1636,7 @@ def _run_build(args, output_level="default"):
         embedders = None
         build_config = None
         if getattr(args, "config", None):
-            from lore_mcp.build_config import BuildConfig
+            from lorme.build_config import BuildConfig
             build_config = BuildConfig.from_file(args.config)
     else:
         embedders, build_config = _load_embedders_from_config_or_args(args)
@@ -1674,7 +1674,7 @@ def _run_build(args, output_level="default"):
 
     recipe_path = args.recipe
     if not recipe_path:
-        from lore_mcp.recipe import scan_directory
+        from lorme.recipe import scan_directory
         import yaml as _yaml
         scan_base = _orig_dir or docs_dir
         scanned = scan_directory(scan_base)
@@ -1717,12 +1717,12 @@ def _run_build(args, output_level="default"):
 def _run_lint(args):
     """Run source quality analysis."""
     import sys
-    from lore_mcp.lint import lint_sources, format_lint_report
+    from lorme.lint import lint_sources, format_lint_report
 
     has_config = getattr(args, "config", None)
     if not has_config:
         import logging
-        logging.getLogger("lore_mcp").warning(
+        logging.getLogger("lorme").warning(
             "No --config: only text heuristics applied. "
             "Add --config for heading/content similarity scoring."
         )
@@ -1743,8 +1743,8 @@ def _run_lint(args):
 
 def _run_preprocess(args):
     """Run source preprocessing."""
-    from lore_mcp.preprocess import preprocess_sources
-    from lore_mcp.progress import output_level_from_args
+    from lorme.preprocess import preprocess_sources
+    from lorme.progress import output_level_from_args
 
     cfg = _get_config()
 
@@ -1803,7 +1803,7 @@ def _run_preprocess(args):
 
     recipe_path = args.recipe
     if not recipe_path:
-        from lore_mcp.recipe import scan_directory
+        from lorme.recipe import scan_directory
         import yaml as _yaml
         scan_base = cfg.orig_dir
         out_base = cfg.build_dir
@@ -1885,8 +1885,8 @@ def _run_preprocess(args):
 
 def _run_enrich(args):
     """Run standalone LLM enrichment on preprocessed sources."""
-    from lore_mcp.recipe import parse_recipe
-    from lore_mcp.preprocess.enrich import enrich_context, enrich_qa
+    from lorme.recipe import parse_recipe
+    from lorme.preprocess.enrich import enrich_context, enrich_qa
 
     cfg = _get_config()
     modes = args.enrich.split(",")

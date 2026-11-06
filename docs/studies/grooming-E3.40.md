@@ -2,7 +2,7 @@
 
 ## Context
 
-No MCP tool currently exposes lore-mcp's active
+No MCP tool currently exposes lorme's active
 configuration. An LLM using the server has no
 way to know: which embedding model is active,
 what chunk params are configured, where the
@@ -36,9 +36,9 @@ def get_config() -> str:
 ### Output format: YAML with section comments
 
 ```yaml
-# Active lore-mcp configuration
+# Active lorme configuration
 database:
-  dir: /home/user/.local/share/lore-mcp
+  dir: /home/user/.local/share/lorme
   default_collection: default
 
 embedding:
@@ -82,7 +82,7 @@ Any field matching `*key*`, `*token*`,
 
 ### Implementation
 
-1. Read `LoreConfig` via `_get_config()`
+1. Read `LormeConfig` via `_get_config()`
    (already available in server.py)
 2. Build a dict from config attributes
 3. Mask secrets
@@ -122,7 +122,7 @@ Single MVP — the tool is small.
 
 ## Dependencies
 
-None (LoreConfig already exists).
+None (LormeConfig already exists).
 
 ## Risks
 

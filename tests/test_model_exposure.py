@@ -5,12 +5,12 @@ which embedding model was used to create it.
 """
 
 from conftest import DIMS, make_embedding
-from lore_mcp.store import create_tables, insert_chunk, open_db
+from lorme.store import create_tables, insert_chunk, open_db
 
 
 class TestAutoModelFromDb:
     def test_search_single_collection_uses_stored_model(self, tmp_path):
-        """When querying a third-party .db, lore-mcp should know the model."""
+        """When querying a third-party .db, lorme should know the model."""
         db_path = str(tmp_path / "third-party.db")
         db = open_db(db_path)
         create_tables(db, "BAAI/bge-m3", DIMS)

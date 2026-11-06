@@ -54,7 +54,7 @@ modules restructured.
 | File | Fix |
 |------|-----|
 | `configuration.md` | Remove `LORE_*` env var sections. Update `manifest.py` → `recipe.py`. Update CLI args (deprecated `--docs-base-dir`, `--output-dir`) |
-| `preprocessing.md` | Update ownership scope (lore-mcp now covers all 6 steps). Fix `manifest.py` → `recipe.py`. Remove `MD_SEPARATORS` reference |
+| `preprocessing.md` | Update ownership scope (lorme now covers all 6 steps). Fix `manifest.py` → `recipe.py`. Remove `MD_SEPARATORS` reference |
 
 ## DoD
 

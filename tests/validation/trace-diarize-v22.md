@@ -24,7 +24,7 @@ Task: 9d534de5, 3062s (~51 min), file_count: 1.
 - Résultat: `workspace-validation/build/test-diarize-v22/prep/Réunion suivi école sophie 6 octobre 2026.md`
 - Phase1-diarize: `workspace-validation/build/test-diarize-v22/.work/Réunion suivi école sophie 6 octobre 2026.phase1-diarize.md`
 - Phase3-enrich: `workspace-validation/build/test-diarize-v22/.work/Réunion suivi école sophie 6 octobre 2026.phase3-enrich.md`
-- Stderr log: `/tmp/lore-mcp-stderr.log`
+- Stderr log: `/tmp/lorme-stderr.log`
 
 ## Problème 1: Attribution speaker incorrecte
 

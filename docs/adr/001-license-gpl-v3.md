@@ -6,7 +6,7 @@
 
 ## Context
 
-lore-mcp is a standalone MCP server and CLI tool for local semantic search over technical documents. It is not a library — no third-party code links against it. It runs as a separate process communicating with MCP clients (Claude Code, Claude Desktop, Cursor, etc.) via stdio or HTTP.
+lorme is a standalone MCP server and CLI tool for local semantic search over technical documents. It is not a library — no third-party code links against it. It runs as a separate process communicating with MCP clients (Claude Code, Claude Desktop, Cursor, etc.) via stdio or HTTP.
 
 The project needs a license that:
 1. Protects users against software patent claims
@@ -113,7 +113,7 @@ The "or later" clause follows the FSF recommendation to allow future GPL version
 The license was migrated from GPL-3.0-or-later to
 **AGPL-3.0-or-later** per openshift cross-workspace
 sync decision. The AGPL adds section 13 (Remote
-Network Interaction): if someone forks lore-mcp
+Network Interaction): if someone forks lorme
 and deploys it as a network service, they must
 provide the source code to users of that service.
 

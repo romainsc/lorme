@@ -230,7 +230,7 @@ existants. Il délègue au registry.
 
 ### Itération 1 — FormatRegistry classe
 
-- `src/lore_mcp/format_registry.py`
+- `src/lorme/format_registry.py`
 - Défauts intégrés + détection tree-sitter
 - API : `detect()`, `is_supported()`,
   `has_structural_parser()`, `get_treesitter()`,
@@ -243,7 +243,7 @@ existants. Il délègue au registry.
 ### Itération 2 — Config overrides
 
 - `parse.formats` dans config.yaml
-- `format_overrides` dans LoreConfig
+- `format_overrides` dans LormeConfig
 - `apply_config()` avec validation
 - `get_config()` expose les formats
 

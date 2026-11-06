@@ -4,7 +4,7 @@ import time
 import threading
 import pytest
 
-from lore_mcp.task_manager import TaskManager, TaskInfo, ModelRegistry
+from lorme.task_manager import TaskManager, TaskInfo, ModelRegistry
 
 
 class TestTaskStart:
@@ -294,7 +294,7 @@ class TestCancelRunningTask:
     """E12.111: cancel_task must stop running tasks."""
 
     def test_cancel_running_task(self):
-        from lore_mcp.task_manager import check_cancelled
+        from lorme.task_manager import check_cancelled
 
         blocker = threading.Event()
 

@@ -1,7 +1,7 @@
 # Architecture
 
 This document describes the internal architecture
-of lore-mcp: why each design decision was made,
+of lorme: why each design decision was made,
 how the components interact, and how the code
 implements the design. For configuration
 reference, see [`configuration.md`](configuration.md).
@@ -57,7 +57,7 @@ from the code.
 
 ## Store layer
 
-**Module:** `src/lore_mcp/store.py`
+**Module:** `src/lorme/store.py`
 
 ### Why sqlite-vec?
 
@@ -98,7 +98,7 @@ A regular `chunks` table stores all metadata.
 The two are linked by SQLite's implicit `rowid`.
 
 This is the standard sqlite-vec pattern, not
-a lore-mcp invention. The alternative — using
+a lorme invention. The alternative — using
 vec0 auxiliary columns (`+content text`) — was
 rejected because auxiliary columns cannot be
 used in WHERE clauses and have a 16-column limit.
@@ -274,7 +274,7 @@ prevent resource leaks.
 
 ## Embedding layer
 
-**Module:** `src/lore_mcp/embedder.py`
+**Module:** `src/lorme/embedder.py`
 
 ### Why sentence-transformers?
 
@@ -421,7 +421,7 @@ cosine distance is not meaningful.
 
 ## MCP server
 
-**Module:** `src/lore_mcp/server.py`
+**Module:** `src/lorme/server.py`
 
 ### Why MCPServer (MCP SDK v2)?
 
@@ -429,7 +429,7 @@ MCPServer (formerly FastMCP in v1) is the official
 Anthropic Python SDK for MCP servers. It handles
 protocol negotiation, tool registration, and
 transport (stdio, SSE, streamable-http). Using it
-means lore-mcp is compatible with any MCP client
+means lorme is compatible with any MCP client
 without custom protocol code.
 
 The migration from FastMCP (v1) to MCPServer (v2)
@@ -473,7 +473,7 @@ visible.
 
 The server stores collections under a data
 directory configured via `database.dir` in
-`config.yaml` (default: `~/.local/share/lore-mcp`).
+`config.yaml` (default: `~/.local/share/lorme`).
 Each collection is a `.db` file. Connections are
 cached per collection in `_db_cache`.
 
@@ -503,7 +503,7 @@ def _get_embedder():
 
 ## Collections layer
 
-**Module:** `src/lore_mcp/collections.py`
+**Module:** `src/lorme/collections.py`
 
 See also: [`adr/004-multi-collection.md`](adr/004-multi-collection.md)
 
@@ -573,7 +573,7 @@ corrupt `.db` files are silently skipped.
 
 ## Preprocessing pipeline
 
-**Module:** `src/lore_mcp/preprocess/`
+**Module:** `src/lorme/preprocess/`
 
 The preprocess module converts raw sources to
 clean markdown and produces an enriched recipe.
@@ -620,20 +620,20 @@ resolve → fetch URL → detect format (FormatRegistry)
 
 All parse dependencies (trafilatura, docling,
 markitdown, tree-sitter) are optional. Install
-with `pip install lore-mcp[parse]`.
+with `pip install lorme[parse]`.
 
 ### Configuration
 
-**Module:** `src/lore_mcp/config.py`
+**Module:** `src/lorme/config.py`
 
-`LoreConfig` dataclass reads a single `config.yaml`.
+`LormeConfig` dataclass reads a single `config.yaml`.
 No environment variable fallback — everything comes
 from the config file. Loaded once at CLI startup,
 passed to all modules.
 
 ## Ingestion pipeline
 
-**Module:** `src/lore_mcp/ingest.py`
+**Module:** `src/lorme/ingest.py`
 
 ### Pipeline stages
 
@@ -742,8 +742,8 @@ decide whether the partial index is acceptable.
 
 ## Bibliographic metadata
 
-**Modules:** `src/lore_mcp/recipe.py`,
-`src/lore_mcp/metadata.py`
+**Modules:** `src/lorme/recipe.py`,
+`src/lorme/metadata.py`
 
 ### Why store metadata in the database?
 
@@ -782,7 +782,7 @@ constraint, for backward compatibility with
 ### Recipe-driven ingestion
 
 The recipe YAML file is the primary input for
-the lore-mcp workflow. Sources are identified
+the lorme workflow. Sources are identified
 by their metadata (title, url, license, author).
 `file` and `path` are operational details,
 generated if absent.
@@ -805,7 +805,7 @@ Field cascade (`recipe.py:resolve_source_fields`):
 fields (title, author, license) extracted from
 document after conversion if not in the recipe.
 
-`lore-mcp preprocess` reads the recipe, converts
+`lorme preprocess` reads the recipe, converts
 and cleans sources, extracts metadata, and writes
 an enriched recipe (`-prep` suffix). The enriched
 recipe is used by `lint` and `build`.
@@ -855,7 +855,7 @@ See `server.py:format_search_results()`.
 
 ## RAG evaluation
 
-**Module:** `src/lore_mcp/eval.py`
+**Module:** `src/lorme/eval.py`
 
 ### Why integrated evaluation?
 
@@ -863,7 +863,7 @@ A Platform component should provide tools to
 validate its own output quality. Without
 integrated evaluation, consumers must build
 ad hoc pipelines with SDG Hub, RAGAS, and custom
-scripts. lore-mcp provides this as a built-in
+scripts. lorme provides this as a built-in
 capability. Note that source preprocessing has
 ~60% impact on quality — see
 [`preprocessing.md`](preprocessing.md).
@@ -901,13 +901,13 @@ Two strategies, in priority order
 
 ### Two modes
 
-**`lore-mcp eval`** — evaluate an existing index:
+**`lorme eval`** — evaluate an existing index:
 1. Generate N questions (heading-based or extractive)
 2. For each: embed query, search, score contexts
 3. Output JSON report with per-question and
    aggregate scores
 
-**`lore-mcp optimize`** — find optimal parameters:
+**`lorme optimize`** — find optimal parameters:
 1. Vary chunk_size (512, 1024, 2048), overlap
    (64, 128), top_k (3, 5, 10)
 2. For each config: index, retrieve, score
@@ -933,7 +933,7 @@ Relevance is determined by word overlap ≥
 `RELEVANCE_THRESHOLD` (0.3). This works without
 any LLM or external dependency.
 
-When RAGAS is installed (`pip install lore-mcp[eval]`),
+When RAGAS is installed (`pip install lorme[eval]`),
 LLM-based metrics (faithfulness, context_recall,
 answer_correctness) are available. A
 `_RagasEmbeddingsWrapper` adapts the current
@@ -971,7 +971,7 @@ output report for traceability.
 
 ### Optimize with recipe
 
-`lore-mcp optimize` with a recipe file
+`lorme optimize` with a recipe file
 uses `ingest_with_manifest` for each tested
 configuration, preserving bibliographic metadata
 (title, author, license) in the temporary `.db`
@@ -1027,11 +1027,11 @@ See `eval.py:compute_embedding_metrics()`,
 
 ## Build workflow
 
-**Module:** `src/lore_mcp/build.py`
+**Module:** `src/lorme/build.py`
 
 ### Single command pipeline
 
-`lore-mcp build` combines all components into
+`lorme build` combines all components into
 one command:
 
 ```
@@ -1071,7 +1071,7 @@ See `build.py:run_build()` and
 
 ## Output management
 
-**Module:** `src/lore_mcp/progress.py`
+**Module:** `src/lorme/progress.py`
 
 Five output levels, controlled by mutually
 exclusive CLI flags. `configure_logging()` sets
@@ -1083,7 +1083,7 @@ log levels accordingly.
 | progress | `--progress` | Single `\r` line: global %, ETA, phase n/total, phase %, model name |
 | default | *(none)* | Boxed header, sections, results table with ★, summary |
 | verbose | `--verbose` | Default + questions table (truncated), per-iteration milestones with scores |
-| debug | `--debug` | Verbose + HTTP request content (URL, model, batch, texts), search results, scores. Only `lore_mcp` loggers at DEBUG; httpx at INFO; httpcore and third-party libs at WARNING |
+| debug | `--debug` | Verbose + HTTP request content (URL, model, batch, texts), search results, scores. Only `lorme` loggers at DEBUG; httpx at INFO; httpcore and third-party libs at WARNING |
 
 ### ProgressReporter
 
@@ -1109,7 +1109,7 @@ Each phase has its own debug output and summary.
 
 ## Resumable pipeline (E12.63–67)
 
-**Module:** `src/lore_mcp/checkpoint.py`
+**Module:** `src/lorme/checkpoint.py`
 
 Pipeline runs are checkpointed so they can
 resume after interruption (Ctrl+C, crash, reboot).
@@ -1117,7 +1117,7 @@ resume after interruption (Ctrl+C, crash, reboot).
 ### Checkpoint mechanism
 
 Each pipeline run creates a state directory in
-`~/.local/state/lore-mcp/<hash>/` based on the
+`~/.local/state/lorme/<hash>/` based on the
 recipe content hash. The `checkpoint.json`
 inside tracks:
 - Phase completion status (done/in_progress)
@@ -1164,7 +1164,7 @@ prep_base_dir/                 (--prep-dir)
 ├── <collection>/              (basename of docs-base-dir)
 │   ├── source1.md             (final files)
 │   └── source2.pdf.md
-~/.local/state/lore-mcp/<hash>/  (intermediates)
+~/.local/state/lorme/<hash>/  (intermediates)
 ├── phase1-report.json
 ├── source1.phase1-parse.md
 ├── source1.stt.json
@@ -1216,11 +1216,11 @@ Enrichment prompts are loaded from a cascade:
 3. Distributed `prompts.yaml` (shipped with package)
 4. Minimal EN fallback
 
-See `src/lore_mcp/prompts.yaml` for defaults.
+See `src/lorme/prompts.yaml` for defaults.
 
 ## Complementary with Codebase-Memory
 
-lore-mcp handles document RAG (semantic search
+lorme handles document RAG (semantic search
 over text content). For source code intelligence,
 use [Codebase-Memory](https://github.com/DeusData/codebase-memory-mcp)
 (MIT) — a complementary MCP server that provides

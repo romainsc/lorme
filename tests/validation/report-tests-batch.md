@@ -4,7 +4,7 @@ Dernière mise à jour : 2026-10-07
 
 ## Résumé
 
-Deux sessions de validation exhaustive du pipeline lore-mcp via MCP.
+Deux sessions de validation exhaustive du pipeline lorme via MCP.
 - Session 1 (2026-10-06) : 24 bugs identifiés (E12.101-E12.123), 18 corrigés.
   5 tests PASS, 1 partiel.
 - Session 2 (2026-10-06/07) : 5 bugs supplémentaires (E12.128-E12.133), tous corrigés.
@@ -20,7 +20,7 @@ Deux sessions de validation exhaustive du pipeline lore-mcp via MCP.
 - Collection: reval-nonenrich
 
 ### E2.14 — Project scan via add_directory ✓
-- add_directory("src/lore_mcp", enrich="none", include_pattern="*.py")
+- add_directory("src/lorme", enrich="none", include_pattern="*.py")
 - 28 fichiers, 926 chunks (vs 856 — code a grandi), 22 skippés (hash match)
 - search_docs score 0.875
 - Durée: 64s
@@ -49,7 +49,7 @@ Deux sessions de validation exhaustive du pipeline lore-mcp via MCP.
 - Collection: reval-code-py
 
 ### E2.16 — Scan + enrichissement code ✓ (NOUVEAU)
-- add_directory("src/lore_mcp", enrich="context,qa,meta", include_pattern="*.py")
+- add_directory("src/lorme", enrich="context,qa,meta", include_pattern="*.py")
 - 27 fichiers, 1316 chunks enrichis, 2 skippés (hash match), 0 erreurs
 - search_docs: pipeline 0.88, MCP tools 0.87
 - Durée: 716s (~12 min)

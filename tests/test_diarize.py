@@ -8,7 +8,7 @@ class TestAlignSpeakers:
     """Align STT segments with diarization speaker turns."""
 
     def test_single_speaker(self):
-        from lore_mcp.preprocess.diarize import align_speakers
+        from lorme.preprocess.diarize import align_speakers
 
         segments = [
             {"text": "Hello world", "start": 0.0, "end": 1.5},
@@ -23,7 +23,7 @@ class TestAlignSpeakers:
         assert result[1]["speaker"] == "SPEAKER_00"
 
     def test_two_speakers(self):
-        from lore_mcp.preprocess.diarize import align_speakers
+        from lorme.preprocess.diarize import align_speakers
 
         segments = [
             {"text": "Hello I'm Alice", "start": 0.5, "end": 1.5},
@@ -41,13 +41,13 @@ class TestAlignSpeakers:
         assert result[2]["speaker"] == "SPEAKER_00"
 
     def test_empty_segments(self):
-        from lore_mcp.preprocess.diarize import align_speakers
+        from lorme.preprocess.diarize import align_speakers
 
         result = align_speakers([], [{"speaker": "SPEAKER_00", "start": 0, "end": 5}])
         assert result == []
 
     def test_empty_turns(self):
-        from lore_mcp.preprocess.diarize import align_speakers
+        from lorme.preprocess.diarize import align_speakers
 
         segments = [{"text": "Hello", "start": 0.0, "end": 1.0}]
         result = align_speakers(segments, [])
@@ -55,7 +55,7 @@ class TestAlignSpeakers:
         assert result[0].get("speaker", "unknown") == "unknown"
 
     def test_segment_spans_two_turns(self):
-        from lore_mcp.preprocess.diarize import align_speakers
+        from lorme.preprocess.diarize import align_speakers
 
         segments = [
             {"text": "Long sentence spanning two speakers", "start": 1.5, "end": 3.5},
@@ -73,7 +73,7 @@ class TestFormatDiarizedMarkdown:
     """Format aligned segments as markdown with speaker headings."""
 
     def test_basic_format(self):
-        from lore_mcp.preprocess.diarize import format_diarized_markdown
+        from lorme.preprocess.diarize import format_diarized_markdown
 
         segments = [
             {"text": "Hello I'm Alice", "start": 0.5, "speaker": "SPEAKER_00"},
@@ -87,7 +87,7 @@ class TestFormatDiarizedMarkdown:
         assert "Hello I'm Alice" in md
 
     def test_consecutive_same_speaker_merged(self):
-        from lore_mcp.preprocess.diarize import format_diarized_markdown
+        from lorme.preprocess.diarize import format_diarized_markdown
 
         segments = [
             {"text": "First sentence.", "start": 0.5, "speaker": "SPEAKER_00"},
@@ -103,14 +103,14 @@ class TestDiarizeAudioGraceful:
     """diarize_audio skips gracefully when pyannote not installed."""
 
     def test_skip_without_pyannote(self):
-        from lore_mcp.preprocess.diarize import diarize_audio
+        from lorme.preprocess.diarize import diarize_audio
 
         turns, error = diarize_audio("/fake/audio.mp3", "fake-model")
         assert turns == []
         assert error  # should have an error message
 
     def test_error_surfaced_on_failure(self):
-        from lore_mcp.preprocess.diarize import diarize_audio
+        from lorme.preprocess.diarize import diarize_audio
 
         turns, error = diarize_audio("/nonexistent/audio.mp3", "diarize")
         assert turns == []
@@ -121,8 +121,8 @@ class TestEnrichSpeakerId:
     """enrich_speaker_id replaces anonymous labels with LLM-inferred names."""
 
     def test_with_hint(self):
-        from lore_mcp.preprocess.enrich import enrich_speaker_id
-        from lore_mcp.preprocess.llm import LLMConfig
+        from lorme.preprocess.enrich import enrich_speaker_id
+        from lorme.preprocess.llm import LLMConfig
 
         text = (
             "# Meeting\n\n"
@@ -133,7 +133,7 @@ class TestEnrichSpeakerId:
         )
         mock_llm = LLMConfig(api_url="http://fake", model="fake")
 
-        with patch("lore_mcp.preprocess.enrich.call_llm") as mock_call:
+        with patch("lorme.preprocess.enrich.call_llm") as mock_call:
             mock_call.return_value = '{"Speaker 1": "Alice", "Speaker 2": "Bob"}'
             result = enrich_speaker_id(
                 text, speakers_hint="Alice presents, Bob asks questions",
@@ -144,8 +144,8 @@ class TestEnrichSpeakerId:
         assert "Speaker 1" not in result
 
     def test_without_hint(self):
-        from lore_mcp.preprocess.enrich import enrich_speaker_id
-        from lore_mcp.preprocess.llm import LLMConfig
+        from lorme.preprocess.enrich import enrich_speaker_id
+        from lorme.preprocess.llm import LLMConfig
 
         text = (
             "## Speaker 1 [00:00:00]\n\n"
@@ -155,14 +155,14 @@ class TestEnrichSpeakerId:
         )
         mock_llm = LLMConfig(api_url="http://fake", model="fake")
 
-        with patch("lore_mcp.preprocess.enrich.call_llm") as mock_call:
+        with patch("lorme.preprocess.enrich.call_llm") as mock_call:
             mock_call.return_value = '{"Speaker 1": "John", "Speaker 2": "Speaker 2"}'
             result = enrich_speaker_id(text, llm=mock_llm)
         assert "John" in result
 
     def test_no_speaker_labels_passthrough(self):
-        from lore_mcp.preprocess.enrich import enrich_speaker_id
-        from lore_mcp.preprocess.llm import LLMConfig
+        from lorme.preprocess.enrich import enrich_speaker_id
+        from lorme.preprocess.llm import LLMConfig
 
         text = "## Section\n\nRegular document without speakers.\n"
         mock_llm = LLMConfig(api_url="http://fake", model="fake")
@@ -174,7 +174,7 @@ class TestExtractSpeakerAudio:
     """E12.138: extract and concat audio segments per speaker."""
 
     def test_groups_by_speaker(self):
-        from lore_mcp.preprocess.diarize import extract_speaker_audio
+        from lorme.preprocess.diarize import extract_speaker_audio
         from unittest.mock import patch
         import subprocess
 
@@ -184,7 +184,7 @@ class TestExtractSpeakerAudio:
             {"speaker": "S01", "start": 5.0, "end": 8.0},
         ]
 
-        with patch("lore_mcp.preprocess.diarize.subprocess.run") as mock_run:
+        with patch("lorme.preprocess.diarize.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess([], 0)
             result = extract_speaker_audio("/fake/audio.mp3", turns)
 
@@ -196,14 +196,14 @@ class TestExtractSpeakerAudio:
         assert s01_segs[1] == (5.0, 8.0, 3.0, 6.0)
 
     def test_empty_turns(self):
-        from lore_mcp.preprocess.diarize import extract_speaker_audio
+        from lorme.preprocess.diarize import extract_speaker_audio
 
         result = extract_speaker_audio("/fake/audio.mp3", [])
         assert result == {}
 
     def test_skipped_short_segments_contiguous_labels(self):
         """E12.148: segments < 0.05s must not break ffmpeg filter labels."""
-        from lore_mcp.preprocess.diarize import extract_speaker_audio
+        from lorme.preprocess.diarize import extract_speaker_audio
         from unittest.mock import patch, call
         import subprocess
 
@@ -215,7 +215,7 @@ class TestExtractSpeakerAudio:
             {"speaker": "S01", "start": 5.1, "end": 7.0},
         ]
 
-        with patch("lore_mcp.preprocess.diarize.subprocess.run") as mock_run:
+        with patch("lorme.preprocess.diarize.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess([], 0)
             result = extract_speaker_audio("/fake/audio.mp3", turns)
 
@@ -236,12 +236,12 @@ class TestExtractSpeakerAudio:
         assert "concat=n=3" in filter_complex
 
     def test_ffmpeg_failure_skips_speaker(self):
-        from lore_mcp.preprocess.diarize import extract_speaker_audio
+        from lorme.preprocess.diarize import extract_speaker_audio
         from unittest.mock import patch
 
         turns = [{"speaker": "S01", "start": 0.0, "end": 3.0}]
 
-        with patch("lore_mcp.preprocess.diarize.subprocess.run", side_effect=FileNotFoundError("ffmpeg not found")):
+        with patch("lorme.preprocess.diarize.subprocess.run", side_effect=FileNotFoundError("ffmpeg not found")):
             result = extract_speaker_audio("/fake/audio.mp3", turns)
 
         assert result == {}
@@ -251,7 +251,7 @@ class TestReconstructTimeline:
     """E12.138: reconstruct timeline from per-speaker STT."""
 
     def test_basic_reconstruction(self):
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
 
         turns = [
             {"speaker": "S01", "start": 0.0, "end": 3.0},
@@ -284,7 +284,7 @@ class TestReconstructTimeline:
 
     def test_no_duplication_with_single_stt_segment(self):
         """E12.150: per-speaker STT must not duplicate text."""
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
 
         s01_text = "Alpha bravo charlie delta echo foxtrot golf hotel india juliet"
         s02_text = "One two three four five six seven eight nine ten"
@@ -320,7 +320,7 @@ class TestReconstructTimeline:
 
     def test_word_boundary_splitting(self):
         """E12.151: text must split at word boundaries, not mid-word."""
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
 
         turns = [
             {"speaker": "S01", "start": 0.0, "end": 5.0},
@@ -343,7 +343,7 @@ class TestReconstructTimeline:
 
     def test_merges_consecutive_same_speaker_turns(self):
         """E12.151: consecutive turns from same speaker produce one section."""
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
         import re
 
         turns = [
@@ -365,7 +365,7 @@ class TestReconstructTimeline:
 
     def test_many_short_turns_merged_into_paragraphs(self):
         """E12.152: 20 short turns (1s each) from 2 speakers must produce ~4 sections, not 20."""
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
         import re
 
         turns = []
@@ -388,7 +388,7 @@ class TestReconstructTimeline:
 
     def test_stt_heading_not_in_output(self):
         """E12.151: STT heading markers must not leak into output."""
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
 
         turns = [
             {"speaker": "S01", "start": 0.0, "end": 10.0},
@@ -406,7 +406,7 @@ class TestReconstructTimeline:
 
     def test_speaker_always_in_heading(self):
         """E12.150: every heading must include a speaker identifier."""
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
         import re
 
         s01_text = "Hello world from speaker one part two"
@@ -431,7 +431,7 @@ class TestReconstructTimeline:
 
     def test_proportional_distribution(self):
         """E12.150: text distributed proportionally across turns."""
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
 
         turns = [
             {"speaker": "S01", "start": 0.0, "end": 5.0},
@@ -450,7 +450,7 @@ class TestReconstructTimeline:
         assert "B" in text
 
     def test_empty_per_speaker(self):
-        from lore_mcp.preprocess.diarize import reconstruct_timeline
+        from lorme.preprocess.diarize import reconstruct_timeline
 
         turns = [{"speaker": "S01", "start": 0.0, "end": 3.0}]
         md = reconstruct_timeline(turns, {}, "Empty")
@@ -461,31 +461,31 @@ class TestDiarizationDevice:
     """E12.137: diarization_device config."""
 
     def test_resolve_cpu(self):
-        from lore_mcp.preprocess.diarize import _resolve_device
+        from lorme.preprocess.diarize import _resolve_device
         assert _resolve_device("cpu") == "cpu"
 
     def test_resolve_gpu(self):
-        from lore_mcp.preprocess.diarize import _resolve_device
+        from lorme.preprocess.diarize import _resolve_device
         assert _resolve_device("gpu") == "gpu"
 
     def test_resolve_cuda(self):
-        from lore_mcp.preprocess.diarize import _resolve_device
+        from lorme.preprocess.diarize import _resolve_device
         assert _resolve_device("cuda") == "gpu"
 
     def test_config_diarization_device(self):
-        from lore_mcp.config import LoreConfig
-        cfg = LoreConfig.defaults()
+        from lorme.config import LormeConfig
+        cfg = LormeConfig.defaults()
         assert cfg.diarization_device == "auto"
 
     def test_config_from_yaml(self, tmp_path):
         import yaml
-        from lore_mcp.config import LoreConfig
+        from lorme.config import LormeConfig
 
         config_file = tmp_path / "config.yaml"
         config_file.write_text(yaml.dump({
             "parse": {"diarization_device": "gpu"},
         }))
-        cfg = LoreConfig.from_file(str(config_file))
+        cfg = LormeConfig.from_file(str(config_file))
         assert cfg.diarization_device == "gpu"
 
 
@@ -493,17 +493,17 @@ class TestConfigDiarizationModel:
     """Config reads diarization_model from parse section."""
 
     def test_config_default_empty(self):
-        from lore_mcp.config import LoreConfig
-        cfg = LoreConfig.defaults()
+        from lorme.config import LormeConfig
+        cfg = LormeConfig.defaults()
         assert cfg.diarization_model == ""
 
     def test_config_from_yaml(self, tmp_path):
         import yaml
-        from lore_mcp.config import LoreConfig
+        from lorme.config import LormeConfig
 
         config_file = tmp_path / "config.yaml"
         config_file.write_text(yaml.dump({
             "parse": {"diarization_model": "pyannote-diarize"},
         }))
-        cfg = LoreConfig.from_file(str(config_file))
+        cfg = LormeConfig.from_file(str(config_file))
         assert cfg.diarization_model == "pyannote-diarize"

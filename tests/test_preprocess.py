@@ -1,18 +1,18 @@
-"""Tests for lore_mcp.preprocess. See docs/preprocessing.md."""
+"""Tests for lorme.preprocess. See docs/preprocessing.md."""
 
 import pytest
 import yaml
 
-from lore_mcp.config import LoreConfig
-from lore_mcp.preprocess import clean_text, preprocess_file, preprocess_sources
-from lore_mcp.preprocess import _phase1_worker
+from lorme.config import LormeConfig
+from lorme.preprocess import clean_text, preprocess_file, preprocess_sources
+from lorme.preprocess import _phase1_worker
 
 
-def _cfg(**overrides) -> LoreConfig:
-    """Build a LoreConfig with force=True and quiet output for tests."""
+def _cfg(**overrides) -> LormeConfig:
+    """Build a LormeConfig with force=True and quiet output for tests."""
     defaults = {"force": True, "output_level": "quiet"}
     defaults.update(overrides)
-    return LoreConfig(**defaults)
+    return LormeConfig(**defaults)
 
 
 class TestCleanText:
@@ -461,7 +461,7 @@ class TestDirectoryAsCollection:
             {"file": "docs/special.md", "lang": "fra", "title": "Spécial"},
         ])
 
-        from lore_mcp.recipe import parse_recipe, expand_directory_entries
+        from lorme.recipe import parse_recipe, expand_directory_entries
         m = parse_recipe(str(manifest))
         m = expand_directory_entries(m, str(orig))
         special = [s for s in m["sources"] if "special" in s.get("file", "")]
@@ -479,7 +479,7 @@ class TestDirectoryAsCollection:
             {"file": "docs/"},
         ])
 
-        from lore_mcp.recipe import parse_recipe, expand_directory_entries
+        from lorme.recipe import parse_recipe, expand_directory_entries
         m = parse_recipe(str(manifest))
         m = expand_directory_entries(m, str(orig))
         origs = [s["file"] for s in m["sources"]]
@@ -536,7 +536,7 @@ class TestDownloadImmutability:
             dest.write_text("fetched content")
             return {"ok": True, "path": str(dest)}
 
-        import lore_mcp.preprocess as pp
+        import lorme.preprocess as pp
         monkeypatch.setattr(pp, "_fetch_url", mock_fetch)
 
         reports = preprocess_sources(
@@ -554,7 +554,7 @@ class TestDownloadImmutability:
     def test_phase1_fetch_writes_to_downloads_dir(self, tmp_path, monkeypatch):
         """_phase1_worker URL download should go to downloads subdir, not orig."""
         import json
-        import lore_mcp.preprocess as pp
+        import lorme.preprocess as pp
 
         orig = tmp_path / "orig"
         orig.mkdir()
@@ -873,25 +873,25 @@ class TestPreprocessConfig:
 
     def test_config_only_signature(self, tmp_path):
         """preprocess_sources works with just manifest + dir + config."""
-        from lore_mcp.config import LoreConfig
+        from lorme.config import LormeConfig
 
         (tmp_path / "doc.md").write_text("## Title\n\nContent here.\n")
         manifest = tmp_path / "manifest.yaml"
         _write_manifest(manifest, [{"file": "doc.md"}])
 
-        cfg = LoreConfig(force=True)
+        cfg = LormeConfig(force=True)
         reports = preprocess_sources(str(manifest), str(tmp_path), cfg)
         assert reports[0]["status"] == "ok"
 
     def test_config_runtime_flags(self, tmp_path):
         """Runtime flags (force, output_level) read from config."""
-        from lore_mcp.config import LoreConfig
+        from lorme.config import LormeConfig
 
         (tmp_path / "doc.md").write_text("## Title\n\nContent here.\n")
         manifest = tmp_path / "manifest.yaml"
         _write_manifest(manifest, [{"file": "doc.md"}])
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             force=True,
             output_level="quiet",
             ocr_engine="tesseract",
@@ -902,13 +902,13 @@ class TestPreprocessConfig:
 
     def test_config_enrich_techniques(self, tmp_path):
         """Enrich techniques resolved from config."""
-        from lore_mcp.config import LoreConfig
+        from lorme.config import LormeConfig
 
         (tmp_path / "doc.md").write_text("## Title\n\nContent here.\n")
         manifest = tmp_path / "manifest.yaml"
         _write_manifest(manifest, [{"file": "doc.md"}])
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             force=True,
             enrich_techniques=["context", "qa"],
         )
@@ -1139,7 +1139,7 @@ class TestSttFix:
     def test_stt_fix_corrects_errors(self):
         """stt_fix replaces STT errors in text with timestamp headings."""
         from unittest.mock import patch
-        from lore_mcp.preprocess.enrich import enrich_stt_fix
+        from lorme.preprocess.enrich import enrich_stt_fix
 
         stt_text = (
             "# Talk\n\n"
@@ -1154,7 +1154,7 @@ class TestSttFix:
                 "Asian", "agent"
             ).replace("Ejetic", "agentic")
 
-        with patch("lore_mcp.preprocess.llm.call_llm", side_effect=mock_llm):
+        with patch("lorme.preprocess.llm.call_llm", side_effect=mock_llm):
             result = enrich_stt_fix(stt_text, "http://fake/v1/chat/completions", "model")
 
         assert "agent development" in result
@@ -1163,7 +1163,7 @@ class TestSttFix:
 
     def test_stt_fix_skips_non_stt_content(self):
         """stt_fix returns text unchanged when no timestamp headings present."""
-        from lore_mcp.preprocess.enrich import enrich_stt_fix
+        from lorme.preprocess.enrich import enrich_stt_fix
 
         normal_text = (
             "# Document\n\n"

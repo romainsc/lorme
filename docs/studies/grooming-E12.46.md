@@ -24,7 +24,7 @@ structure.
 
 ### What the labels don't do
 
-- **No downstream parsing**: no code in lore-mcp
+- **No downstream parsing**: no code in lorme
   reads or matches these labels. The enriched
   markdown is chunked and embedded as raw text.
 - **No RAG signal**: embedding models encode

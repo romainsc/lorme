@@ -15,7 +15,7 @@ knobs handle all?
 
 | Type | Characteristics | Example | Challenges for RAG |
 |------|----------------|---------|-------------------|
-| **Source code** | Syntactic structure, imports, variable names as semantic signals, mixed code+docs+config | lore-mcp repo (~4K LOC) | Function boundaries matter; line-based splitting destroys semantics; cross-file dependencies (imports, calls) create implicit context |
+| **Source code** | Syntactic structure, imports, variable names as semantic signals, mixed code+docs+config | lorme repo (~4K LOC) | Function boundaries matter; line-based splitting destroys semantics; cross-file dependencies (imports, calls) create implicit context |
 | **Technical documentation** | Structured headings, procedures, tables, commands, multilingual | OpenShift/RHOAI docs, OCDE PDF | Heading hierarchy is a chunking signal; tables must not be split; images carry meaning |
 | **Philosophy/literature** | Long prose, extended argumentation, minimal formal structure, rich vocabulary, cross-references | Project Gutenberg — Kant, Montaigne (public domain) | Arguments span multiple paragraphs; no heading structure to chunk on; semantic coherence requires larger chunks |
 | **Heterogeneous** | Mix of all above in one collection | All three combined | Embedding model must handle all domains; chunking strategy must not assume structure |
@@ -24,7 +24,7 @@ knobs handle all?
 
 ### 3.1 Chunking
 
-| Strategy | Best for | Mechanism | lore-mcp support |
+| Strategy | Best for | Mechanism | lorme support |
 |----------|---------|-----------|-----------------|
 | **Heading-based** (MarkdownTextSplitter) | Technical docs | Split on `##`, `###` headings | Current default |
 | **AST-aware** (tree-sitter) | Source code | Parse AST, chunk by function/class boundaries | Not implemented |
@@ -102,7 +102,7 @@ Voyage code-3 (proprietary API) but permits CodeBERT (MIT).
 
 **Recommendation**: Core preprocessing (normalization,
 cleanup) is universal. Format-specific parsing
-(PDF, DOCX, HTML) is already handled by lore-mcp's
+(PDF, DOCX, HTML) is already handled by lorme's
 multi-format pipeline. Code-specific preprocessing
 (import resolution, dependency extraction) is the main
 gap — it requires AST analysis that does not exist in
@@ -180,7 +180,7 @@ grammars (varies, mostly MIT), LangChain text-splitters
 - **Contextual retrieval (Anthropic, 2024)**: Prepend
   LLM-generated context summary to each chunk before
   indexing. −35% retrieval failure alone, −49% with
-  hybrid BM25. Already implemented in lore-mcp (E12.09).
+  hybrid BM25. Already implemented in lorme (E12.09).
 
 ### 4.3 Hybrid/heterogeneous RAG architectures
 
@@ -224,7 +224,7 @@ MTEB now has separate code retrieval benchmarks (introduced
 ### What is universal (works for all types)?
 
 1. **Core preprocessing**: Unicode NFC, whitespace cleanup,
-   format parsing (PDF/HTML/DOCX → markdown) — lore-mcp
+   format parsing (PDF/HTML/DOCX → markdown) — lorme
    already handles this
 2. **Recursive character splitting** with overlap —
    acceptable baseline for all types
@@ -240,12 +240,12 @@ MTEB now has separate code retrieval benchmarks (introduced
 
 1. **Code chunking**: AST-aware via tree-sitter is
    significantly better than line-based (+5.5 pts). This
-   is the single largest type-specific gap in lore-mcp.
+   is the single largest type-specific gap in lorme.
 2. **Code metadata**: Import/dependency resolution for
    cross-file context — not possible with text-based
    chunking.
 3. **Table protection**: Only matters for technical docs
-   (already implemented in lore-mcp).
+   (already implemented in lorme).
 4. **Image captioning**: Only matters for visual documents
    (already implemented).
 5. **Long-prose chunking**: Larger chunk sizes (2048+) for
@@ -268,7 +268,7 @@ MTEB now has separate code retrieval benchmarks (introduced
 
 | Type | Corpus | License | Language | Size |
 |------|--------|---------|----------|------|
-| Source code | lore-mcp repository (src/ + docs/) | AGPL-3.0 | Python + EN | ~4K LOC + docs |
+| Source code | lorme repository (src/ + docs/) | AGPL-3.0 | Python + EN | ~4K LOC + docs |
 | Technical docs | Existing test corpus (manifest-test-redist) | Various libre | FR + EN | ~20 files |
 | Philosophy | Kant — *Prolegomena to Any Future Metaphysics* (Project Gutenberg #52821) | Public domain | EN | ~100 pages |
 | Heterogeneous | All three combined | Mixed | EN + FR | ~50 files |
@@ -325,7 +325,7 @@ from the test corpus.
 type, unified orchestration.**
 
 A single pipeline with configuration knobs handles 80% of
-the problem. The current lore-mcp pipeline (recursive
+the problem. The current lorme pipeline (recursive
 chunking + generalist embedding + hybrid search + reranking
 + enrichment) works well for technical documentation and
 adequately for prose.
@@ -340,7 +340,7 @@ However, this does not require a fundamentally different
 pipeline. The architecture should be:
 
 ```
-lore-mcp pipeline (unified orchestration)
+lorme pipeline (unified orchestration)
 ├── Parse (format-specific, already modular)
 ├── Chunk (type-specific backend needed)
 │   ├── MarkdownTextSplitter → docs, prose
@@ -356,7 +356,7 @@ config knobs are sufficient. No new backend needed.
 
 **Final verdict depends on benchmarks** — the estimated
 impact of AST chunking on code retrieval needs validation
-on the lore-mcp codebase. If the current pipeline scores
+on the lorme codebase. If the current pipeline scores
 above 0.5 NDCG@5 on code questions, the urgency of a
 tree-sitter backend is lower.
 

@@ -80,7 +80,7 @@ opts.heading_hierarchy_options = HeadingHierarchyOptions(
 
 ### I2. Docling HybridChunker evaluation (HIGH)
 
-**Problem**: lore-mcp uses `MarkdownTextSplitter`
+**Problem**: lorme uses `MarkdownTextSplitter`
 (text-based), losing document structure. Docling's
 `HybridChunker` operates on the structured document
 model, preserving table boundaries, heading hierarchy,
@@ -267,7 +267,7 @@ build-dir/
 - `--docs-base-dir` removed
 - `--prep-dir` removed (becomes `build-dir/prep/`)
 - `--output-dir` renamed to `--build-dir`
-- Checkpoint moves from `~/.local/state/lore-mcp/<hash>/`
+- Checkpoint moves from `~/.local/state/lorme/<hash>/`
   to `build-dir/.work/`
 - `--keep-intermediates` keeps `.work/` after success
 - Reprise: same `--build-dir` = checkpoint found
@@ -276,7 +276,7 @@ build-dir/
 
 - 2 flags only: `--orig-dir` + `--build-dir`
 - Checkpoint in `build-dir/.work/`
-- `~/.local/state/lore-mcp/` no longer used
+- `~/.local/state/lorme/` no longer used
 - All existing tests updated
 - CLI help and docs updated
 - Migration: deprecation warning for old flags (1 release)

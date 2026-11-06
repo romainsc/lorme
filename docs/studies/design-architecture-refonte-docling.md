@@ -7,7 +7,7 @@
 
 ## Constat
 
-lore-mcp réimplémente ~300 lignes de captioning
+lorme réimplémente ~300 lignes de captioning
 (VLM API call, classify, skip small, dedup) que
 Docling fait nativement. Les items E12.36-41
 ont produit des régressions car granite-8b ne
@@ -20,7 +20,7 @@ trop complexe.
 1. **Docling fait le travail lourd** : parse,
    OCR, captioning images, classification. On
    configure, on ne réimplémente pas.
-2. **lore-mcp orchestre** : manifest, phases,
+2. **lorme orchestre** : manifest, phases,
    IS lifecycle, progressive output, multi-model,
    judge, enrichissement, dedup, PII, qualité.
 3. **Les notions avancées sont préservées** :
@@ -112,7 +112,7 @@ parse:
 - Table extraction
 - Export markdown avec captions intégrés
 
-### Ce que lore-mcp gère en phase 1
+### Ce que lorme gère en phase 1
 
 - Résolution manifest (orig → path)
 - Fetch URL si nécessaire
@@ -143,7 +143,7 @@ Si multi-model :
 Si un modèle additionnel bénéficie du contexte
 OCR, l'OCR extrait par Docling en phase 1 peut
 être injecté dans le prompt du modèle phase 2.
-C'est la valeur ajoutée lore-mcp — Docling ne
+C'est la valeur ajoutée lorme — Docling ne
 le fait pas.
 
 ## Phase 3 : Enrichissement
@@ -210,10 +210,10 @@ section par section.
 |------|----------|
 | E12.23 | Column reorder — Docling ne le fait pas. |
 | E12.25 | IS lifecycle — Docling ne gère pas les conteneurs. |
-| E12.26 | Séquentiel — orchestration lore-mcp. |
+| E12.26 | Séquentiel — orchestration lorme. |
 | E12.27 | Progressive output — Docling n'écrit pas par phase. |
 | E12.31 | Subprocess — toujours nécessaire pour VRAM. |
-| E12.32 | Traces debug — diagnostic lore-mcp. |
+| E12.32 | Traces debug — diagnostic lorme. |
 | E12.35 | Judge prompt + keep-intermediates. |
 | E12.37 | Whole-document enrichment — fonctionne. |
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-lore-mcp uses external inference services (TEI for
+lorme uses external inference services (TEI for
 embeddings, VLM for captioning, STT for transcription)
 managed via start/stop commands in the LLM registry
 (config.yaml).

@@ -4,13 +4,13 @@ import json
 import logging
 from pathlib import Path
 
-from lore_mcp.embedder import Embedder
-from lore_mcp.eval import run_optimize
-from lore_mcp.ingest import ingest_with_manifest
-from lore_mcp.recipe import parse_recipe
-from lore_mcp.metadata import generate_all
-from lore_mcp.preprocess import preprocess_sources
-from lore_mcp.store import ChunkStore
+from lorme.embedder import Embedder
+from lorme.eval import run_optimize
+from lorme.ingest import ingest_with_manifest
+from lorme.recipe import parse_recipe
+from lorme.metadata import generate_all
+from lorme.preprocess import preprocess_sources
+from lorme.store import ChunkStore
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def validate_models(
     embedders: dict | None = None,
 ) -> list[str]:
     """Validate all model configs before starting. Returns list of errors."""
-    from lore_mcp.embedder import _probe_api
+    from lorme.embedder import _probe_api
 
     errors = []
     for cfg in configs:
@@ -49,7 +49,7 @@ def validate_models(
 
 def _start_embedders(config) -> dict:
     """Create embedders from config, starting services if needed. See E12.68."""
-    from lore_mcp.embedder import create_embedder
+    from lorme.embedder import create_embedder
 
     if config.embedding_models:
         return {
@@ -59,7 +59,7 @@ def _start_embedders(config) -> dict:
 
     entry = config.get_embedding_entry()
     if entry:
-        from lore_mcp.preprocess.service import start_service
+        from lorme.preprocess.service import start_service
         start_service(entry)
 
     emb = create_embedder(config, entry)
@@ -89,7 +89,7 @@ def run_build(
 
     _build_dir = config.build_dir or output_dir
 
-    from lore_mcp.task_manager import report_progress, check_cancelled
+    from lorme.task_manager import report_progress, check_cancelled
 
     if config.preprocess:
         prep_recipe_path = Path(_build_dir) / (
@@ -126,7 +126,7 @@ def run_build(
     work_path = output_path / ".work"
     work_path.mkdir(parents=True, exist_ok=True)
 
-    from lore_mcp.progress import ProgressReporter
+    from lorme.progress import ProgressReporter
     import time as _time
 
     build_reporter = ProgressReporter(

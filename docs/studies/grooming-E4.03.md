@@ -5,7 +5,7 @@
 
 ## Solution
 
-OCI container image with full lore-mcp runtime.
+OCI container image with full lorme runtime.
 All commands: serve, build, preprocess, eval,
 lint, enrich. Data via volume mounts.
 
@@ -23,26 +23,26 @@ tesseract-ocr-eng, ffmpeg.
 ```bash
 # Serve (MCP stdio)
 podman run -i --rm -v ./data:/data:Z \
-  lore-mcp serve --config /data/config.yaml
+  lorme serve --config /data/config.yaml
 
 # Serve (SSE)
 podman run -d -p 8080:8080 -v ./data:/data:Z \
-  lore-mcp serve --transport sse --port 8080
+  lorme serve --transport sse --port 8080
 
 # Preprocess (IS on host)
 podman run --rm --network host -v ./data:/data:Z \
-  lore-mcp preprocess /data/manifest.yaml \
+  lorme preprocess /data/manifest.yaml \
     --docs-base-dir /data --config /data/config.yaml
 
 # Build
 podman run --rm --network host -v ./data:/data:Z \
-  lore-mcp build /data/manifest.yaml \
+  lorme build /data/manifest.yaml \
     --docs-dir /data/prep --output-dir /data/out \
     --config /data/config.yaml
 
 # Lint
 podman run --rm -v ./data:/data:Z \
-  lore-mcp lint /data/manifest.yaml --docs-dir /data
+  lorme lint /data/manifest.yaml --docs-dir /data
 ```
 
 ## Claude Desktop config
@@ -54,7 +54,7 @@ podman run --rm -v ./data:/data:Z \
       "command": "podman",
       "args": ["run", "-i", "--rm",
                "-v", "./data:/data:Z",
-               "lore-mcp", "serve",
+               "lorme", "serve",
                "--config", "/data/config.yaml"]
     }
   }

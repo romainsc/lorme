@@ -7,13 +7,13 @@
 
 `preprocess_sources` has 18 parameters,
 `run_build` has 22 parameters. Now that both
-resolve params from `LoreConfig`, the individual
+resolve params from `LormeConfig`, the individual
 parameters are redundant.
 
 ## Solution
 
 Reduce to structural minimum. All pipeline
-parameters move into `LoreConfig`.
+parameters move into `LormeConfig`.
 
 ### Target signatures
 
@@ -21,18 +21,18 @@ parameters move into `LoreConfig`.
 def preprocess_sources(
     manifest_path: str,
     docs_base_dir: str,
-    config: LoreConfig,
+    config: LormeConfig,
 ) -> list[dict]:
 
 def run_build(
     manifest_path: str,
     docs_dir: str,
     output_dir: str,
-    config: LoreConfig,
+    config: LormeConfig,
 ) -> dict:
 ```
 
-### Parameters moving to LoreConfig
+### Parameters moving to LormeConfig
 
 From `preprocess_sources`:
 - `orig_dir` → `config.preprocess_orig_dir`
@@ -57,7 +57,7 @@ From `run_build`:
 - `judge_*` → already resolved from config
 - `report_path` → `config.report_path`
 
-### New LoreConfig fields
+### New LormeConfig fields
 
 ```python
 # Runtime flags (set by CLI, not config.yaml)
@@ -74,18 +74,18 @@ report_path: str = ""
 
 ### Migration
 
-1. Add runtime fields to `LoreConfig`
+1. Add runtime fields to `LormeConfig`
 2. CLI sets them on config before passing
 3. Simplify `preprocess_sources` signature
 4. Simplify `run_build` signature
-5. Migrate tests to use `LoreConfig` fixture
+5. Migrate tests to use `LormeConfig` fixture
 6. Remove `_run_preprocess` plumbing in server.py
 
 ## DoD
 
 1. `preprocess_sources`: 3 params
 2. `run_build`: 4 params
-3. All tests pass with LoreConfig fixture
+3. All tests pass with LormeConfig fixture
 4. server.py CLI handlers simplified
 
 ## Provenance

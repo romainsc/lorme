@@ -33,7 +33,7 @@ parse:
 
 ### DoD
 
-- `diarization_device` in LoreConfig + config.yaml
+- `diarization_device` in LormeConfig + config.yaml
 - pyannote: `pipeline.to(device)` based on config
 - diarize library: CPU only (ignored)
 - Warning in report for risky config

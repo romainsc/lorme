@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "lore": {
-      "command": "lore-mcp",
+      "command": "lorme",
       "args": ["serve", "--config", "/path/to/config.yaml"]
     },
     "lore-container": {
@@ -9,7 +9,7 @@
       "args": [
         "run", "-i", "--rm",
         "-v", "/path/to/data:/data:Z",
-        "lore-mcp", "serve",
+        "lorme", "serve",
         "--config", "/data/config.yaml"
       ]
     },

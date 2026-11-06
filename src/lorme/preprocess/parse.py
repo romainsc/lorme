@@ -17,7 +17,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-from lore_mcp.preprocess.service import run_with_interrupt
+from lorme.preprocess.service import run_with_interrupt
 from charset_normalizer import from_path as detect_encoding
 
 
@@ -426,7 +426,7 @@ class Parser:
     @staticmethod
     def detect_format(filename: str) -> str:
         """Detect conversion backend from content then extension."""
-        from lore_mcp.format_registry import get_format_registry
+        from lorme.format_registry import get_format_registry
         return get_format_registry().detect(filename)
 
     def _create_converter(self):
@@ -501,7 +501,7 @@ class Parser:
             if not _HAVE_TRAFILATURA:
                 raise ImportError(
                     "trafilatura is required for HTML conversion. "
-                    "Install: pip install lore-mcp[html]"
+                    "Install: pip install lorme[html]"
                 )
             html = self._read_text(path)
             result = trafilatura.extract(
@@ -518,7 +518,7 @@ class Parser:
             if not _HAVE_DOCLING:
                 raise ImportError(
                     "docling is required for PDF/DOCX/PPTX/XLSX/EPUB conversion. "
-                    "Install: pip install lore-mcp[pdf]"
+                    "Install: pip install lorme[pdf]"
                 )
             converter = self._get_converter()
             from docling_core.types.doc.base import ImageRefMode
@@ -545,7 +545,7 @@ class Parser:
             if not _HAVE_MARKITDOWN:
                 raise ImportError(
                     "markitdown is required for CSV/JSON/XML conversion. "
-                    "Install: pip install lore-mcp[office]"
+                    "Install: pip install lorme[office]"
                 )
             md = MarkItDown()
             try:
@@ -571,7 +571,7 @@ class Parser:
         if not _HAVE_DOCLING:
             raise ImportError(
                 "docling is required for batch PDF/DOCX/PPTX conversion. "
-                "Install: pip install lore-mcp[pdf]"
+                "Install: pip install lorme[pdf]"
             )
 
         converter = self._get_converter()
@@ -948,7 +948,7 @@ class Parser:
         filename = Path(audio_path).name
         api_lang = Parser._to_iso639_1(language) if language else ""
 
-        boundary = "----LoreMCPBoundary"
+        boundary = "----LormeBoundary"
         body = bytearray()
         body.extend(f"--{boundary}\r\n".encode())
         body.extend(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode())
@@ -1056,7 +1056,7 @@ class Parser:
         try:
             import yt_dlp
         except (ImportError, ModuleNotFoundError):
-            return {"error": "yt-dlp not installed (pip install lore-mcp[video])"}
+            return {"error": "yt-dlp not installed (pip install lorme[video])"}
 
         out_dir = Path(output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)

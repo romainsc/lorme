@@ -1,4 +1,4 @@
-# Why lore-mcp?
+# Why lorme?
 
 ## The problem
 
@@ -20,14 +20,14 @@ Existing solutions either require cloud services
 coding expertise (LangChain, LlamaIndex), or only
 handle one format (Obsidian, grep).
 
-## What lore-mcp does
+## What lorme does
 
-lore-mcp turns a folder of documents into a
+lorme turns a folder of documents into a
 searchable knowledge base that any AI assistant
 can query. One command, one `.db` file, no server.
 
 ```bash
-lore-mcp build --docs-dir /path/to/docs/ --output-dir .
+lorme build --docs-dir /path/to/docs/ --output-dir .
 ```
 
 The AI assistant (Claude Code, Claude Desktop, or
@@ -59,7 +59,7 @@ alongside your PDFs.
 
 ### MCP native
 
-lore-mcp exposes three MCP tools (`search_docs`,
+lorme exposes three MCP tools (`search_docs`,
 `list_indexed_sources`, `list_collections`). Any
 MCP client — Claude Code, Claude Desktop, Cursor,
 or custom — can use them. The AI chooses which
@@ -83,7 +83,7 @@ database server, no migrations, no infrastructure.
 
 ### Complementary to code intelligence
 
-lore-mcp handles documents. For source code,
+lorme handles documents. For source code,
 pair it with [Codebase-Memory](https://github.com/DeusData/codebase-memory-mcp)
 (MIT, 158 languages). Both are MCP servers — mount
 them together and the AI routes queries to the
@@ -171,7 +171,7 @@ on their machine.
 ### 9. Air-gapped environments
 
 *Defense, government, or healthcare IT.*
-Cloud RAG is forbidden. lore-mcp runs entirely
+Cloud RAG is forbidden. lorme runs entirely
 offline with local embedding (CPU or GPU). The
 `.db` file is the only artifact. No network
 calls, no telemetry, no external dependencies
@@ -188,7 +188,7 @@ chunking?" and the specific source comes back.
 
 ## Comparison
 
-| Feature | lore-mcp | Notion AI / Confluence AI | LangChain / LlamaIndex | Obsidian plugins |
+| Feature | lorme | Notion AI / Confluence AI | LangChain / LlamaIndex | Obsidian plugins |
 |---------|----------|--------------------------|----------------------|-----------------|
 | **Runs locally** | Yes (offline) | No (cloud only) | Yes (requires coding) | Yes |
 | **Multi-format** | PDF, HTML, DOCX, PPTX, audio, video, images | Platform-native only | Any (you build it) | Markdown only |
@@ -201,7 +201,7 @@ chunking?" and the specific source comes back.
 
 ### vs Codebase-Memory
 
-Not a competitor — a complement. lore-mcp indexes
+Not a competitor — a complement. lorme indexes
 **documents** (prose, PDFs, recordings).
 Codebase-Memory indexes **code** (AST, call
 graphs, dependencies). Mount both as MCP servers

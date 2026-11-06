@@ -78,7 +78,7 @@ Other sections reference models by name:
 - `parse.caption_models: [granite-docling, granite-vision]`
 - `parse.caption_judge: granite-8b`
 
-`LoreConfig.get_llm(name)` looks up by name,
+`LormeConfig.get_llm(name)` looks up by name,
 raises KeyError if not found.
 
 ## Backward compatibility
@@ -96,11 +96,11 @@ For legacy code that reads first LLM:
 - `cfg.llm_api_key` → first registry entry's key
 - `cfg.llm_verify_ssl` → first entry's verify_ssl
 
-## `LoreConfig.from_file(path)`
+## `LormeConfig.from_file(path)`
 
 Reads YAML, maps sections to dataclass fields.
 Validates `embedding:` key (rejects old `models:`).
-Returns populated `LoreConfig`.
+Returns populated `LormeConfig`.
 
 ## Cross-references
 

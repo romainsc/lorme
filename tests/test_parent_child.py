@@ -1,6 +1,6 @@
 """Tests for parent-child retrieval (backward compat for existing .db files)."""
 
-from lore_mcp.store import (
+from lorme.store import (
     create_tables,
     insert_chunks,
     open_db,

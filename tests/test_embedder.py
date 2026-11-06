@@ -1,11 +1,11 @@
-"""Tests for lore_mcp.embedder. See docs/architecture.md for design context."""
+"""Tests for lorme.embedder. See docs/architecture.md for design context."""
 
 from unittest.mock import MagicMock, patch, PropertyMock
 
 import numpy as np
 import pytest
 
-from lore_mcp.embedder import Embedder, assess_gpu, assess_cpu
+from lorme.embedder import Embedder, assess_gpu, assess_cpu
 
 
 DIMS = 1024
@@ -17,13 +17,13 @@ class TestAssessGpu:
     VRAM detection, FP32/FP16 decision, actionable messages.
     """
 
-    @patch("lore_mcp.embedder.torch")
+    @patch("lorme.embedder.torch")
     def test_no_cuda(self, mock_torch):
         mock_torch.cuda.is_available.return_value = False
         result = assess_gpu()
         assert result["available"] is False
 
-    @patch("lore_mcp.embedder.torch")
+    @patch("lorme.embedder.torch")
     def test_enough_vram_fp32(self, mock_torch):
         mock_torch.cuda.is_available.return_value = True
         mock_torch.cuda.mem_get_info.return_value = (4 * 1024**3, 6 * 1024**3)
@@ -33,7 +33,7 @@ class TestAssessGpu:
         assert result["available"] is True
         assert result["recommended_dtype"] == "float32"
 
-    @patch("lore_mcp.embedder.torch")
+    @patch("lorme.embedder.torch")
     def test_enough_vram_fp16_only(self, mock_torch):
         mock_torch.cuda.is_available.return_value = True
         mock_torch.cuda.mem_get_info.return_value = (int(1.8 * 1024**3), 4 * 1024**3)
@@ -43,7 +43,7 @@ class TestAssessGpu:
         assert result["available"] is True
         assert result["recommended_dtype"] == "float16"
 
-    @patch("lore_mcp.embedder.torch")
+    @patch("lorme.embedder.torch")
     def test_not_enough_vram_actionable_message(self, mock_torch):
         """architecture.md: actionable message when VRAM insufficient."""
         mock_torch.cuda.is_available.return_value = True
@@ -54,12 +54,12 @@ class TestAssessGpu:
         assert result["available"] is False
         assert "vram" in result["message"].lower() or "free" in result["message"].lower()
 
-    @patch("lore_mcp.embedder.torch", None)
+    @patch("lorme.embedder.torch", None)
     def test_no_torch(self):
         result = assess_gpu()
         assert result["available"] is False
 
-    @patch("lore_mcp.embedder.torch")
+    @patch("lorme.embedder.torch")
     def test_old_gpu_no_fp16(self, mock_torch):
         """Compute capability < 7 does not support FP16."""
         mock_torch.cuda.is_available.return_value = True
@@ -82,7 +82,7 @@ class TestAssessCpu:
         result = assess_cpu()
         assert result["ram_available_gb"] > 0
 
-    @patch("lore_mcp.embedder._get_available_ram_gb", return_value=2.0)
+    @patch("lorme.embedder._get_available_ram_gb", return_value=2.0)
     def test_insufficient_ram(self, _):
         result = assess_cpu()
         assert result["available"] is False
@@ -144,7 +144,7 @@ class TestEmbedderLazyLoading:
 class TestEmbedderFallbackChain:
     """Validate the GPU → CPU fallback documented in architecture.md."""
 
-    @patch("lore_mcp.embedder.assess_gpu")
+    @patch("lorme.embedder.assess_gpu")
     def test_auto_mode_selects_gpu_when_available(self, mock_assess):
         mock_assess.return_value = {
             "available": True,
@@ -154,14 +154,14 @@ class TestEmbedderFallbackChain:
         device, dtype = emb._select_device_dtype()
         assert device == "cuda"
 
-    @patch("lore_mcp.embedder.assess_gpu")
+    @patch("lorme.embedder.assess_gpu")
     def test_auto_mode_falls_back_to_cpu(self, mock_assess):
         mock_assess.return_value = {"available": False, "message": "no GPU"}
         emb = Embedder(mode="builtin")
         device, dtype = emb._select_device_dtype()
         assert device == "cpu"
 
-    @patch("lore_mcp.embedder.assess_gpu")
+    @patch("lorme.embedder.assess_gpu")
     def test_auto_mode_selects_fp16_when_recommended(self, mock_assess):
         mock_assess.return_value = {
             "available": True,
@@ -179,7 +179,7 @@ class TestEmbedderFallbackChain:
         assert device == "cpu"
         assert dtype is None
 
-    @patch("lore_mcp.embedder.assess_gpu")
+    @patch("lorme.embedder.assess_gpu")
     def test_gpu_mode_raises_when_unavailable(self, mock_assess):
         mock_assess.return_value = {
             "available": False,
@@ -259,8 +259,8 @@ class TestEmbedderModelDim:
 class TestEmbedderAssess:
     """Validate the assess() method documented in architecture.md."""
 
-    @patch("lore_mcp.embedder.assess_gpu")
-    @patch("lore_mcp.embedder.assess_cpu")
+    @patch("lorme.embedder.assess_gpu")
+    @patch("lorme.embedder.assess_cpu")
     def test_returns_all_backends(self, mock_cpu, mock_gpu):
         mock_gpu.return_value = {"available": False, "message": "no GPU"}
         mock_cpu.return_value = {"available": True, "ram_available_gb": 16.0, "message": "OK"}
@@ -270,9 +270,9 @@ class TestEmbedderAssess:
         assert "cpu" in result
         assert "api" in result
 
-    @patch("lore_mcp.embedder._probe_api", return_value=True)
-    @patch("lore_mcp.embedder.assess_gpu")
-    @patch("lore_mcp.embedder.assess_cpu")
+    @patch("lorme.embedder._probe_api", return_value=True)
+    @patch("lorme.embedder.assess_gpu")
+    @patch("lorme.embedder.assess_cpu")
     def test_probes_api_when_url_set(self, mock_cpu, mock_gpu, mock_probe):
         mock_gpu.return_value = {"available": False, "message": "no GPU"}
         mock_cpu.return_value = {"available": True, "ram_available_gb": 16.0, "message": "OK"}

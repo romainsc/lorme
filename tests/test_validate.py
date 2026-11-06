@@ -1,8 +1,8 @@
-"""Tests for lore_mcp.preprocess.validate. See docs/studies/grooming-E12.01.md."""
+"""Tests for lorme.preprocess.validate. See docs/studies/grooming-E12.01.md."""
 
 import pytest
 
-from lore_mcp.preprocess.validate import quality_gate
+from lorme.preprocess.validate import quality_gate
 
 
 class TestQualityGate:

@@ -49,7 +49,7 @@ def call_llm(config: LLMConfig, prompt: str) -> str:
             "LLM api_url is required for enrichment. "
             "Set it in config.yaml llm registry."
         )
-    from lore_mcp.preprocess.service import run_with_interrupt
+    from lorme.preprocess.service import run_with_interrupt
 
     payload = {
         "model": config.model,
@@ -89,7 +89,7 @@ def call_llm_batch(config: LLMConfig, prompts: list[str]) -> list[str]:
     Returns results in the same order as prompts.
     Ctrl+C responsive within 0.5s (daemon threads + main poll).
     """
-    from lore_mcp.task_manager import check_cancelled
+    from lorme.task_manager import check_cancelled
 
     if config.concurrency <= 1:
         return [call_llm(config, p) for p in prompts]

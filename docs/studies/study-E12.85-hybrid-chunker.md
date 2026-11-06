@@ -55,7 +55,7 @@ HybridChunker **only works with Docling-parsed sources**:
 - ✓ PDF, DOCX, PPTX, XLSX, images (Docling backend)
 - ✗ HTML (trafilatura), markdown, CSV/JSON (markitdown), video transcripts
 
-Requires a `DoclingDocument` object (docling.json). lore-mcp's
+Requires a `DoclingDocument` object (docling.json). lorme's
 `_cleanup_phase_files` currently deletes these after phase 4.
 
 ## PPTX Concern

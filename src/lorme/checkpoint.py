@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 def _state_dir() -> Path:
-    """Return XDG_STATE_HOME/lore-mcp/."""
+    """Return XDG_STATE_HOME/lorme/."""
     base = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
-    d = Path(base) / "lore-mcp"
+    d = Path(base) / "lorme"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

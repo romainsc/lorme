@@ -7,7 +7,7 @@
 
 BuildConfig (E10.13) exists but is not wired into
 the CLI. The `--config` flag is missing from
-`lore-mcp build` and `optimize`. Users must use
+`lorme build` and `optimize`. Users must use
 `--models` + env vars instead of a unified file.
 
 ## DoD

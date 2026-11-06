@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from lore_mcp.recipe import parse_recipe
+from lorme.recipe import parse_recipe
 
 
 def analyze_file(path: Path | str) -> dict:
@@ -147,8 +147,8 @@ def lint_sources(
     recipe_path: str,
 ) -> list[dict]:
     """Analyze all manifest sources with quality, PII, and dedup checks."""
-    from lore_mcp.preprocess.pii import detect_pii
-    from lore_mcp.preprocess.dedup import find_exact_duplicates, find_near_duplicates
+    from lorme.preprocess.pii import detect_pii
+    from lorme.preprocess.dedup import find_exact_duplicates, find_near_duplicates
 
     docs_path = Path(docs_dir)
     recipe = parse_recipe(recipe_path)

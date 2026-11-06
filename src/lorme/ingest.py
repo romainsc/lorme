@@ -6,11 +6,11 @@ import logging
 import os
 from pathlib import Path
 
-from lore_mcp.collections import collection_db_path
-from lore_mcp.embedder import Embedder
-from lore_mcp.recipe import extract_source_metadata, parse_recipe, resolve_source_id
-from lore_mcp.preprocess import clean_text
-from lore_mcp.store import ChunkStore
+from lorme.collections import collection_db_path
+from lorme.embedder import Embedder
+from lorme.recipe import extract_source_metadata, parse_recipe, resolve_source_id
+from lorme.preprocess import clean_text
+from lorme.store import ChunkStore
 
 logger = logging.getLogger(__name__)
 

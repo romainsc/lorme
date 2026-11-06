@@ -5,7 +5,7 @@
 
 ## Context
 
-lint.py and `lore-mcp lint` already implemented
+lint.py and `lorme lint` already implemented
 (text_density, noise_sections, verdict). This
 grooming adds structural analysis metrics.
 
@@ -22,7 +22,7 @@ directly impacts RAG retrieval quality:
 
 ## Solution
 
-A `lore-mcp lint` subcommand that analyzes
+A `lorme lint` subcommand that analyzes
 markdown sources and produces a quality report.
 Runs before indexing — does not modify files.
 
@@ -52,14 +52,14 @@ first), with a per-file verdict:
 ### CLI invocation
 
 ```
-lore-mcp lint manifest.yaml --docs-dir /path/
-lore-mcp lint manifest.yaml --docs-dir /path/ --config models.yaml
-lore-mcp lint manifest.yaml --docs-dir /path/ --verbose
-lore-mcp lint manifest.yaml --docs-dir /path/ --report report.md
+lorme lint manifest.yaml --docs-dir /path/
+lorme lint manifest.yaml --docs-dir /path/ --config models.yaml
+lorme lint manifest.yaml --docs-dir /path/ --verbose
+lorme lint manifest.yaml --docs-dir /path/ --report report.md
 ```
 
 - `manifest.yaml` (positional): source file list
-  (same pattern as `lore-mcp build`)
+  (same pattern as `lorme build`)
 - `--docs-dir`: base directory to resolve manifest
   paths
 - `--config`: when provided, loads the embedding

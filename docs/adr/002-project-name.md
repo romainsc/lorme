@@ -1,8 +1,8 @@
-# ADR-002: Project name — lore-mcp
+# ADR-002: Project name — lorme
 
 - **Status:** Accepted
 - **Date:** 2026-07-29
-- **Decision:** Name the project **lore-mcp**, where LORE stands for **Local Offline Retrieval Engine**
+- **Decision:** Name the project **lorme**, where LORE stands for **Local Offline Retrieval Engine**
 
 ## Context
 
@@ -45,7 +45,7 @@ LORE alone doesn't indicate the MCP connection. Variants explored:
 
 | Form | Analysis |
 |---|---|
-| **lore-mcp** | LORE identity + MCP suffix. Follows ecosystem convention. Clear: "this is LORE, an MCP server." PyPI: `lore-mcp`, import: `lore_mcp` |
+| **lorme** | LORE identity + MCP suffix. Follows ecosystem convention. Clear: "this is LORE, an MCP server." PyPI: `lorme`, import: `lorme` |
 | **mcp-lore** | MCP prefix convention (`mcp-server-*`). But puts the protocol before the identity — the project becomes "just another mcp-something" |
 | **LORME** | Word blend of LORE + MCP. Could expand to "Local Offline Retrieval for MCP Environments." Elegant fusion, but less immediately readable than the hyphenated form |
 | **mcplore** | Portmanteau of MCP + explore + lore. Clever wordplay but hard to pronounce and parse |
@@ -54,15 +54,15 @@ LORE alone doesn't indicate the MCP connection. Variants explored:
 
 ## Decision
 
-**lore-mcp** — the hyphenated form `{identity}-{protocol}`.
+**lorme** — the hyphenated form `{identity}-{protocol}`.
 
 Rationale:
 1. **Identity first:** "lore" is the name people remember; "-mcp" is the technical qualifier
 2. **Ecosystem convention:** follows the `{name}-mcp` pattern used by community MCP servers
 3. **Technically unambiguous:** the suffix immediately signals this is an MCP server
-4. **PyPI-friendly:** `lore-mcp` is a valid, available-style package name; Python import becomes `lore_mcp`
-5. **CLI-friendly:** `lore-mcp` works as a command name
-6. **LORME was a close second:** elegant fusion, but `lore-mcp` wins on immediate readability for someone discovering the project on GitHub or PyPI
+4. **PyPI-friendly:** `lorme` is a valid, available-style package name; Python import becomes `lorme`
+5. **CLI-friendly:** `lorme` works as a command name
+6. **LORME was a close second:** elegant fusion, but `lorme` wins on immediate readability for someone discovering the project on GitHub or PyPI
 
 ## Provenance
 
@@ -71,9 +71,9 @@ Rationale:
 
 ## Consequences
 
-- GitHub repository: `lore-mcp`
-- PyPI package: `lore-mcp`
-- Python package: `lore_mcp` (under `src/lore_mcp/`)
-- CLI entry point: `lore-mcp`
+- GitHub repository: `lorme`
+- PyPI package: `lorme`
+- Python package: `lorme` (under `src/lorme/`)
+- CLI entry point: `lorme`
 - Environment variable prefix: `LORE_`
 - The acronym LORE (Local Offline Retrieval Engine) should appear in the README and project description

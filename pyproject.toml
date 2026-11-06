@@ -3,9 +3,9 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "lore-mcp"
+name = "lorme"
 dynamic = ["version"]
-description = "LORE — Local Offline Retrieval Engine for MCP. Semantic search over local documents via Model Context Protocol."
+description = "LORME — Local Offline Retrieval & MCP Engine. Semantic search over local documents via Model Context Protocol."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.10"
@@ -64,22 +64,22 @@ video = [
 ]
 
 [project.scripts]
-lore-mcp = "lore_mcp.server:main"
+lorme = "lorme.server:main"
 
 [project.urls]
-Homepage = "https://github.com/romainsc/lore-mcp"
-Repository = "https://github.com/romainsc/lore-mcp"
-Issues = "https://github.com/romainsc/lore-mcp/issues"
+Homepage = "https://github.com/romainsc/lorme"
+Repository = "https://github.com/romainsc/lorme"
+Issues = "https://github.com/romainsc/lorme/issues"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/lore_mcp/_version.py"
+version-file = "src/lorme/_version.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/lore_mcp"]
+packages = ["src/lorme"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/lore_mcp/prompts.yaml" = "lore_mcp/prompts.yaml"
-"src/lore_mcp/bootstrap.yaml" = "lore_mcp/bootstrap.yaml"
+"src/lorme/prompts.yaml" = "lorme/prompts.yaml"
+"src/lorme/bootstrap.yaml" = "lorme/bootstrap.yaml"

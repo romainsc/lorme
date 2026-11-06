@@ -17,15 +17,15 @@ knows internals of preprocess, optimize, ingest.
 ## Vision
 
 ```
-lore-mcp build =
-  lore-mcp preprocess  (config → markdown + manifest-prep)
-  lore-mcp optimize    (config → winning params)
-  lore-mcp ingest      (config + winning params → .db)
-  lore-mcp metadata    (manifest + .db → .json/.bib/.md)
+lorme build =
+  lorme preprocess  (config → markdown + manifest-prep)
+  lorme optimize    (config → winning params)
+  lorme ingest      (config + winning params → .db)
+  lorme metadata    (manifest + .db → .json/.bib/.md)
 ```
 
 Each step:
-1. Accepts a `LoreConfig` (or reads config.yaml)
+1. Accepts a `LormeConfig` (or reads config.yaml)
 2. Resolves its own params from config
 3. Produces output files
 4. Next step reads those files as input
@@ -58,7 +58,7 @@ metadata:
 
 ### MVP 1: preprocess reads config
 
-`preprocess_sources()` accepts `config: LoreConfig`
+`preprocess_sources()` accepts `config: LormeConfig`
 and resolves enrich, llm, caption, ocr, judge
 internally. Extract resolution logic from
 `_run_preprocess()` in server.py.
@@ -67,7 +67,7 @@ internally. Extract resolution logic from
 
 ### MVP 2: optimize reads config
 
-`run_optimize()` accepts `config: LoreConfig`
+`run_optimize()` accepts `config: LormeConfig`
 and resolves chunk_sizes, overlaps, top_ks,
 metrics, judge, embedders internally.
 
@@ -75,7 +75,7 @@ metrics, judge, embedders internally.
 
 ### MVP 3: ingest reads config
 
-`ingest_with_manifest()` accepts `config: LoreConfig`
+`ingest_with_manifest()` accepts `config: LormeConfig`
 and resolves embedder internally. Winning params
 passed as simple values (output of optimize).
 
@@ -89,12 +89,12 @@ each component from config.
 
 ## DoD
 
-1. Each step accepts `config: LoreConfig`
+1. Each step accepts `config: LormeConfig`
 2. Each step resolves its own params from config
 3. `run_build` signature reduced to ~6 params
 4. `_run_preprocess()` delegates to component
 5. All existing tests pass
-6. `lore-mcp build --preprocess --config` works
+6. `lorme build --preprocess --config` works
    with full pipeline (enrich, caption, OCR)
 
 ## Provenance

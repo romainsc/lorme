@@ -1,9 +1,9 @@
-# Multi-MCP Setup: lore-mcp + Codebase-Memory (v1.0)
+# Multi-MCP Setup: lorme + Codebase-Memory (v1.0)
 
 Use two complementary MCP servers to cover both
 documentation and source code in a single project.
 
-- **lore-mcp**: semantic search over documents
+- **lorme**: semantic search over documents
   (PDF, HTML, DOCX, audio, video). Embedding-based
   retrieval with hybrid BM25+vector search.
 - **Codebase-Memory**: structural code intelligence
@@ -16,7 +16,7 @@ route queries to the right one.
 
 ## Installation
 
-### lore-mcp
+### lorme
 
 ```bash
 # From source (PyPI publication pending):
@@ -47,8 +47,8 @@ Add both servers to your MCP settings
 ```json
 {
   "mcpServers": {
-    "lore-mcp": {
-      "command": "lore-mcp",
+    "lorme": {
+      "command": "lorme",
       "args": ["serve", "--config", "/path/to/config.yaml"]
     },
     "codebase-memory": {
@@ -65,8 +65,8 @@ Same structure in `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "lore-mcp": {
-      "command": "lore-mcp",
+    "lorme": {
+      "command": "lorme",
       "args": ["serve", "--config", "/path/to/config.yaml"]
     },
     "codebase-memory": {
@@ -80,17 +80,17 @@ Same structure in `claude_desktop_config.json`:
 
 | Question type | Server | Tool | Example query |
 |--------------|--------|------|---------------|
-| Documentation content | lore-mcp | `search_docs` | "What does the doc say about reranking?" |
-| Configuration reference | lore-mcp | `search_docs` | "How to configure the embedding model?" |
-| API documentation | lore-mcp | `search_docs` | "What MCP tools are exposed?" |
-| Indexed sources list | lore-mcp | `list_indexed_sources` | "What documents are indexed?" |
+| Documentation content | lorme | `search_docs` | "What does the doc say about reranking?" |
+| Configuration reference | lorme | `search_docs` | "How to configure the embedding model?" |
+| API documentation | lorme | `search_docs` | "What MCP tools are exposed?" |
+| Indexed sources list | lorme | `list_indexed_sources` | "What documents are indexed?" |
 | Code structure | Codebase-Memory | `search_graph` | "Where is reranking implemented?" |
 | Call chains | Codebase-Memory | `trace_path` | "Who calls `_start_embedders`?" |
 | Architecture overview | Codebase-Memory | `get_architecture` | "Show project structure and hotspots" |
 | Dependencies | Codebase-Memory | `query_graph` | "What does `store.py` import?" |
 
 **Rule of thumb**: if the answer is in prose
-(documentation, guides, specs), use lore-mcp. If
+(documentation, guides, specs), use lorme. If
 the answer is in code structure (where something
 is defined, who calls it, what it depends on),
 use Codebase-Memory.
@@ -100,7 +100,7 @@ use Codebase-Memory.
 ### 1. Index documentation
 
 ```bash
-lore-mcp build \
+lorme build \
   --orig-dir docs/ \
   --build-dir build/ \
   --config config.yaml
@@ -150,15 +150,15 @@ code and documentation.
 
 ### Corpus type impact (E10.34)
 
-Measured on the lore-mcp repository itself:
+Measured on the lorme repository itself:
 
-| Corpus type | lore-mcp Recall@5 | Codebase-Memory |
+| Corpus type | lorme Recall@5 | Codebase-Memory |
 |-------------|-------------------|-----------------|
 | Technical docs | 90% | N/A (not designed for docs) |
 | Philosophy (Kant) | 100% | N/A |
 | Source code | 0% | Structural queries (83% quality, 10x fewer tokens) |
 
-lore-mcp with generalist embeddings cannot
+lorme with generalist embeddings cannot
 retrieve source code effectively — natural
 language documentation always wins in vector
 similarity. Codebase-Memory uses AST parsing
@@ -173,7 +173,7 @@ Measured on 10 mixed queries spanning docs + code:
 |----------|--------------|
 | Both MCP servers | **2.9** |
 | Codebase-Memory only | 2.4 |
-| lore-mcp only | 1.4 |
+| lorme only | 1.4 |
 | No tools | 1.3 |
 
 The LLM routes queries naturally — no integration
@@ -183,7 +183,7 @@ code needed. Combined recall exceeds either alone.
 
 | Server | License | Compatibility |
 |--------|---------|---------------|
-| lore-mcp | AGPL-3.0 | Copyleft, network clause |
+| lorme | AGPL-3.0 | Copyleft, network clause |
 | Codebase-Memory | MIT | Permissive |
 
 Both communicate via MCP (stdio), so there is no

@@ -7,7 +7,7 @@
 - Two sections: `sources` (what) + `options` (how)
 - `file` replaces `orig` (neutral naming)
 - `path` removed (derived from file in build_dir/prep/)
-- Recipe is read-only input, never modified by lore-mcp
+- Recipe is read-only input, never modified by lorme
 - URL fallback: if file absent + url present → download
 - Template available as MCP resource
 

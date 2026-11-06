@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """E12.95: CLI end-to-end validation.
 
-Validates the full lore-mcp CLI pipeline on a fast subset
+Validates the full lorme CLI pipeline on a fast subset
 of sources. Requires IS scripts in scripts/ and podman.
 
 Usage:
@@ -18,7 +18,7 @@ import sys
 import json
 from pathlib import Path
 
-BUILD_DIR = "/tmp/lore-mcp-validation"
+BUILD_DIR = "/tmp/lorme-validation"
 RECIPE = "tests/validation/recipe-validation.yaml"
 CONFIG = "tests/validation/config-validation.yaml"
 ORIG_DIR = "tests/fixtures/orig"
@@ -51,7 +51,7 @@ def main():
     if not skip_preprocess:
         print("[1/5] Preprocess")
         run(
-            f"lore-mcp preprocess {RECIPE} "
+            f"lorme preprocess {RECIPE} "
             f"--orig-dir {ORIG_DIR} --build-dir {BUILD_DIR} "
             f"--config {CONFIG} --allow-download --force --verbose",
             timeout=300,
@@ -67,7 +67,7 @@ def main():
     # 2. Build
     print("[2/5] Build (skip-optimize)")
     run(
-        f"lore-mcp build {RECIPE} "
+        f"lorme build {RECIPE} "
         f"--orig-dir {ORIG_DIR} --build-dir {BUILD_DIR} "
         f"--config {CONFIG} --skip-optimize --verbose",
         timeout=300,
@@ -82,7 +82,7 @@ def main():
     print("[3/5] Eval")
     db_path = db_files[0] if db_files else Path(BUILD_DIR) / "test-validation.db"
     output = run(
-        f"lore-mcp eval --db {db_path} "
+        f"lorme eval --db {db_path} "
         f"--config {CONFIG} --verbose",
         timeout=120,
     )
@@ -94,12 +94,12 @@ def main():
     prep_recipe = Path(RECIPE).parent / f"{Path(RECIPE).stem}-prep.yaml"
     if prep_recipe.exists():
         lint_cmd = (
-            f"lore-mcp lint {prep_recipe} "
+            f"lorme lint {prep_recipe} "
             f"--docs-dir {BUILD_DIR}/prep"
         )
     else:
         lint_cmd = (
-            f"lore-mcp lint {RECIPE} "
+            f"lorme lint {RECIPE} "
             f"--docs-dir {ORIG_DIR}"
         )
     print(f"  $ {lint_cmd}")
@@ -119,7 +119,7 @@ def main():
 
     # 5. State
     print("[5/5] State")
-    output = run("lore-mcp state --list")
+    output = run("lorme state --list")
     if output:
         print(f"  → {output.strip()[:100]}")
 
