@@ -405,6 +405,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Revue` E0.07 [P] README skeleton with quickstart placeholder and roadmap
 - `Revue` E0.08 [P] pyproject.toml skeleton with dependencies and entry points
 - `Revue` E0.09 [D] CONTRIBUTING.md with git workflow, AI guidelines, and license terms
+- `Prêt` E0.10 [E] Project rename: lore-mcp taken on PyPI (v1.0.17, blocker). 8 GitHub homonyms. Evaluate candidates (lorme, mnemos-mcp, rune-mcp), select, apply rename across all artifacts. Blocks E4.02. See grooming-E0.10.md
 
 ### E1. Core (MVP v0.1.0)
 
@@ -627,7 +628,7 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.76 [P] Test state isolation: purge tests must not touch real state dir. monkeypatch _state_dir in test_mcp_tools.py. Root cause of pipeline crash (test_purge_all deleted active state dir via concurrent fork). See grooming-E12.76-E12.77.md
 - `Implémenté` E12.77 [P] Resilient state dir writes: mkdir(parents=True) before write_text in caption_inline_frames (parse.py) and capture_service_logs (service.py). Prevents crash when state dir externally deleted during long-running captioning
 - `Implémenté` E12.78 [P] Build cache validation: verify .db content (sources > 0, matching model/chunk config) before skipping indexation. Previously any existing .db — even empty — was treated as cached
-- `En cours` E12.79 [P] Upstream contribution to Docling: PR #4392 open, review received (non-blocking: title misleading, lint failure, missing _utils.py test). Fix title + lint + add test. Local workaround (E12.80 MVP1) removable when merged
+- `Implémenté` E12.79 [P] Upstream contribution to Docling: PR #4392 merged (2026-10-19). Fix PIL warning on palette P+tRNS images in picture_description_base_model.py and _utils.py. 3 approvals (chrikrah ×2, dolfim-ibm). Local workaround (E12.80 MVP1) removable when Docling dependency updated
 - `Implémenté` E12.80 [P] Improve Docling usage in lore-mcp: MVP1 local RGBA workaround in caption_with_docling, MVP2 per-image captioning progress logging, MVP3 phase 1 docling_json validation. See grooming-E12.79-E12.80.md
 - `Implémenté` E12.81 [P] YouTube URL detection: route video platform URLs through yt-dlp before HTTP fetch. Fix name collision (use video ID). Fix E12.73 integration — yt-dlp must run BEFORE parse, not only in STT phase. See grooming-E12.80-all.md
 - `Implémenté` E12.82 [P] Capture ConversionResult: check Docling .status (PARTIAL_SUCCESS/FAILURE), surface .errors in preprocess report. Currently .document extracted and result discarded. See grooming-E12.80-all.md
