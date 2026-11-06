@@ -71,6 +71,17 @@ Homepage = "https://github.com/romainsc/lorme"
 Repository = "https://github.com/romainsc/lorme"
 Issues = "https://github.com/romainsc/lorme/issues"
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "tests/fixtures/orig/",
+    "tests/validation/",
+    "workspace-validation/",
+    "docs/studies/",
+    "eval-report-*.json",
+    "mcp-debug-wrapper.sh",
+    ".claude/",
+]
+
 [tool.hatch.version]
 source = "vcs"
 
