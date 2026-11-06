@@ -5,15 +5,15 @@ from pathlib import Path
 
 import yaml
 
-from lore_mcp.recipe import (
+from lorme.recipe import (
     expand_directory_entries,
     extract_source_metadata,
     parse_recipe,
     resolve_source_fields,
 )
-from lore_mcp.preprocess.clean import clean_text
-from lore_mcp.preprocess.dedup import find_exact_duplicates, find_near_duplicates
-from lore_mcp.preprocess.parse import (
+from lorme.preprocess.clean import clean_text
+from lorme.preprocess.dedup import find_exact_duplicates, find_near_duplicates
+from lorme.preprocess.parse import (
     FormatNotSupported,
     IMAGE_EXTENSIONS,
     caption_inline_frames,
@@ -25,10 +25,10 @@ from lore_mcp.preprocess.parse import (
     parse_video,
     transcribe_audio,
 )
-from lore_mcp.preprocess.enrich import enrich_context, enrich_meta, enrich_qa, enrich_stt_fix, enrich_speaker_id
-from lore_mcp.preprocess.pii import detect_pii
-from lore_mcp.preprocess.service import start_service, stop_service
-from lore_mcp.preprocess.validate import quality_gate
+from lorme.preprocess.enrich import enrich_context, enrich_meta, enrich_qa, enrich_stt_fix, enrich_speaker_id
+from lorme.preprocess.pii import detect_pii
+from lorme.preprocess.service import start_service, stop_service
+from lorme.preprocess.validate import quality_gate
 
 logger = logging.getLogger(__name__)
 
@@ -104,11 +104,11 @@ def _fetch_url(url: str, dest: Path) -> dict:
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "lore-mcp/0.1"})
+        req = urllib.request.Request(url, headers={"User-Agent": "lorme/0.1"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = resp.read()
             content_type = resp.headers.get("Content-Type", "").split(";")[0].strip()
-            from lore_mcp.preprocess.parse import detect_format, FormatNotSupported
+            from lorme.preprocess.parse import detect_format, FormatNotSupported
             needs_ext = not dest.suffix
             if not needs_ext:
                 try:
@@ -303,7 +303,7 @@ def _phase1_worker(recipe_path, orig_dir, work_dir,
                     if not video_dest.exists() and not dl_dest.exists():
                         try:
                             _downloads_dir.mkdir(parents=True, exist_ok=True)
-                            from lore_mcp.preprocess.parse import download_video
+                            from lorme.preprocess.parse import download_video
                             dl = download_video(source_url, str(_downloads_dir),
                                                 lang=resolved.get("lang", ""))
                             if dl.get("error"):
@@ -358,7 +358,7 @@ def _phase1_worker(recipe_path, orig_dir, work_dir,
             parsed_meta[resolved["path"]] = {"resolved": resolved, "status": "missing"}
             continue
 
-        from lore_mcp.preprocess.parse import detect_format
+        from lorme.preprocess.parse import detect_format
         try:
             backend = detect_format(str(src_path))
         except (FormatNotSupported, Exception) as e:
@@ -403,7 +403,7 @@ def _phase1_worker(recipe_path, orig_dir, work_dir,
             continue
 
         if backend in ("markitdown", "json", "code"):
-            from lore_mcp.preprocess.narrate import narrate_structured
+            from lorme.preprocess.narrate import narrate_structured
             text = narrate_structured(text, backend, filename=src_path.name)
 
         _write_phase(_prep_dir, target_path, "phase1-parse", text)
@@ -424,7 +424,7 @@ def _phase1_worker(recipe_path, orig_dir, work_dir,
 
     # Batch-process Docling sources (E12.87)
     if docling_batch:
-        from lore_mcp.preprocess.parse import parse_batch_docling
+        from lorme.preprocess.parse import parse_batch_docling
         batch_paths = [d["src_path"] for d in docling_batch]
         batch_jsons = [d["docling_json"] for d in docling_batch]
         if not quiet:
@@ -457,7 +457,7 @@ def _phase1_worker(recipe_path, orig_dir, work_dir,
             batch_text = result["text"]
             src_ext = Path(d["src_path"]).suffix.lower()
             if src_ext in (".xlsx", ".csv", ".json"):
-                from lore_mcp.preprocess.narrate import narrate_structured
+                from lorme.preprocess.narrate import narrate_structured
                 batch_text = narrate_structured(batch_text, "docling")
             _write_phase(_prep_dir, d["target_path"], "phase1-parse", batch_text)
             if not quiet:
@@ -483,7 +483,7 @@ def _phase1_worker(recipe_path, orig_dir, work_dir,
 
 
 def _resolve_from_config(config) -> dict:
-    """Resolve preprocess params from a LoreConfig object."""
+    """Resolve preprocess params from a LormeConfig object."""
     params = {}
     params["enrich"] = config.enrich_techniques or None
     params["ocr_engine"] = config.ocr_engine
@@ -557,12 +557,12 @@ def preprocess_sources(
 ) -> list[dict]:
     """Preprocess sources listed in a recipe. Returns reports.
 
-    All parameters are resolved from the LoreConfig object.
+    All parameters are resolved from the LormeConfig object.
     docs_base_dir is kept for backward compat but config.orig_dir
     takes precedence when set.
     """
-    from lore_mcp.checkpoint import Checkpoint
-    from lore_mcp.task_manager import check_cancelled
+    from lorme.checkpoint import Checkpoint
+    from lorme.task_manager import check_cancelled
 
     _build_dir = config.build_dir
     _orig_dir_cfg = config.orig_dir
@@ -651,8 +651,8 @@ def preprocess_sources(
 
     import subprocess as _sp
     import sys
-    from lore_mcp.preprocess.service import _log_vram
-    logger.debug("VRAM at lore-mcp launch (before subprocess):")
+    from lorme.preprocess.service import _log_vram
+    logger.debug("VRAM at lorme launch (before subprocess):")
     _log_vram()
     try:
         cuda_result = _sp.run(
@@ -676,7 +676,7 @@ def preprocess_sources(
     # ── Phase 1: Parse in subprocess (no captioning) ──────────
     import json as _json
     import multiprocessing
-    from lore_mcp.checkpoint import phase_hash as _phase_hash
+    from lorme.checkpoint import phase_hash as _phase_hash
 
     p1_hash = _phase_hash(recipe_path, config, "phase1")
     report_path = _prep_dir / "phase1-report.json"
@@ -835,7 +835,7 @@ def preprocess_sources(
                             print(f"    {orig_name} → transcribe", flush=True)
                         try:
                             lang = data["resolved"].get("lang", "")
-                            from lore_mcp.preprocess.parse import _get_audio_duration
+                            from lorme.preprocess.parse import _get_audio_duration
                             audio_dur = _get_audio_duration(str(src_path))
                             effective_timeout = max(stt_timeout, int(audio_dur * 2)) if audio_dur else stt_timeout
                             audio_title = Path(data["resolved"]["file"]).stem.replace("-", " ").replace("_", " ")
@@ -862,7 +862,7 @@ def preprocess_sources(
                         # E12.73: try yt-dlp for platform URLs (captions → skip STT)
                         if source_url and config.allow_download:
                             try:
-                                from lore_mcp.preprocess.parse import download_video
+                                from lorme.preprocess.parse import download_video
                                 if not quiet:
                                     print(f"    {data['resolved']['file']} → download+captions", flush=True)
                                 dl = download_video(source_url, str(_prep_dir), lang=lang)
@@ -910,7 +910,7 @@ def preprocess_sources(
                                 "video_frame_strategy",
                                 getattr(config, "video_frame_strategy", "scene"),
                             )
-                            from lore_mcp.preprocess.parse import _get_audio_duration
+                            from lorme.preprocess.parse import _get_audio_duration
                             vid_dur = _get_audio_duration(str(src_path))
                             effective_vid_timeout = max(stt_timeout, int(vid_dur * 2)) if vid_dur else stt_timeout
                             vid_result = parse_video(
@@ -942,7 +942,7 @@ def preprocess_sources(
     if diarize_entry:
         diarize_model = diarize_entry.get("model", "")
         if diarize_model:
-            from lore_mcp.preprocess.diarize import (
+            from lorme.preprocess.diarize import (
                 diarize_audio, align_speakers, format_diarized_markdown,
                 extract_speaker_audio, reconstruct_timeline,
             )
@@ -1049,7 +1049,7 @@ def preprocess_sources(
                 if not quiet:
                     print(f"    {data['resolved']['file']} → STT fallback (no diarization)", flush=True)
                 try:
-                    from lore_mcp.preprocess.parse import _get_audio_duration
+                    from lorme.preprocess.parse import _get_audio_duration
                     dur = _get_audio_duration(str(src_path))
                     effective_timeout = max(stt_timeout, int(dur * 2)) if dur else stt_timeout
                     start_service(stt_entry)
@@ -1264,7 +1264,7 @@ def preprocess_sources(
 
     check_cancelled()
     # ── Phase 3: Clean + Enrich ─────────────────────────────────
-    from lore_mcp.preprocess.llm import LLMConfig
+    from lorme.preprocess.llm import LLMConfig
     llm_config = LLMConfig.from_registry(llm_entry) if llm_entry else None
     llm_url = (llm_entry or {}).get("api_url", "")
     llm_model_name = (llm_entry or {}).get("model", "")

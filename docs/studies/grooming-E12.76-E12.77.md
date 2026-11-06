@@ -7,7 +7,7 @@ crashed with `FileNotFoundError` on state dir writes.
 
 Root cause analysis traced to `test_purge_all` in
 `test_mcp_tools.py` calling `purge_pipeline_state(
-purge_all=True)` on the **real** `~/.local/state/lore-mcp/`
+purge_all=True)` on the **real** `~/.local/state/lorme/`
 directory — no isolation. A Claude Code fork ran
 `pytest test_mcp_tools.py` at 23:14 CEST while the
 pipeline was captioning frame 11/49 of a PPTX, deleting

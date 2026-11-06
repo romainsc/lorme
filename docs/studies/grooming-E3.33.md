@@ -2,7 +2,7 @@
 
 ## Context
 
-No way to verify which version/commit of lore-mcp
+No way to verify which version/commit of lorme
 is running, neither CLI nor MCP. Version duplicated
 in pyproject.toml and __init__.py.
 
@@ -19,11 +19,11 @@ Version derived from git tags. No manual file editing.
 ### CLI
 
 ```
-$ lore-mcp version
+$ lorme version
 0.1.0.dev1+g55c7194
 
-$ lore-mcp version --deps
-lore-mcp 0.1.0.dev1+g55c7194
+$ lorme version --deps
+lorme 0.1.0.dev1+g55c7194
 Python 3.14.7
 sqlite-vec 0.1.6
 puremagic 2.2.0
@@ -37,7 +37,7 @@ markitdown: not installed
 
 ```python
 def get_version(deps: bool = False) -> str:
-    """Return lore-mcp version.
+    """Return lorme version.
 
     deps: include dependency versions
     """
@@ -56,8 +56,8 @@ def get_version(deps: bool = False) -> str:
 
 - setuptools-scm configured in pyproject.toml
 - Single version source (git tags)
-- lore-mcp version CLI
-- lore-mcp version --deps CLI
+- lorme version CLI
+- lorme version --deps CLI
 - get_version(deps) MCP tool
 - __version__ derived, not duplicated
 - Test: version string matches git describe

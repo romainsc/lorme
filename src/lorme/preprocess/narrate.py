@@ -151,7 +151,7 @@ def _narrate_code(text: str, filename: str = "") -> str:
 
     if ext == ".py":
         return _narrate_python(text, filename)
-    from lore_mcp.format_registry import get_format_registry
+    from lorme.format_registry import get_format_registry
     ts_info = get_format_registry().get_treesitter(ext)
     if ts_info:
         result = _narrate_treesitter(text, filename, ext)
@@ -399,7 +399,7 @@ def _narrate_treesitter(text: str, filename: str, ext: str) -> str | None:
     except ImportError:
         return None
 
-    from lore_mcp.format_registry import get_format_registry
+    from lorme.format_registry import get_format_registry
     ts_info = get_format_registry().get_treesitter(ext)
     if not ts_info:
         return None

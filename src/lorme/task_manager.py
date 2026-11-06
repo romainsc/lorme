@@ -100,13 +100,13 @@ class ModelRegistry:
     def _start_model(self, model_name: str, llm_entry: dict | None) -> None:
         """Start a model service if it has a start command."""
         if llm_entry and llm_entry.get("start"):
-            from lore_mcp.preprocess.service import start_service
+            from lorme.preprocess.service import start_service
             start_service(llm_entry)
 
     def _stop_model(self, model_name: str, llm_entry: dict | None) -> None:
         """Stop a model service."""
         if llm_entry and llm_entry.get("stop"):
-            from lore_mcp.preprocess.service import stop_service
+            from lorme.preprocess.service import stop_service
             logger.info("Stopping %s to free slot", model_name)
             stop_service(llm_entry)
 

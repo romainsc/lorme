@@ -5,7 +5,7 @@
 
 ## Context
 
-Currently, `lore-mcp build` configuration is
+Currently, `lorme build` configuration is
 split across multiple sources:
 - `manifest.yaml` — sources + biblio
 - `models.yaml` — embedding models
@@ -14,7 +14,7 @@ split across multiple sources:
 
 The user must juggle a YAML file, env vars, and
 CLI args. For the target UX (provide everything
-lore-mcp needs in one place), all build
+lorme needs in one place), all build
 configuration should be in one file.
 
 ## Proposed format
@@ -60,7 +60,7 @@ optimize:
 ## CLI
 
 ```bash
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --docs-dir /path/to/sources/ \
   --output-dir /path/to/output/ \
   --config build-config.yaml

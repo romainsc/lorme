@@ -1,11 +1,11 @@
-# CLAUDE.md — lore-mcp
+# CLAUDE.md — lorme
 
 ## 1. Project overview
 
 ### What
 
-**lore-mcp** (LORE — Local Offline Retrieval
-Engine) is an MCP (Model Context Protocol)
+**lorme** (LORME — Local Offline Retrieval
+& MCP Engine) is an MCP (Model Context Protocol)
 server for semantic search over a corpus of
 technical documents. Runs locally on the
 workstation with no mandatory network dependency.
@@ -240,7 +240,7 @@ adding any dependency.
 
 **AGPL-3.0-or-later** — copyleft with network
 clause (section 13), patent protection. If
-someone forks lore-mcp and deploys it as a
+someone forks lorme and deploys it as a
 service, they must provide the source. Migrated
 from GPL-3.0 per openshift sync decision
 (2026-08-30). See `docs/adr/001-license-gpl-v3.md`
@@ -256,7 +256,7 @@ process communication, no code linking).
 ### GitHub publication
 
 - **Public** repository on GitHub
-- Name: **lore-mcp**
+- Name: **lorme**
   (see `docs/adr/002-project-name.md`)
 - All code, comments, documentation in **English**
 
@@ -326,12 +326,12 @@ switch, or user request):
 ### Cross-workspace sync
 
 The `sync/` directory handles synchronization
-between lore-mcp and linked workspaces.
+between lorme and linked workspaces.
 
 - `sync/links.md`: table of linked projects
   with paths to their sync files and branches
 - `sync/<project>.md`: outgoing sync file
-  (maintained by lore-mcp, read by the linked
+  (maintained by lorme, read by the linked
   project)
 - Incoming sync files live in the linked
   project's workspace (read-only from here)
@@ -352,7 +352,7 @@ of `main` — check per workspace.
 At every **pause**, read incoming sync files
 from linked projects (see `sync/links.md`) and
 apply any new decisions. Update outgoing sync
-files with lore-mcp's current state.
+files with lorme's current state.
 
 Each repository maintains only its own outgoing
 files. Incoming files are never copied — they
@@ -397,7 +397,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 ### E0. Project initialization
 
 - `Revue` E0.01 [E] License study: evaluate MIT, Apache 2.0, GPL v3 against FSF/APRIL/OSI positions
-- `Revue` E0.02 [E] Project name study: explore naming candidates, select lore-mcp (LORE)
+- `Revue` E0.02 [E] Project name study: explore naming candidates, select lore-mcp (LORE). Renamed to lorme in E0.10
 - `Revue` E0.03 [P] Initialize repository: git, directory structure (4 spaces), .gitignore, GPL v3 LICENSE
 - `Revue` E0.04 [D] Write ADR-001 (license choice) and ADR-002 (project name)
 - `Revue` E0.05 [P] Write CLAUDE.md with all project decisions
@@ -405,6 +405,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Revue` E0.07 [P] README skeleton with quickstart placeholder and roadmap
 - `Revue` E0.08 [P] pyproject.toml skeleton with dependencies and entry points
 - `Revue` E0.09 [D] CONTRIBUTING.md with git workflow, AI guidelines, and license terms
+- `Implémenté` E0.10 [E] Project rename: lore-mcp taken on PyPI (v1.0.17, blocker). 8 GitHub homonyms. Selected: lorme (LORE+MCP fusion). Renamed 183 files, 735 tests pass. ADR-006. See grooming-E0.10.md
 
 ### E1. Core (MVP v0.1.0)
 
@@ -430,9 +431,9 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Implémenté` E2.11 [P] Code narration unitaire (Python): 3x add_source (server.py, store.py, embedder.py). 367 chunks, search scores >0.89. Enrichment applied by default (E12.118). See report-code-py.md. Validates E3.42 It1
 - `Implémenté` E2.12 [P] Cancel task validation: cancel_task stops running add_source in ~34s (cooperative). State clean. See report-cancel-task.md. Validates E12.111
 - `Implémenté` E2.13 [P] MCP stability validation: search_docs (0.91) + list_indexed_sources (21/21) + list_collections (17) + get_service_status on existing full-recipe collection. Serveur stable après builds. See report-tests-batch.md
-- `Implémenté` E2.14 [P] Project scan narration: add_directory src/lore_mcp → 27/28 .py indexed (856 chunks, 0 errors). search score 0.9177. Validates E3.42 + E12.115 + E12.123. See trace-E2.14-final.md
+- `Implémenté` E2.14 [P] Project scan narration: add_directory src/lorme → 27/28 .py indexed (856 chunks, 0 errors). search score 0.9177. Validates E3.42 + E12.115 + E12.123. See trace-E2.14-final.md
 - `Implémenté` E2.15 [P] Code narration sans enrichissement (baseline): add_source store.py enrich="none" → 52 chunks (vs 100 with enrich = -48%). Contenu narration AST pure. enrich="none" fonctionne. See trace-E2.14-2026-10-06.md
-- `Implémenté` E2.16 [P] Code narration scan + enrichissement: add_directory(src/lore_mcp, enrich="context,qa,meta") → 27 fichiers, 1316 chunks, 0 erreurs. Scores: pipeline 0.88, MCP tools 0.87. 716s. Collection: reval-code-enriched. See report-tests-batch.md
+- `Implémenté` E2.16 [P] Code narration scan + enrichissement: add_directory(src/lorme, enrich="context,qa,meta") → 27 fichiers, 1316 chunks, 0 erreurs. Scores: pipeline 0.88, MCP tools 0.87. 716s. Collection: reval-code-enriched. See report-tests-batch.md
 - E2.17 — removed (covered by E2.14 project scan: pyproject.toml, Containerfile, YAML, JSON already in scan scope)
 
 ### E3. Documentation
@@ -450,9 +451,9 @@ Item types: `[E]` study/grooming, `[P]` PoC
 ### E4. Packaging
 
 - `Revue` E4.01 [P] MCP client configuration example (examples/mcp-config.example.json)
-- `Implémenté` E4.02 [P] pip installable package: wheel builds, installs, CLI works. Version 0.1.0.dev1. Missing deps added (charset-normalizer, pyyaml). PyPI publish pending (needs account + token)
+- `Implémenté` E4.02 [P] pip installable package: wheel builds, installs, CLI works. Published on PyPI as `lorme` v0.1.1 (2026-11-06). `pip install lorme`
 - `Implémenté` E4.03 [P] Container image (Podman/Docker): Containerfile multi-stage, all commands, volume mounts, docs/docker.md, mcp-config example updated. See grooming-E4.03.md
-- E4.04 — removed (covered by `lore-mcp build --skip-optimize` since E11.01)
+- E4.04 — removed (covered by `lorme build --skip-optimize` since E11.01)
 - E4.05 — moved to openshift workspace (data repository, not tooling)
 - E4.06 — moved to openshift workspace (data repository, not tooling)
 
@@ -498,14 +499,14 @@ Item types: `[E]` study/grooming, `[P]` PoC
 
 - E7.01 — deferred (no second backend = premature abstraction. Revisit when pgvector is needed — the second backend will guide what to abstract)
 - E7.02 — absorbed by E9 (multi-collection: one .db per model)
-- E7.03 — deferred (pgvector is an openshift infra need, not lore-mcp standalone. Depends on E7.01)
+- E7.03 — deferred (pgvector is an openshift infra need, not lorme standalone. Depends on E7.01)
 
 ### E10. RAG evaluation (openshift demand 2026-08-31)
 
 - `Implémenté` E10.01 [E] RAG evaluation design. RAGAS seul suffit, SDG Hub hors scope. Extractive fallback sans dépendance. LORE_LLM_URL/MODEL pour RAGAS.
-- `Implémenté` E10.02 [P] `lore-mcp eval` — evaluate retrieval quality.
-- `Implémenté` E10.03 [P] `lore-mcp optimize` — auto-optimize chunking params.
-- `Implémenté` E10.04 [P] `lore-mcp optimize --manifest` — optimize with manifest to preserve bibliographic metadata.
+- `Implémenté` E10.02 [P] `lorme eval` — evaluate retrieval quality.
+- `Implémenté` E10.03 [P] `lorme optimize` — auto-optimize chunking params.
+- `Implémenté` E10.04 [P] `lorme optimize --manifest` — optimize with manifest to preserve bibliographic metadata.
 - E10.05 — absorbed by E10.09 (multi-model optimize already implemented)
 - `Implémenté` E10.08 [P] Auto-configure embedding model from .db meta: if config has no embedding.model, read model_name from DB meta at first load. Error if neither configured nor in DB
 - `Implémenté` E10.10 [P] Rename mode `auto` → `builtin` with `:gpu`/`:cpu` suffix.
@@ -521,7 +522,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Implémenté` E10.20 [P] Observability: ProgressReporter with ★ best column, sections, timing, Markdown summary.
 - `Implémenté` E10.21 [P] Config unification: `embedding:` key only, `--models` removed, error on old keys.
 - E10.22 — removed (no value, shelved since creation)
-- `Implémenté` E10.24 [P] Output management: clean default output (no lib noise), --verbose for detailed lore-mcp output, --debug for internal logs. Silence all third-party loggers (httpx, numexpr, sentence-transformers, huggingface_hub). Wire ProgressReporter with --verbose.
+- `Implémenté` E10.24 [P] Output management: clean default output (no lib noise), --verbose for detailed lorme output, --debug for internal logs. Silence all third-party loggers (httpx, numexpr, sentence-transformers, huggingface_hub). Wire ProgressReporter with --verbose.
 - `Implémenté` E10.25 [P] Per-model verify_ssl in embedding config: honor `verify_ssl: false` per embedding model in build-config.yaml (currently only supported for judge LLM).
 - `Implémenté` E10.26 [P] Extractive question quality: filter garbage sentences (min alpha ratio, min word count, skip markdown headers, skip base64/numeric-only lines) in `_generate_extractive`.
 - `Implémenté` E10.27 [P] Heading-based evaluation: generate QA pairs from document headings (heading → query, section content → ground truth) before chunking. Replace chunk-extracted questions. NDCG@k + Recall@k metrics (ir_measures or manual). Eliminates chunking bias.
@@ -529,28 +530,28 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `À faire` E10.31 [E] Default models study: decide default embedding model, reranking model, and LLM model when config does not specify them. Criteria: libre license, multilingual, quality benchmarks. Depends on E5.07 (reranking impl) — decide defaults after features exist
 - `Implémenté` E10.32 [P] Config refactoring: LLM registry pattern. `llm:` top-level = list of available models (name, model, api_url, api_key). Each section (enrich, judge, parse) references models by name. List of models per section = dimensions for optimize. Replaces current flat `llm:` section. Depends on E10.30
 - E10.33 — shelved (E6.10 already allows manual per-source params in manifest. Auto-detection adds complexity for marginal gain — chunking impact ~5% vs preprocessing ~60%. Revisit if benchmarks show otherwise)
-- `Implémenté` E10.29 [E] End-to-end optimize: extend `lore-mcp optimize` to vary all pipeline parameters — preprocessing (dedup threshold, enrich techniques, table protection) + chunking (chunk_size, overlap) + search (top_k, reranking). Single optimization run evaluates the full pipeline against retrieval quality (NDCG, recall). Currently optimize only varies chunking params
+- `Implémenté` E10.29 [E] End-to-end optimize: extend `lorme optimize` to vary all pipeline parameters — preprocessing (dedup threshold, enrich techniques, table protection) + chunking (chunk_size, overlap) + search (top_k, reranking). Single optimization run evaluates the full pipeline against retrieval quality (NDCG, recall). Currently optimize only varies chunking params
 - `À faire` E10.28 [D] Detailed eval report: markdown file with full questions, ground truths, per-model chapters, per-config sections with exhaustive Q&A and scores, scoring methodology appendix.
 - `Implémenté` E10.23 [P] Fix RAGAS import crash: stub langchain_community.chat_models.vertexai before import.
 - `Implémenté` E10.09 [P] AutoRAG multi-model implementation. `--models` CLI, embedding metrics (score_spread, source_diversity), MRR, model config YAML/CLI.
-- `Implémenté` E10.35 [P] Fix eval crash on empty FTS5 query: lore-mcp eval crashes when auto-generated questions produce empty strings after cleaning (headings-only or base64-only content). FTS5 rejects empty MATCH query. Guard: skip empty queries in eval, warn in report
+- `Implémenté` E10.35 [P] Fix eval crash on empty FTS5 query: lorme eval crashes when auto-generated questions produce empty strings after cleaning (headings-only or base64-only content). FTS5 rejects empty MATCH query. Guard: skip empty queries in eval, warn in report
 - `Implémenté` E10.06 [P] Fix optimize .db naming collision.
 - `Implémenté` E10.07 [P] Fix optimize glob+st_mtime fragility.
-- `Implémenté` E10.34 [E] Corpus-type impact on RAG pipeline: study whether fundamentally different corpus types (source code, technical documentation, philosophy books, heterogeneous/general corpus) require different RAG pipelines or if a single pipeline with configuration handles all. Evaluate per corpus type: chunking strategy (AST-aware vs heading-based vs paragraph), embedding model (code-specialized vs generalist vs multilingual), preprocessing needs (code comments vs prose vs structured text), retrieval quality (same queries, different corpus structures). Benchmark on 3-4 corpus types with lore-mcp current pipeline. Determine: universal pipeline with config knobs vs specialized pipelines per corpus type
+- `Implémenté` E10.34 [E] Corpus-type impact on RAG pipeline: study whether fundamentally different corpus types (source code, technical documentation, philosophy books, heterogeneous/general corpus) require different RAG pipelines or if a single pipeline with configuration handles all. Evaluate per corpus type: chunking strategy (AST-aware vs heading-based vs paragraph), embedding model (code-specialized vs generalist vs multilingual), preprocessing needs (code comments vs prose vs structured text), retrieval quality (same queries, different corpus structures). Benchmark on 3-4 corpus types with lorme current pipeline. Determine: universal pipeline with config knobs vs specialized pipelines per corpus type
 
 ### E11. Build workflow
 
-- `Implémenté` E11.01 [P] `lore-mcp build` — single command: manifest + models → optimized .db + metadata + report. Pre-flight validation, resumability.
+- `Implémenté` E11.01 [P] `lorme build` — single command: manifest + models → optimized .db + metadata + report. Pre-flight validation, resumability.
 
 ### E12. Preprocessing tool (E14.17 recommendations)
 
-CLI `lore-mcp preprocess` implementing RAG
+CLI `lorme preprocess` implementing RAG
 pipeline steps 1-3 (parse, clean, deduplicate).
 Self-service tooling for Platform consumers.
 Input: raw sources (PDF, HTML, DOCX, markdown).
 Output: clean markdown + enriched manifest
-(`-prep` suffix), ready for `lore-mcp build`.
-Module: `src/lore_mcp/preprocess/` (separable).
+(`-prep` suffix), ready for `lorme build`.
+Module: `src/lorme/preprocess/` (separable).
 CLI: `--docs-base-dir`, `--orig-subdir`,
 `--prep-subdir`, `--manifest-out`.
 Manifest is never modified — enriched copy only.
@@ -561,15 +562,15 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.04 [P] Deduplication: exact hash SHA-256 + near-duplicate MinHash+LSH (datasketch, academic defaults: k=5, 128 perms, threshold=0.8). Report-only — warns on duplicates, does not remove. Measured rates: ~24% enterprise docs (E14.17)
 - `Implémenté` E12.05 [P] PII detection: warn on patterns (emails, IPs, API keys, internal domains) before indexing. Report-only mode (no auto-removal). Vectors are not anonymization
 - `Implémenté` E12.06 [P] Table protection: detect markdown tables, ensure they are not split across chunk boundaries. Extract large tables as structured metadata. 4-pillar approach (E14.17)
-- `Implémenté` E12.07 [P] Quality gate: integrate `lore-mcp lint` as pre-flight validation. Block indexing of `poor` files unless `--force`. Warn on low text density, noise sections, heading hierarchy issues
+- `Implémenté` E12.07 [P] Quality gate: integrate `lorme lint` as pre-flight validation. Block indexing of `poor` files unless `--force`. Warn on low text density, noise sections, heading hierarchy issues
 - `Implémenté` E12.08 [E] Transversal LLM capability: study + wiring of shared LLM client for preprocessing. Evaluate techniques — contextual retrieval (−35% failures alone, −49% with hybrid BM25), Q&A mode, proposition indexing (+22.5%), metadata enrichment (+14.8pts). Define "complex document" (image-heavy, bad OCR, complex layout) and detection criteria (lint score on parser output, text density threshold). Subsumes E6.03 (image captioning). Cost/benefit, LORE_LLM_URL integration, opt-in config. Foundation for E12.03 LLM fallback and E12.09 enrich
 - `Implémenté` E12.09 [P] LLM enrichment implementation: optional `--enrich` flag calling LLM to add context paragraphs (contextual retrieval) and/or generated questions (Q&A mode) per section. Depends on E12.08 study
-- `Implémenté` E12.10 [P] Build integration: pipeline steps resolve params from LoreConfig autonomously. preprocess_sources(), _run_optimization() accept config param. run_build passes config to each step. Explicit params override config. CLI `--preprocess` + config YAML both work
+- `Implémenté` E12.10 [P] Build integration: pipeline steps resolve params from LormeConfig autonomously. preprocess_sources(), _run_optimization() accept config param. run_build passes config to each step. Explicit params override config. CLI `--preprocess` + config YAML both work
 
 ### Bugs
 
 - E12.11 — removed (double clean is idempotent, clean needed in both preprocess and ingest for all use cases)
-- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lore-mcp build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
+- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lorme build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
 - E12.12 — removed (custom sentinels unnecessary — E6.02 migrates to MarkdownTextSplitter which handles tables natively)
 - `Implémenté` E12.101 [P] Download to build_dir, not orig_dir. CI green. See grooming-E12.101.md
 - `Implémenté` E12.102 [P] Recipe orig_dir used as fallback. CI green. See grooming-E12.102.md
@@ -612,7 +613,7 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.44 [P] Configurable timeout per model in LLM registry: add `timeout` field to llm registry entries. Used by PictureDescriptionApiOptions and caption_with_docling. Default 180s. Molmo CPU needs 600s for PPTX images
 - `Implémenté` E12.45 [P] Standalone photo/infographic fallback: when Docling produces empty output on a standalone image (0 pictures, 0 texts in JSON), fall back to direct VLM captioning via API. Pexels photo produces 0 bytes currently. See audit-prep-full-tesseract-2026-09-22.md
 - E12.46 — removed (no change needed: Summary/Keywords labels are LLM formatting instructions, not RAG signals. Content is already in source language via E12.36. Labels are noise for embedding — a few EN tokens in FR text have no measurable impact on retrieval. See grooming-E12.46.md)
-- `Implémenté` E12.47 [P] Minimal function signatures: preprocess_sources 3 params, run_build 5 params. All pipeline params resolved from LoreConfig. Tests migrated to LoreConfig fixtures. See grooming-E12.47.md
+- `Implémenté` E12.47 [P] Minimal function signatures: preprocess_sources 3 params, run_build 5 params. All pipeline params resolved from LormeConfig. Tests migrated to LormeConfig fixtures. See grooming-E12.47.md
 - `Implémenté` E12.48 [P] Audio ingestion: transcribe_audio() calls STT API (OpenAI-compatible /v1/audio/transcriptions). Markdown with timestamp headings. Config: parse.stt_model references LLM registry. See study-E12.48-audio-ingestion.md
 - `Implémenté` E12.49 [P] Video ingestion: parse_video() extracts audio (ffmpeg) + scene change frames → single .md with transcription + base64 inline frames at temporal position. See grooming-E12.49.md
 - `Implémenté` E12.52 [P] Video frame captioning. Correction needed: log says "video frames" for document inline images (PPTX, DOCX) — should distinguish "inline images" from "video frames"
@@ -620,15 +621,15 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.54 [P] Frame extraction: hybrid strategy (scene change + fixed interval, merge deduplicated). Best coverage for mixed content
 - `Implémenté` E12.55 [P] Frame extraction: OCR-guided strategy. Extract frame every 30s, fast OCR, keep only frames where text content changes. Best for slide presentations with desynchronized camera. Config: `parse.video_frame_strategy: ocr`
 - `Implémenté` E12.73 [P] Video download via yt-dlp: use yt_dlp Python lib (Unlicense). Auto-detect platform URLs (try extract_info, fallback to HTTP fetch). File naming: video ID (e.g. VCqIfIXmFMM.mp4), full title in manifest-prep. Download captions if available → skip STT. Validation videos: youtube.com/watch?v=VCqIfIXmFMM (EN, slides visible) and youtube.com/watch?v=K0X9QDRkIdg (EN, no slides): download videos from URL (YouTube, LinkedIn, etc.) with yt-dlp (Unlicense). If subtitles/captions available (auto or manual), download them and skip STT entirely. If captions downloaded, option to download audio-only (no video) or video-only (for frames). Extract metadata (title, description, duration, upload date) into manifest. Manifest entry: `url: https://...` triggers download. yt-dlp already handles authentication, rate limiting, format selection. Integration: in phase 1 parse, before STT — check for .srt/.vtt alongside video or download captions first
-- `Implémenté` E12.74 [P] Configurable enrich prompts: prompts in separate distributable prompts.yaml (src/lore_mcp/prompts.yaml). Config.yaml references custom file (enrich.prompts_file) or overrides inline (enrich.prompts.<lang>.<technique>). Cascade: inline → custom file → distributed default → fallback EN. No hardcoded prompts in code except minimal fallback: move enrichment prompt templates from hardcoded dict to config.yaml. Allow users to add/override prompts per language and per technique. Current: FR+EN hardcoded in enrich.py. Enables: custom languages, domain-specific prompts, prompt tuning without code changes
+- `Implémenté` E12.74 [P] Configurable enrich prompts: prompts in separate distributable prompts.yaml (src/lorme/prompts.yaml). Config.yaml references custom file (enrich.prompts_file) or overrides inline (enrich.prompts.<lang>.<technique>). Cascade: inline → custom file → distributed default → fallback EN. No hardcoded prompts in code except minimal fallback: move enrichment prompt templates from hardcoded dict to config.yaml. Allow users to add/override prompts per language and per technique. Current: FR+EN hardcoded in enrich.py. Enables: custom languages, domain-specific prompts, prompt tuning without code changes
 - `Implémenté` E12.72 [P] STT post-correction: study approaches to fix recurring STT errors in transcriptions. Regex/dictionary (fast, fragile) vs LLM contextual correction (robust, 1 LLM call/section). Measured: Canary-1B-v2 produces "Asian" for "agent", "Ejetic" for "agentic" on technical talks. LLM approach integrates as enrich technique `stt_correction`. Evaluate: error rate before/after, false positive risk, cost/benefit
 - `Implémenté` E12.71 [P] Smart frame captioning filter: skip VLM captioning on frames with no readable text content. OCR each frame before captioning — if OCR text < threshold (e.g. <20 chars or alpha ratio <0.3), skip captioning. Avoids spending ~70s/frame on "a man at a podium" descriptions. For scene strategy: reduces 44 frames to ~5-10 meaningful ones. Combine with transcript context: if frame OCR matches nearby transcript, skip (redundant). Measured waste: 51 min GPU on 44 frames, ~30 were pure noise
-- E12.75 — removed (code RAG handled by Codebase-Memory MCP server, MIT, 158 languages, knowledge graph. lore-mcp stays focused on documents. The two MCP servers are complementary. See study-E10.34-corpus-type-rag.md)
+- E12.75 — removed (code RAG handled by Codebase-Memory MCP server, MIT, 158 languages, knowledge graph. lorme stays focused on documents. The two MCP servers are complementary. See study-E10.34-corpus-type-rag.md)
 - `Implémenté` E12.76 [P] Test state isolation: purge tests must not touch real state dir. monkeypatch _state_dir in test_mcp_tools.py. Root cause of pipeline crash (test_purge_all deleted active state dir via concurrent fork). See grooming-E12.76-E12.77.md
 - `Implémenté` E12.77 [P] Resilient state dir writes: mkdir(parents=True) before write_text in caption_inline_frames (parse.py) and capture_service_logs (service.py). Prevents crash when state dir externally deleted during long-running captioning
 - `Implémenté` E12.78 [P] Build cache validation: verify .db content (sources > 0, matching model/chunk config) before skipping indexation. Previously any existing .db — even empty — was treated as cached
-- `En cours` E12.79 [P] Upstream contribution to Docling: PR #4392 open, review received (non-blocking: title misleading, lint failure, missing _utils.py test). Fix title + lint + add test. Local workaround (E12.80 MVP1) removable when merged
-- `Implémenté` E12.80 [P] Improve Docling usage in lore-mcp: MVP1 local RGBA workaround in caption_with_docling, MVP2 per-image captioning progress logging, MVP3 phase 1 docling_json validation. See grooming-E12.79-E12.80.md
+- `Implémenté` E12.79 [P] Upstream contribution to Docling: PR #4392 merged (2026-10-19). Fix PIL warning on palette P+tRNS images in picture_description_base_model.py and _utils.py. 3 approvals (chrikrah ×2, dolfim-ibm). Local workaround (E12.80 MVP1) removable when Docling dependency updated
+- `Implémenté` E12.80 [P] Improve Docling usage in lorme: MVP1 local RGBA workaround in caption_with_docling, MVP2 per-image captioning progress logging, MVP3 phase 1 docling_json validation. See grooming-E12.79-E12.80.md
 - `Implémenté` E12.81 [P] YouTube URL detection: route video platform URLs through yt-dlp before HTTP fetch. Fix name collision (use video ID). Fix E12.73 integration — yt-dlp must run BEFORE parse, not only in STT phase. See grooming-E12.80-all.md
 - `Implémenté` E12.82 [P] Capture ConversionResult: check Docling .status (PARTIAL_SUCCESS/FAILURE), surface .errors in preprocess report. Currently .document extracted and result discarded. See grooming-E12.80-all.md
 - `Implémenté` E12.83 [P] Preprocess corrections: transverse item for fixes identified during pipeline validation (report completeness, error surfacing, quality gate edge cases)
@@ -637,7 +638,7 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.88 [E] Export options study: compact_tables=True recommended (-9% PDF, -76% XLSX, no loss). Applied. See study-E12.88
 - `Implémenté` E12.98 [E] Docling Markdown bridge study: all markdown (trafilatura, markitdown, STT) loaded via Docling Markdown backend → HybridChunker. Result: GO — <0.3% loss, 2× fewer chunks, 100% heading context, enrichment preserved. See study-E12.98
 - `Implémenté` E12.99 [P] Replace MarkdownTextSplitter with Docling bridge + HybridChunker in ingest.py. All formats: markdown → Docling Markdown backend → DoclingDocument → HybridChunker. No parser changes. See grooming-E12.99
-- E12.120 — shelved (6/10 Docling options already covered by lore-mcp with superior implementations — VLM captioning, code narration AST, OCR, LLM registry. Remaining 4 have no demonstrated need. Upstream contribution preferred over adoption — PR #4392 open, smart captioning filter is next candidate. Maximize work not done)
+- E12.120 — shelved (6/10 Docling options already covered by lorme with superior implementations — VLM captioning, code narration AST, OCR, LLM registry. Remaining 4 have no demonstrated need. Upstream contribution preferred over adoption — PR #4392 open, smart captioning filter is next candidate. Maximize work not done)
 - `Implémenté` E12.127 [P] Params passthrough: generic `params` dict in LLM registry, forwarded to API (form data for STT, JSON body for LLM/VLM). 6 call sites. 696 tests. See grooming-E12.127.md
 - `Implémenté` E12.125 [P] Speaker diarization: pyannote.audio (MIT, Level 2) optional post-processing. Phase 1.5 after STT. Alignment + format_diarized_markdown. enrich:speaker_id LLM technique (with/without speakers hint). Config: parse.diarization_model. 712 tests. See grooming-E12.125.md
 - `Implémenté` E12.126 [P] Cleanup intermediates: MCP+build delete prep/+.work/ after success. preprocess keeps prep/ (deliverable). --keep-intermediates preserves all. See grooming-E12.126.md
@@ -688,7 +689,7 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E3.14 [P] Incremental ingest path: ingest_source() in ingest.py reads chunk params from existing .db meta, validates model, no create_tables. add_source uses ingest_source for existing .db, falls back to run_build for new .db. Merges E3.15. Introduced by E3.09d
 - E3.15 — merged into E3.14 (same root cause: no incremental ingest path)
 - `Implémenté` E3.16 [P] MCP serve db connection lifecycle: separate connections for write ops, invalidate _single_db after. Introduced by E3.09d
-- `Implémenté` E3.19 [P] Default directories: data_dir (XDG), default_collection, _get_db(collection) cache, lore-mcp init bootstrap. _single_db/_is_multi_collection removed. CI green
+- `Implémenté` E3.19 [P] Default directories: data_dir (XDG), default_collection, _get_db(collection) cache, lorme init bootstrap. _single_db/_is_multi_collection removed. CI green
 - `Implémenté` E3.18 [P] Unified add pipeline: add_source (preprocess+ingest, all formats), add_sources (JSON batch), add_recipe (YAML). start_build/start_preprocess/start_enrich removed. 14 MCP tools. CI green
 - `Implémenté` E3.20 [P] add_source markdown: validate add_source with .md files via MCP LLM. Config defaults, override, preprocess=false. Use existing test fixtures
 - `Implémenté` E3.21 [P] add_source HTML: validate with .html files via MCP LLM. trafilatura parsing. Use existing test fixtures
@@ -702,7 +703,7 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E3.29 [P] Source identification: source_id as PK in all tables. Cascade resolution: param → DOI → ISBN → URL → file. Migration auto (file: prefix). search/remove/list support source_id. 689 tests. See grooming-E12.123.md
 - `Implémenté` E3.30 [P] Format detection by content: puremagic (MIT, pure Python) for content-based detection, extension fallback for text formats. ZIP disambiguation (DOCX/PPTX/EPUB) native. CI green
 - `Implémenté` E3.32 [P] Test database fixtures: produce small .db collections for tests (markdown-only, mixed formats, multi-collection). Rebuilt from scratch — no migration of existing .db. Used by E3.17 validation and unit tests
-- `Implémenté` E3.33 [P] Version command: hatch-vcs, lore-mcp version [--deps], get_version(deps) MCP tool. CI green
+- `Implémenté` E3.33 [P] Version command: hatch-vcs, lorme version [--deps], get_version(deps) MCP tool. CI green
 - `Implémenté` E3.34 [P] orig_dir in recipe: add orig_dir field to recipe YAML (base directory for source files). Also as parameter on add_source, add_sources, add_recipe MCP tools. Recipe is self-contained — no external --orig-dir needed
 - `Implémenté` E3.35 [P] Heuristic text format detection: puremagic returns text/plain for HTML with leading whitespace. Add fallback heuristic: strip whitespace, check for <!DOCTYPE or <html. Improve detect_format for text files that puremagic can't distinguish
 - `Implémenté` E3.36 [P] Task progress reporting: get_task_status returns only "running" + elapsed. Add phase info (parsing 3/5, captioning 2/8, enriching 7/12, embedding). LLM can report progress to user
@@ -719,9 +720,9 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.96 [P] Validation MCP via SDK: programmatic test of all MCP tools without LLM
 - `Implémenté` E12.97 [P] Validation MCP via LLM: playbook natural language before/after indexing, incremental ops, from-scratch. Depends on E3.09a-d, E12.96
 - `Implémenté` E12.93 [P] Rename manifest → recipe (code, CLI, docs, tests). Recipe = sources + defaults + options cascade. config.yaml = instance defaults only
-- `Implémenté` E10.36 [E] Multi-MCP benchmark: measure retrieval quality with lore-mcp + Codebase-Memory combined vs each alone vs neither. Complex queries spanning docs + code. 4 scenarios: both MCP, lore-mcp only, Codebase-Memory only, no tools. 10 mixed questions. Metrics: answer completeness, source coverage, file/line accuracy. Requires built .db (after validation pipeline)
-- `Implémenté` E3.08 [E] Codebase-Memory synergy study: benchmark E10.36 confirms natural synergy (2.9/3.0 combined vs 2.4 CM-only vs 1.4 lore-only). No integration code needed — LLM routes naturally. Axes 1,3,4 dropped (premature coupling). See /tmp/e10-36-results.md: evaluate deeper integration between lore-mcp (documents) and Codebase-Memory (code). Evaluate: unified search proxy (single MCP tool queries both), cross-referencing (doc mentions function → link to code), docstring indexing (code comments as lore-mcp sources), shared context (lore-mcp enrichment uses code graph for better context), joint eval (measure combined recall vs separate). Determine: which integrations add value vs premature coupling. Both are MCP servers — integration should respect MCP boundaries (no code linking)
-- `Implémenté` E3.07 [D] Multi-MCP setup guide: document how to use lore-mcp (documents) + Codebase-Memory (code) together. MCP client config example with both servers. Use cases: "what does the doc say about X" (lore-mcp) + "where is X implemented" (Codebase-Memory). Installation, config, example queries
+- `Implémenté` E10.36 [E] Multi-MCP benchmark: measure retrieval quality with lorme + Codebase-Memory combined vs each alone vs neither. Complex queries spanning docs + code. 4 scenarios: both MCP, lorme only, Codebase-Memory only, no tools. 10 mixed questions. Metrics: answer completeness, source coverage, file/line accuracy. Requires built .db (after validation pipeline)
+- `Implémenté` E3.08 [E] Codebase-Memory synergy study: benchmark E10.36 confirms natural synergy (2.9/3.0 combined vs 2.4 CM-only vs 1.4 lore-only). No integration code needed — LLM routes naturally. Axes 1,3,4 dropped (premature coupling). See /tmp/e10-36-results.md: evaluate deeper integration between lorme (documents) and Codebase-Memory (code). Evaluate: unified search proxy (single MCP tool queries both), cross-referencing (doc mentions function → link to code), docstring indexing (code comments as lorme sources), shared context (lorme enrichment uses code graph for better context), joint eval (measure combined recall vs separate). Determine: which integrations add value vs premature coupling. Both are MCP servers — integration should respect MCP boundaries (no code linking)
+- `Implémenté` E3.07 [D] Multi-MCP setup guide: document how to use lorme (documents) + Codebase-Memory (code) together. MCP client config example with both servers. Use cases: "what does the doc say about X" (lorme) + "where is X implemented" (Codebase-Memory). Installation, config, example queries
 - `Implémenté` E12.56 [P] Unified model registry
 - `Implémenté` E12.57 [P] Standardize API URL convention
 - `Implémenté` E12.58 [P] Unified --allow-download flag: gate both model downloads (HuggingFace builtin) and source URL fetches (manifest url-only entries) behind explicit authorization. Default: no download without flag
@@ -729,7 +730,7 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.65 [P] Threaded blocking calls for immediate signal handling
 - `Implémenté` E12.66 [P] Selective state purge
 - `Implémenté` E12.61 [P] Preserve source directory tree in preprocess output: two files with the same name in different subdirectories must not collide. prep/ mirrors the orig/ tree structure. Path in manifest-prep reflects the relative path
-- `Implémenté` E12.62 [P] Directory-as-collection: preprocess a directory tree recursively without manifest (or with partial manifest). Manifest optional — if absent, scan directory; if partial, enrich with scanned files. Goal: index lore-mcp's own docs as a .db, then any framework/library docs to validate RAG relevance. Supports: full manifest, partial manifest (overrides per file), directory-only (auto-manifest), subdirectory selection
+- `Implémenté` E12.62 [P] Directory-as-collection: preprocess a directory tree recursively without manifest (or with partial manifest). Manifest optional — if absent, scan directory; if partial, enrich with scanned files. Goal: index lorme's own docs as a .db, then any framework/library docs to validate RAG relevance. Supports: full manifest, partial manifest (overrides per file), directory-only (auto-manifest), subdirectory selection
 - `Implémenté` E12.63 [P] Resumable pipeline
 - `Implémenté` E12.64 [P] Sub-source checkpoint for captioning: resume at the Nth image within a source, not from scratch. Detect already-captioned images in intermediate file. Critical for PPTX with 49+ images (2h captioning lost on interrupt). Correction needed: per-image checkpoint implemented for caption_with_docling (phase 2) but NOT for caption_inline_frames (phase 1.7). Phase 1.7 restarts from frame 1 on resume
 - `Implémenté` E12.67 [P] Per-phase hash for intermediate reuse: all 3 phases wired. Phase 1 (ocr/video params), phase 2 (caption models), phase 3 (enrich techniques + LLM). Config change triggers automatic re-run. 691 tests
@@ -747,10 +748,10 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.15 [P] Document type detection: classify input as text-native PDF, scanned document, photo, infographic, or data. Route to appropriate parser (Docling text, Docling VLM, VLM captioning). Prerequisite for E12.16 and E12.24
 - `Implémenté` E12.16 [P] Image captioning via VLM: LLM vision generates descriptions for photos and infographics. Requires general-purpose VLM (Claude vision, LLaVA, Qwen-VL). Also enriches alt text of images in markdown documents. Depends on E12.15 (detection). Related to E6.03
 - E12.17 — moved to E10.29 (end-to-end optimize)
-- `Implémenté` E12.18 [P] CLI separation: `lore-mcp enrich` as standalone command (currently only `--enrich` option on preprocess). Same modules, separate entry point. `lore-mcp preprocess --enrich` remains as shortcut
-- `Implémenté` E12.19 [P] Analyze integration: dedup + PII reports as implicit analysis during preprocess (not separate action). `lore-mcp lint` already exists as standalone. Wire dedup+PII into lint if not already
-- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lore-mcp build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
-- `Implémenté` E12.21 [P] URL list input: accept a simple text file of URLs as input (one URL per line) instead of a full manifest. lore-mcp fetches, generates manifest entries, preprocesses. Simplest possible input format
+- `Implémenté` E12.18 [P] CLI separation: `lorme enrich` as standalone command (currently only `--enrich` option on preprocess). Same modules, separate entry point. `lorme preprocess --enrich` remains as shortcut
+- `Implémenté` E12.19 [P] Analyze integration: dedup + PII reports as implicit analysis during preprocess (not separate action). `lorme lint` already exists as standalone. Wire dedup+PII into lint if not already
+- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lorme build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
+- `Implémenté` E12.21 [P] URL list input: accept a simple text file of URLs as input (one URL per line) instead of a full manifest. lorme fetches, generates manifest entries, preprocesses. Simplest possible input format
 - `Implémenté` E12.27 [P] Progressive output and VLM resilience: phase-suffixed files on disk (phase1-parse.md, phase2-caption.md, phase3-enrich.md → final .md), phase announcement in stdout+report, VLM per-image try/except + skip <10KB + content-hash dedup + circuit breaker + progressive write per image. See docs/studies/grooming-E12.27.md
 - E12.28 — absorbed by E12.42 (Docling native multi-model) + E12.35 (judge) + E12.41 (caption quality). All described functionality implemented
 - E12.29 — absorbed into E12.28
@@ -791,11 +792,11 @@ Llama Stack, Milvus).
 
 ### Team Topologies
 
-lore-mcp is a **Platform component** in the
+lorme is a **Platform component** in the
 openshift workspace Team Topologies.
 
 Interactions:
-- **AI Serving** consumes lore-mcp as
+- **AI Serving** consumes lorme as
   X-as-a-Service (corpus indexing, MCP config)
 - **Veille** (Enabling) feeds the corpus with
   sources (Facilitating)
@@ -818,7 +819,7 @@ pgvector and hardcoded URLs).
 ## 10. Project structure
 
 ```
-lore-mcp/
+lorme/
 ├── CLAUDE.md              # Claude instructions
 ├── CONTRIBUTING.md        # Showcase: contribution rules
 ├── LICENSE                # AGPL v3
@@ -842,10 +843,10 @@ lore-mcp/
 │       └── reference/     #   Lab prototypes
 │
 ├── src/                   # Code
-│   └── lore_mcp/
+│   └── lorme/
 │       ├── __init__.py
 │       ├── server.py      # MCP server (18 tools)
-│       ├── config.py      # LoreConfig (config.yaml)
+│       ├── config.py      # LormeConfig (config.yaml)
 │       ├── format_registry.py # Format detection registry
 │       ├── embedder.py    # GPU/API/CPU embedding
 │       ├── store.py       # SQLite + sqlite-vec
@@ -973,18 +974,18 @@ stale answers — reindexing is not optional.
   other items — backlog entry, grooming, TDD,
   branch, merge. No ad hoc fixes outside the
   backlog.
-- **Never override user declarations**: lore-mcp
+- **Never override user declarations**: lorme
   does not correct or override values declared
   by the user (manifest fields, config). If a
   document title is "w" in its metadata and the
   user does not override it in the manifest,
-  lore-mcp uses "w". The manifest is the
+  lorme uses "w". The manifest is the
   mechanism for the user to declare corrections.
 - **Input files are never modified**: all
   commands (preprocess, enrich, build, lint)
   write to output directories, never modify
   files provided as input. The manifest is
-  never modified — lore-mcp produces an
+  never modified — lorme produces an
   enriched copy (`-prep` suffix).
 - **Background commands**: always provide the
   output file path immediately after launching
@@ -1155,7 +1156,7 @@ block by block (high level → atomic).
 
 ### Workspace boundaries (Team Topologies)
 
-lore-mcp is a **stream-aligned team** — it owns
+lorme is a **stream-aligned team** — it owns
 the product end-to-end (code, tests, packaging,
 docs, user-facing features). All other teams
 (Veille, IA Serving, Deep Research, Cogliq) are
@@ -1164,7 +1165,7 @@ in the **openshift workspace**.
 When the user requests work that belongs to
 another team, **warn immediately** and propose
 to transfer the context via `sync/openshift.md`.
-Do not start the work in lore-mcp.
+Do not start the work in lorme.
 
 Work belonging to **other teams** (openshift):
 - **Veille** (Enabling): model evaluation,
@@ -1176,17 +1177,17 @@ Work belonging to **other teams** (openshift):
 - **Deep Research**: strategic studies,
   architecture decisions spanning workspaces
 
-Work belonging to **lore-mcp** (stream-aligned):
+Work belonging to **lorme** (stream-aligned):
 - Feature implementation using evaluated models
 - Bug fixes in the pipeline
 - Tests, documentation, packaging
-- Integration studies specific to lore-mcp code
+- Integration studies specific to lorme code
   (e.g., how to wire an already-evaluated model)
-- Grooming documents for lore-mcp items
+- Grooming documents for lorme items
 
 ### Platform posture
 
-lore-mcp is a Platform component. Design
+lorme is a Platform component. Design
 decisions should prioritize:
 - Self-service for consumers (API, tools, docs)
 - Developer experience (clear errors, sensible

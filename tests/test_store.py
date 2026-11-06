@@ -1,9 +1,9 @@
-"""Tests for lore_mcp.store. See docs/architecture.md for design context."""
+"""Tests for lorme.store. See docs/architecture.md for design context."""
 
 import pytest
 from conftest import DIMS, make_embedding
 
-from lore_mcp.store import (
+from lorme.store import (
     create_tables,
     delete_source_chunks,
     get_meta,
@@ -176,7 +176,7 @@ class TestSearch:
     def test_prefilter_level(self, db):
         """E5.13: pre-filter by level via metadata column."""
         create_tables(db, MODEL, DIMS)
-        from lore_mcp.store import upsert_source
+        from lorme.store import upsert_source
         upsert_source(db, "a.md", level="libre")
         upsert_source(db, "b.md", level="nda")
         insert_chunk(db, "a0", "a.md", 0, "alpha", make_embedding(0.1))
@@ -188,7 +188,7 @@ class TestSearch:
 
     def test_prefilter_guarantees_top_k(self, db):
         """E5.13: pre-filter returns top_k results from filtered set."""
-        from lore_mcp.store import upsert_source
+        from lorme.store import upsert_source
         create_tables(db, MODEL, DIMS)
         upsert_source(db, "a.md")
         upsert_source(db, "b.md")
@@ -259,7 +259,7 @@ class TestDeleteSourceChunks:
         assert sources[0]["source_file"] == "b.md"
 
     def test_deletes_source_metadata(self, db):
-        from lore_mcp.store import upsert_source, get_source
+        from lorme.store import upsert_source, get_source
         create_tables(db, MODEL, DIMS)
         upsert_source(db, "a.md", title="Doc A")
         insert_chunk(db, "a0", "a.md", 0, "text", make_embedding(0.1))

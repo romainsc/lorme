@@ -9,11 +9,11 @@ import numpy as np
 import pytest
 
 from conftest import DIMS, make_embedding
-from lore_mcp.store import create_tables, insert_chunk, open_db, upsert_source
+from lorme.store import create_tables, insert_chunk, open_db, upsert_source
 
 
 def _make_mock_embedder(model_name="test-model", dim=DIMS):
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name=model_name, mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = dim
@@ -39,7 +39,7 @@ class TestEmbeddingMetrics:
     """Level 1 metrics: no LLM, no ground truth."""
 
     def test_score_spread(self):
-        from lore_mcp.eval import compute_embedding_metrics
+        from lorme.eval import compute_embedding_metrics
         results = [
             {"score": 0.9, "source_file": "a.md", "content": "text a"},
             {"score": 0.7, "source_file": "b.md", "content": "text b"},
@@ -49,7 +49,7 @@ class TestEmbeddingMetrics:
         assert abs(metrics["score_spread"] - 0.6) < 0.01
 
     def test_source_diversity(self):
-        from lore_mcp.eval import compute_embedding_metrics
+        from lorme.eval import compute_embedding_metrics
         results = [
             {"score": 0.9, "source_file": "a.md", "content": "t1"},
             {"score": 0.8, "source_file": "a.md", "content": "t2"},
@@ -59,7 +59,7 @@ class TestEmbeddingMetrics:
         assert abs(metrics["source_diversity"] - 2/3) < 0.01
 
     def test_source_diversity_all_unique(self):
-        from lore_mcp.eval import compute_embedding_metrics
+        from lorme.eval import compute_embedding_metrics
         results = [
             {"score": 0.9, "source_file": "a.md", "content": "t1"},
             {"score": 0.8, "source_file": "b.md", "content": "t2"},
@@ -68,7 +68,7 @@ class TestEmbeddingMetrics:
         assert metrics["source_diversity"] == 1.0
 
     def test_empty_results(self):
-        from lore_mcp.eval import compute_embedding_metrics
+        from lorme.eval import compute_embedding_metrics
         metrics = compute_embedding_metrics([])
         assert metrics["score_spread"] == 0.0
         assert metrics["source_diversity"] == 0.0
@@ -78,19 +78,19 @@ class TestRetrievalMetricsMRR:
     """Level 2 metrics: with ground truth, no LLM."""
 
     def test_mrr_first_result(self):
-        from lore_mcp.eval import compute_retrieval_metrics
+        from lorme.eval import compute_retrieval_metrics
         contexts = ["the answer is here", "other text"]
         metrics = compute_retrieval_metrics(contexts, "the answer is here")
         assert metrics["mrr"] == 1.0
 
     def test_mrr_second_result(self):
-        from lore_mcp.eval import compute_retrieval_metrics
+        from lorme.eval import compute_retrieval_metrics
         contexts = ["irrelevant", "the answer is here"]
         metrics = compute_retrieval_metrics(contexts, "the answer is here")
         assert metrics["mrr"] == 0.5
 
     def test_mrr_not_found(self):
-        from lore_mcp.eval import compute_retrieval_metrics
+        from lorme.eval import compute_retrieval_metrics
         contexts = ["irrelevant", "also irrelevant"]
         metrics = compute_retrieval_metrics(contexts, "the answer")
         assert metrics["mrr"] == 0.0
@@ -100,19 +100,19 @@ class TestSelectableMetrics:
     """User selects which metrics to compute."""
 
     def test_select_level1_only(self):
-        from lore_mcp.eval import METRIC_LEVELS
+        from lorme.eval import METRIC_LEVELS
         assert "score_spread" in METRIC_LEVELS["embedding"]
         assert "source_diversity" in METRIC_LEVELS["embedding"]
         assert "result_diversity" in METRIC_LEVELS["embedding"]
 
     def test_select_level2(self):
-        from lore_mcp.eval import METRIC_LEVELS
+        from lorme.eval import METRIC_LEVELS
         assert "hit" in METRIC_LEVELS["retrieval"]
         assert "mrr" in METRIC_LEVELS["retrieval"]
         assert "word_overlap" in METRIC_LEVELS["retrieval"]
 
     def test_all_metrics_listed(self):
-        from lore_mcp.eval import METRIC_LEVELS
+        from lorme.eval import METRIC_LEVELS
         assert "embedding" in METRIC_LEVELS
         assert "retrieval" in METRIC_LEVELS
 
@@ -121,7 +121,7 @@ class TestModelConfig:
     """Parse model configurations for multi-model optimize."""
 
     def test_parse_models_yaml(self, tmp_path):
-        from lore_mcp.eval import parse_model_configs
+        from lorme.eval import parse_model_configs
         config_path = tmp_path / "models.yaml"
         config_path.write_text("""
 embedding:
@@ -141,7 +141,7 @@ embedding:
 
 class TestMultiModelOptimize:
     def test_optimize_multiple_models(self, tmp_path):
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()

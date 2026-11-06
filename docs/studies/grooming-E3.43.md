@@ -5,7 +5,7 @@
 E3.18 removed `start_preprocess` MCP tool
 (unified add pipeline). Users who want the
 preprocessed markdown without indexation have
-no MCP option — only the CLI `lore-mcp preprocess`.
+no MCP option — only the CLI `lorme preprocess`.
 
 Use cases:
 - STT of a video → get the transcription markdown

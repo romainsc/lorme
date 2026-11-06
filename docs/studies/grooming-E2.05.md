@@ -2,11 +2,11 @@
 
 ## Context
 
-Exhaustive audit (2026-10-03) of `src/lore_mcp/`
+Exhaustive audit (2026-10-03) of `src/lorme/`
 identified dead code accumulated over E6, E10,
 E12, E3 iterations. The project evolved
 significantly (manifest→recipe, langchain→Docling
-HybridChunker, env vars→LoreConfig, inline
+HybridChunker, env vars→LormeConfig, inline
 collections→server.py) but orphaned code was
 not cleaned up.
 
@@ -26,7 +26,7 @@ not cleaned up.
 | `collections.py:86` | `search_across()` | Never called in prod |
 | `server.py:186` | `format_collections()` | Never called |
 | `store.py:246` | `insert_parent_chunk()` | Vestige of E6.08 pre-HybridChunker |
-| `ingest.py:53` | `get_chunk_config()` | Params resolved via LoreConfig |
+| `ingest.py:53` | `get_chunk_config()` | Params resolved via LormeConfig |
 | `progress.py:283` | `report_step()` | Dead alias |
 | `progress.py:287` | `report_config()` | Dead alias |
 | `progress.py:294` | `report_summary()` | Dead alias |
@@ -56,7 +56,7 @@ not cleaned up.
 
 ### Orphan module (1) — remove
 
-`src/lore_mcp/preprocess/tables.py` — vestige of
+`src/lorme/preprocess/tables.py` — vestige of
 E6.02 (MarkdownTextSplitter table sentinels).
 HybridChunker handles tables natively since
 E12.99.

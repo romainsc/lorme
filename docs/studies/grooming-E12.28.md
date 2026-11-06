@@ -28,7 +28,7 @@ Image
   → Decision (configurable, E12.29) → final
 ```
 
-No hardcoded routing: lore-mcp does not decide
+No hardcoded routing: lorme does not decide
 which model handles which image type. All models
 process all images.
 

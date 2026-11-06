@@ -1,6 +1,6 @@
 """Quality gate for preprocessing pipeline. See docs/studies/grooming-E12.01.md."""
 
-from lore_mcp.lint import analyze_file
+from lorme.lint import analyze_file
 
 
 def quality_gate(file_path: str, force: bool = False) -> dict:

@@ -5,7 +5,7 @@
 
 ## Five output levels
 
-| Flag | lore-mcp output | Logging |
+| Flag | lorme output | Logging |
 |------|-----------------|---------|
 | `--quiet` | Nothing | ERROR |
 | `--progress` | One line per milestone | WARNING |

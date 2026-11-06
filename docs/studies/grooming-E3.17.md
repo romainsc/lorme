@@ -76,7 +76,7 @@ underlying function and verify:
 - add/search/remove cycle passes without error
 - No transient errors
 - Exit 0 = all passed, exit 1 = any failure
-- validate_cli.py: add `lore-mcp optimize` step
+- validate_cli.py: add `lorme optimize` step
 
 ## Risks
 

@@ -10,8 +10,8 @@ automatic selection across all backends. In reality
 it loads the model in-process via sentence-transformers
 and picks GPU or CPU based on hardware.
 
-The name should convey "lore-mcp does it itself"
-— the embedding engine is built into lore-mcp.
+The name should convey "lorme does it itself"
+— the embedding engine is built into lorme.
 
 ## New modes
 
@@ -55,11 +55,11 @@ Current `gpu`/`cpu`/`auto` branches become:
 
 ### Files to change
 
-- `src/lore_mcp/embedder.py`: mode parsing,
+- `src/lorme/embedder.py`: mode parsing,
   _select_device_dtype, assess(), embed()
-- `src/lore_mcp/server.py`: default mode in
+- `src/lorme/server.py`: default mode in
   _get_embedder, backend display in search_docs
-- `src/lore_mcp/eval.py`: parse_model_configs_from_cli
+- `src/lorme/eval.py`: parse_model_configs_from_cli
   default mode
 - `tests/`: all `mode="auto"` → `mode="builtin"`,
   all `mode="cpu"` → `mode="builtin:cpu"`,

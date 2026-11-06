@@ -123,7 +123,7 @@ Foundational for enterprise. Isolate agent actions
 from resources beyond intended scope. Critical for
 build/preprocess operations that touch filesystem.
 
-## 5. Comparison — Approaches for lore-mcp
+## 5. Comparison — Approaches for lorme
 
 | Approach | Pros | Cons | Effort |
 |----------|------|------|--------|
@@ -132,7 +132,7 @@ build/preprocess operations that touch filesystem.
 | **C: Tasks via SDK Extension** | Standard, official SDK | SDK doesn't implement yet, build from scratch | High |
 | **D: Wait for SDK** | Zero effort | Unknown timeline, blocks E3.09 | Zero |
 
-## 6. Recommendation for lore-mcp
+## 6. Recommendation for lorme
 
 ### Short term: Pattern A (custom polling tools)
 

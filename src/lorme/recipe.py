@@ -151,7 +151,7 @@ def _extract_first_heading(text: str) -> str | None:
 
 def _is_supported(filename: str) -> bool:
     """Check if a file is supported. Delegates to FormatRegistry."""
-    from lore_mcp.format_registry import get_format_registry
+    from lorme.format_registry import get_format_registry
     return get_format_registry().is_supported(filename)
 
 
@@ -224,7 +224,7 @@ def scan_directory(docs_dir: str) -> dict:
         if not f.is_file():
             continue
         if _is_supported(f.name):
-            from lore_mcp.format_registry import get_format_registry
+            from lorme.format_registry import get_format_registry
             _reg = get_format_registry()
             ext = f.suffix.lower()
             try:

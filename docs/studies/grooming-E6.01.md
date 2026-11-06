@@ -5,7 +5,7 @@
 
 ## Problem
 
-`lore-mcp build` does a full rebuild every time.
+`lorme build` does a full rebuild every time.
 Adding 1 file to a 100-document corpus means
 re-embedding everything (~30 min). No way to
 update or remove a single source.
@@ -13,7 +13,7 @@ update or remove a single source.
 ## Vision
 
 The manifest is the source of truth. The DB is
-its reflection. `lore-mcp build` synchronizes the
+its reflection. `lorme build` synchronizes the
 DB to match the manifest — declarative, like
 `kubectl apply`.
 

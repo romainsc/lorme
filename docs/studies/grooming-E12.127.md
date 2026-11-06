@@ -16,7 +16,7 @@ the API call:
 - **STT**: as multipart form data fields
 - **LLM/VLM**: as JSON body keys
 
-No interpretation by lore-mcp. The user knows
+No interpretation by lorme. The user knows
 what their server accepts.
 
 ```yaml
@@ -50,7 +50,7 @@ llm:
 name, model, api_url, api_key, start, stop,
 timeout, batch_size, verify_ssl, concurrency
 
-These are consumed by lore-mcp. `params` is
+These are consumed by lorme. `params` is
 the explicit passthrough — no ambiguity.
 
 ## Test

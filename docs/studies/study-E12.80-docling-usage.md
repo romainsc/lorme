@@ -1,6 +1,6 @@
 # Study E12.80: Exhaustive Docling Usage Analysis
 
-Analysis of lore-mcp's Docling integration based on
+Analysis of lorme's Docling integration based on
 Codebase-Memory graph analysis of both docling-upstream
 (19887 nodes) and pillow-upstream (7575 nodes).
 
@@ -284,7 +284,7 @@ review or different processing.
 
 ### Current usage
 
-lore-mcp uses `langchain-text-splitters`
+lorme uses `langchain-text-splitters`
 `MarkdownTextSplitter` for chunking (`ingest.py:8,75`).
 This operates on exported markdown text, losing the
 structured document model.

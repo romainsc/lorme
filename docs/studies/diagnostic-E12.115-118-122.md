@@ -5,12 +5,12 @@ Session de test MCP, 2026-10-05/06.
 ## E12.115 — add_directory "File not found"
 
 ### Symptôme
-`add_directory("src/lore_mcp", collection="test", enrich="none")` →
+`add_directory("src/lorme", collection="test", enrich="none")` →
 28 sources scannées, toutes "File not found".
 
 ### Fonctionne en appel direct
 ```python
-cfg.orig_dir = str(Path("src/lore_mcp").resolve())
+cfg.orig_dir = str(Path("src/lorme").resolve())
 preprocess_sources(recipe_path, orig_dir, cfg)
 # → 2/2 sources ok (server.md, store.md)
 ```
@@ -58,7 +58,7 @@ subprocess le lirait indépendamment de la config.
 
 ### Test de vérification
 ```bash
-add_directory src/lore_mcp --collection test --enrich none
+add_directory src/lorme --collection test --enrich none
 # Attendu : 28 sources indexées
 # Actuel : 28 "File not found"
 ```
@@ -68,7 +68,7 @@ add_directory src/lore_mcp --collection test --enrich none
 ## E12.118 — enrich="none" sans effet sur add_source
 
 ### Symptôme
-`add_source("src/lore_mcp/server.py", enrich="none")` →
+`add_source("src/lorme/server.py", enrich="none")` →
 chunks contiennent du contenu enrichi (contexte LLM, Q&A).
 
 ### Preuve
@@ -96,8 +96,8 @@ Vérifier si `_do_add()` dans `add_source` a le même bloc.
 
 ### Test de vérification
 ```bash
-add_source src/lore_mcp/store.py --collection test-none --enrich none
-add_source src/lore_mcp/store.py --collection test-default
+add_source src/lorme/store.py --collection test-none --enrich none
+add_source src/lorme/store.py --collection test-default
 # Sans enrich : ~30-50 chunks attendus (narration seule)
 # Avec enrich : ~100 chunks (narration + context + qa + meta)
 ```

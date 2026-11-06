@@ -39,7 +39,7 @@ def _signal_handler(signum, frame):
         os._exit(128 + signum)
     _shutdown_requested = True
     try:
-        from lore_mcp.task_manager import _global_shutdown
+        from lorme.task_manager import _global_shutdown
         _global_shutdown.set()
     except ImportError:
         pass
@@ -74,7 +74,7 @@ def run_with_interrupt(fn, *args, **kwargs):
     t = threading.Thread(target=worker, daemon=True)
     t.start()
 
-    from lore_mcp.task_manager import check_cancelled
+    from lorme.task_manager import check_cancelled
     while not done.wait(timeout=0.5):
         check_cancelled()
 

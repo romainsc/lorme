@@ -4,8 +4,8 @@ import yaml
 import pytest
 from unittest.mock import patch, MagicMock
 
-from lore_mcp.build import run_build
-from lore_mcp.config import LoreConfig
+from lorme.build import run_build
+from lorme.config import LormeConfig
 
 
 def _write_manifest(path, sources, collection="test", level="libre"):
@@ -33,7 +33,7 @@ class TestBuildWithPreprocess:
         embedder.embed.return_value = [[0.1] * 768]
         embedder.embed_batch.return_value = [[0.1] * 768]
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             skip_optimize=True, output_level="quiet",
             preprocess=True,
             orig_dir=str(orig),
@@ -66,7 +66,7 @@ class TestBuildWithPreprocess:
         embedder.embed.return_value = [[0.1] * 768]
         embedder.embed_batch.return_value = [[0.1] * 768]
 
-        cfg = LoreConfig(skip_optimize=True, output_level="quiet")
+        cfg = LormeConfig(skip_optimize=True, output_level="quiet")
         run_build(str(manifest), str(docs), str(output), cfg,
                   embedder=embedder)
 
@@ -88,7 +88,7 @@ class TestBuildWithPreprocess:
 
         real_preprocess = None
         try:
-            from lore_mcp.preprocess import preprocess_sources as _real
+            from lorme.preprocess import preprocess_sources as _real
             real_preprocess = _real
         except ImportError:
             pass
@@ -108,7 +108,7 @@ class TestBuildWithPreprocess:
             embedder.unload = MagicMock()
             return {"test-model": embedder}
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             skip_optimize=True, output_level="quiet",
             preprocess=True,
             orig_dir=str(orig),
@@ -116,8 +116,8 @@ class TestBuildWithPreprocess:
             force=True,
         )
 
-        with patch("lore_mcp.build.preprocess_sources", mock_preprocess), \
-             patch("lore_mcp.build._start_embedders", mock_start_embedders):
+        with patch("lorme.build.preprocess_sources", mock_preprocess), \
+             patch("lorme.build._start_embedders", mock_start_embedders):
             run_build(str(manifest), str(orig), str(output), cfg)
 
         assert call_order == ["preprocess", "start_embedders"]
@@ -128,7 +128,7 @@ class TestBuildDirModel:
 
     def test_build_dir_creates_structure(self, tmp_path):
         """build_dir creates prep/, .work/ during build (keep_intermediates to inspect)."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         orig = tmp_path / "file"
         orig.mkdir()
@@ -146,7 +146,7 @@ class TestBuildDirModel:
         embedder.embed.return_value = [[0.1] * 768]
         embedder.embed_batch.return_value = [[0.1] * 768]
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             skip_optimize=True, output_level="quiet",
             preprocess=True, force=True,
             build_dir=str(build),
@@ -165,7 +165,7 @@ class TestBuildDirModel:
 
     def test_build_dir_checkpoint_in_work(self, tmp_path):
         """Checkpoint is in build-dir/.work/ not ~/.local/state/."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         orig = tmp_path / "file"
         orig.mkdir()
@@ -183,7 +183,7 @@ class TestBuildDirModel:
         embedder.embed.return_value = [[0.1] * 768]
         embedder.embed_batch.return_value = [[0.1] * 768]
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             skip_optimize=True, output_level="quiet",
             preprocess=True, force=True,
             build_dir=str(build),
@@ -201,7 +201,7 @@ class TestChunkParamsFromConfig:
     """E12.105: skip_optimize must use config chunk params, not optimize defaults."""
 
     def test_skip_optimize_uses_config_chunk_size(self, tmp_path):
-        from lore_mcp.store import open_db
+        from lorme.store import open_db
 
         orig = tmp_path / "file"
         orig.mkdir()
@@ -219,7 +219,7 @@ class TestChunkParamsFromConfig:
         embedder.embed.return_value = [[0.1] * 768]
         embedder.embed_batch.return_value = [[0.1] * 768]
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             skip_optimize=True, output_level="quiet",
             preprocess=True, force=True,
             build_dir=str(build),
@@ -241,7 +241,7 @@ class TestCollectionOverride:
     """E12.103: collection override from config must be used by run_build."""
 
     def test_collection_override_names_db(self, tmp_path):
-        from lore_mcp.store import open_db
+        from lorme.store import open_db
 
         orig = tmp_path / "file"
         orig.mkdir()
@@ -259,7 +259,7 @@ class TestCollectionOverride:
         embedder.embed.return_value = [[0.1] * 768]
         embedder.embed_batch.return_value = [[0.1] * 768]
 
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             skip_optimize=True, output_level="quiet",
             preprocess=True, force=True,
             build_dir=str(build),

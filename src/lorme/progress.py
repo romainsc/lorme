@@ -29,10 +29,10 @@ def configure_logging(level: str) -> None:
     root = logging.getLogger()
     if level == DEBUG_ALL:
         root.setLevel(logging.DEBUG)
-        logging.getLogger("lore_mcp").setLevel(logging.DEBUG)
+        logging.getLogger("lorme").setLevel(logging.DEBUG)
     elif level == DEBUG:
         root.setLevel(logging.WARNING)
-        logging.getLogger("lore_mcp").setLevel(logging.DEBUG)
+        logging.getLogger("lorme").setLevel(logging.DEBUG)
         for name in ("httpcore", "sentence_transformers",
                      "huggingface_hub", "numexpr", "transformers",
                      "RapidOCR", "docling", "docling_core",
@@ -43,7 +43,7 @@ def configure_logging(level: str) -> None:
         root.setLevel(logging.ERROR)
     elif level == VERBOSE:
         root.setLevel(logging.WARNING)
-        logging.getLogger("lore_mcp").setLevel(logging.INFO)
+        logging.getLogger("lorme").setLevel(logging.INFO)
         for name in ("httpx", "httpcore", "sentence_transformers",
                      "huggingface_hub", "numexpr", "transformers",
                      "RapidOCR", "docling", "docling_core",
@@ -111,11 +111,11 @@ class ProgressReporter:
             return
         if self._is_progress():
             models_str = ", ".join(self.models)
-            print(f"lore-mcp build {self.collection} ({self.total_configs} configs, models: {models_str})")
+            print(f"lorme build {self.collection} ({self.total_configs} configs, models: {models_str})")
             return
         models_str = ", ".join(self.models)
         print(f"╔{'═' * 58}╗")
-        print(f"║  lore-mcp build — {self.collection:<39}║")
+        print(f"║  lorme build — {self.collection:<39}║")
         print(f"║  Models: {models_str:<48}║")
         print(f"║  Configs: {self.total_configs:<47}║")
         print(f"╚{'═' * 58}╝")

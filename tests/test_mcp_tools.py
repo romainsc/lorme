@@ -11,7 +11,7 @@ class TestLintTool:
     """lint_source MCP tool."""
 
     def test_returns_verdict(self, tmp_path):
-        from lore_mcp.server import lint_source
+        from lorme.server import lint_source
 
         doc = tmp_path / "doc.md"
         doc.write_text("## Title\n\nGood content here with enough text.\n")
@@ -20,7 +20,7 @@ class TestLintTool:
         assert "verdict" in result.lower() or "good" in result.lower() or "density" in result.lower()
 
     def test_missing_file(self, tmp_path):
-        from lore_mcp.server import lint_source
+        from lorme.server import lint_source
 
         result = lint_source(str(tmp_path / "nonexistent.md"))
         assert "not found" in result.lower() or "error" in result.lower()
@@ -30,14 +30,14 @@ class TestListStateTool:
     """list_pipeline_state MCP tool."""
 
     def test_returns_format(self):
-        from lore_mcp.server import list_pipeline_state
+        from lorme.server import list_pipeline_state
 
         result = list_pipeline_state()
         assert isinstance(result, str)
 
     def test_with_state(self, monkeypatch, tmp_path):
-        from lore_mcp import checkpoint
-        from lore_mcp.checkpoint import Checkpoint
+        from lorme import checkpoint
+        from lorme.checkpoint import Checkpoint
         import yaml
 
         monkeypatch.setattr(checkpoint, "_state_dir", lambda: tmp_path)
@@ -46,7 +46,7 @@ class TestListStateTool:
         cp = Checkpoint(str(manifest))
         cp.mark_phase_done("phase1")
 
-        from lore_mcp.server import list_pipeline_state
+        from lorme.server import list_pipeline_state
         result = list_pipeline_state()
         assert "phase" in result.lower() or "state" in result.lower()
 
@@ -55,17 +55,17 @@ class TestPurgeStateTool:
     """purge_pipeline_state MCP tool."""
 
     def test_purge_nonexistent(self, monkeypatch, tmp_path):
-        from lore_mcp import checkpoint
+        from lorme import checkpoint
         monkeypatch.setattr(checkpoint, "_state_dir", lambda: tmp_path)
-        from lore_mcp.server import purge_pipeline_state
+        from lorme.server import purge_pipeline_state
 
         result = purge_pipeline_state(hash="nonexistent123456")
         assert "not found" in result.lower()
 
     def test_purge_all(self, monkeypatch, tmp_path):
-        from lore_mcp import checkpoint
+        from lorme import checkpoint
         monkeypatch.setattr(checkpoint, "_state_dir", lambda: tmp_path)
-        from lore_mcp.server import purge_pipeline_state
+        from lorme.server import purge_pipeline_state
 
         result = purge_pipeline_state(purge_all=True)
         assert "purged" in result.lower() or "0" in result
@@ -73,14 +73,14 @@ class TestPurgeStateTool:
     def test_does_not_touch_real_state_dir(self, monkeypatch, tmp_path):
         """E12.76: purge tests must use isolated state dir."""
         import os
-        from lore_mcp import checkpoint
+        from lorme import checkpoint
 
         real_state = checkpoint._state_dir()
         sentinel = real_state / "_test_sentinel"
         sentinel.mkdir(parents=True, exist_ok=True)
         try:
             monkeypatch.setattr(checkpoint, "_state_dir", lambda: tmp_path)
-            from lore_mcp.server import purge_pipeline_state
+            from lorme.server import purge_pipeline_state
             purge_pipeline_state(purge_all=True)
             assert sentinel.exists(), "purge_all destroyed real state dir"
         finally:
@@ -92,21 +92,21 @@ class TestServiceStatus:
     """E3.11: get_service_status MCP tool."""
 
     def test_returns_string(self):
-        from lore_mcp.server import get_service_status
+        from lorme.server import get_service_status
 
         result = get_service_status()
         assert isinstance(result, str)
         assert len(result) > 0
 
     def test_shows_embedder(self):
-        from lore_mcp.server import get_service_status
+        from lorme.server import get_service_status
 
         result = get_service_status()
         assert "Embedder" in result
 
     def test_shows_no_services_when_empty(self):
-        from lore_mcp.server import get_service_status
-        from lore_mcp.preprocess.service import _running_services
+        from lorme.server import get_service_status
+        from lorme.preprocess.service import _running_services
 
         old = list(_running_services)
         _running_services.clear()
@@ -121,13 +121,13 @@ class TestTaskTools:
     """E3.09a: task management MCP tools."""
 
     def test_get_task_status_not_found(self):
-        from lore_mcp.server import get_task_status
+        from lorme.server import get_task_status
         result = get_task_status(task_id="nonexistent")
         assert "not found" in result.lower()
 
     def test_get_task_status_completed(self):
         import time
-        from lore_mcp.server import get_task_status, _task_manager
+        from lorme.server import get_task_status, _task_manager
         task_id = _task_manager.start("test-tool", lambda: "ok")
         time.sleep(0.2)
         result = get_task_status(task_id=task_id)
@@ -135,19 +135,19 @@ class TestTaskTools:
         assert "ok" in result
 
     def test_cancel_task_not_found(self):
-        from lore_mcp.server import cancel_task
+        from lorme.server import cancel_task
         result = cancel_task(task_id="nonexistent")
         assert "cannot" in result.lower() or "not found" in result.lower()
 
     def test_list_tasks_empty(self):
-        from lore_mcp.server import list_tasks, _task_manager
+        from lorme.server import list_tasks, _task_manager
         _task_manager._tasks.clear()
         result = list_tasks()
         assert "no tasks" in result.lower()
 
     def test_list_tasks_shows_task(self):
         import time
-        from lore_mcp.server import list_tasks, _task_manager
+        from lorme.server import list_tasks, _task_manager
         _task_manager._tasks.clear()
         _task_manager.start("list-test", lambda: None)
         time.sleep(0.2)
@@ -159,15 +159,15 @@ class TestAddRecipe:
     """E3.18: add_recipe MCP tool."""
 
     def test_returns_task_id(self, tmp_path, monkeypatch):
-        from lore_mcp.server import add_recipe
+        from lorme.server import add_recipe
         import yaml
         monkeypatch.setattr(
-            "lore_mcp.build.run_build",
+            "lorme.build.run_build",
             lambda *a, **kw: {"collection": "test", "file_count": 0},
         )
-        import lore_mcp.server as srv
-        from lore_mcp.config import LoreConfig
-        cfg = LoreConfig.defaults()
+        import lorme.server as srv
+        from lorme.config import LormeConfig
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path)
         monkeypatch.setattr(srv, "_config", cfg)
         recipe = tmp_path / "recipe.yaml"
@@ -181,12 +181,12 @@ class TestAddSources:
     """E3.18: add_sources MCP tool."""
 
     def test_invalid_json(self):
-        from lore_mcp.server import add_sources
+        from lorme.server import add_sources
         result = add_sources(sources="not json")
         assert "invalid json" in result.lower()
 
     def test_empty_array(self):
-        from lore_mcp.server import add_sources
+        from lorme.server import add_sources
         result = add_sources(sources="[]")
         assert "non-empty" in result.lower()
 
@@ -195,30 +195,30 @@ class TestRemoveSource:
     """E3.09d: remove_source MCP tool."""
 
     def test_no_db(self, tmp_path, monkeypatch):
-        import lore_mcp.server as srv
-        from lore_mcp.config import LoreConfig
-        cfg = LoreConfig.defaults()
+        import lorme.server as srv
+        from lorme.config import LormeConfig
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path)
         cfg.default_collection = "empty"
         monkeypatch.setattr(srv, "_config", cfg)
-        from lore_mcp.server import remove_source
+        from lorme.server import remove_source
         result = remove_source(source="doc.md", collection="empty")
         assert "no .db" in result.lower()
 
     def test_source_not_found(self, tmp_path, monkeypatch):
-        import lore_mcp.server as srv
-        from lore_mcp.config import LoreConfig
-        from lore_mcp.store import open_db, create_tables
+        import lorme.server as srv
+        from lorme.config import LormeConfig
+        from lorme.store import open_db, create_tables
         col_dir = tmp_path / "testcol"
         col_dir.mkdir()
         db_path = col_dir / "testcol.db"
         db = open_db(str(db_path))
         create_tables(db, "test-model", 768)
         db.close()
-        cfg = LoreConfig.defaults()
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path)
         monkeypatch.setattr(srv, "_config", cfg)
-        from lore_mcp.server import remove_source
+        from lorme.server import remove_source
         result = remove_source(source="nonexistent.md", collection="testcol")
         assert "not found" in result.lower()
 
@@ -227,13 +227,13 @@ class TestInvalidateDb:
     """E3.16: db connection invalidated after add/remove."""
 
     def test_invalidate_clears_store_cache(self):
-        import lore_mcp.server as srv
+        import lorme.server as srv
         srv._store_cache["test"] = "fake-connection"
         srv._invalidate_db()
         assert len(srv._store_cache) == 0
 
     def test_invalidate_specific_collection(self):
-        import lore_mcp.server as srv
+        import lorme.server as srv
         srv._store_cache["col1"] = "conn1"
         srv._store_cache["col2"] = "conn2"
         srv._invalidate_db("col1")
@@ -243,8 +243,8 @@ class TestInvalidateDb:
 
     def test_remove_source_invalidates_cache(self, tmp_path, monkeypatch):
         """remove_source invalidates db cache after deletion."""
-        import lore_mcp.server as srv
-        from lore_mcp.store import open_db, create_tables
+        import lorme.server as srv
+        from lorme.store import open_db, create_tables
 
         col_dir = tmp_path / "testcol"
         col_dir.mkdir()
@@ -263,8 +263,8 @@ class TestInvalidateDb:
         db.commit()
         db.close()
 
-        from lore_mcp.config import LoreConfig
-        cfg = LoreConfig.defaults()
+        from lorme.config import LormeConfig
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path)
         monkeypatch.setattr(srv, "_config", cfg)
         srv._store_cache["testcol"] = "cached"
@@ -279,8 +279,8 @@ class TestIngestSource:
 
     def test_preserves_existing_sources(self, tmp_path):
         """add_source must not destroy existing sources."""
-        from lore_mcp.store import open_db, create_tables
-        from lore_mcp.ingest import ingest_source, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
+        from lorme.store import open_db, create_tables
+        from lorme.ingest import ingest_source, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
 
         db_path = tmp_path / "test.db"
         db = open_db(str(db_path))
@@ -324,8 +324,8 @@ class TestIngestSource:
 
     def test_reads_chunk_params_from_db(self, tmp_path):
         """ingest_source must use chunk params from db meta, not defaults."""
-        from lore_mcp.store import open_db, create_tables
-        from lore_mcp.ingest import ingest_source
+        from lorme.store import open_db, create_tables
+        from lorme.ingest import ingest_source
 
         db_path = tmp_path / "test.db"
         db = open_db(str(db_path))
@@ -353,8 +353,8 @@ class TestIngestSource:
 
     def test_rejects_model_mismatch(self, tmp_path):
         """ingest_source must reject if model doesn't match db."""
-        from lore_mcp.store import open_db, create_tables
-        from lore_mcp.ingest import ingest_source
+        from lorme.store import open_db, create_tables
+        from lorme.ingest import ingest_source
 
         db_path = tmp_path / "test.db"
         db = open_db(str(db_path))
@@ -376,8 +376,8 @@ class TestIngestSource:
 
     def test_reindex_replaces_chunks(self, tmp_path):
         """ingest_source on existing source replaces old chunks."""
-        from lore_mcp.store import open_db, create_tables
-        from lore_mcp.ingest import ingest_source
+        from lorme.store import open_db, create_tables
+        from lorme.ingest import ingest_source
 
         db_path = tmp_path / "test.db"
         db = open_db(str(db_path))
@@ -419,7 +419,7 @@ class TestStartEval:
     """E3.09e: start_eval MCP tool."""
 
     def test_no_db(self, tmp_path):
-        from lore_mcp.server import start_eval
+        from lorme.server import start_eval
         result = start_eval(build_dir=str(tmp_path))
         assert "no .db" in result.lower()
 
@@ -428,9 +428,9 @@ class TestStartOptimize:
     """E3.09e: start_optimize MCP tool."""
 
     def test_returns_task_id(self, monkeypatch):
-        from lore_mcp.server import start_optimize
+        from lorme.server import start_optimize
         monkeypatch.setattr(
-            "lore_mcp.eval.run_optimize",
+            "lorme.eval.run_optimize",
             lambda **kw: {"best": {"chunk_size": 1024, "chunk_overlap": 128, "top_k": 5, "avg_score": 0.5}},
         )
         result = start_optimize(recipe="/fake/recipe.yaml", build_dir="/tmp/test-opt")
@@ -474,16 +474,16 @@ class TestPrepRecipeHandoff:
 
     def test_add_sources_uses_prep_recipe(self, tmp_path, monkeypatch):
         """add_sources with .py files must index via prep recipe (path: .md)."""
-        import lore_mcp.server as srv
-        from lore_mcp.config import LoreConfig
-        from lore_mcp.store import open_db
+        import lorme.server as srv
+        from lorme.config import LormeConfig
+        from lorme.store import open_db
 
         orig = tmp_path / "src"
         orig.mkdir()
         self._make_py_file(orig, "mod_a.py")
         self._make_py_file(orig, "mod_b.py")
 
-        cfg = LoreConfig.defaults()
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path / "data")
         cfg.default_collection = "test-prep"
         monkeypatch.setattr(srv, "_config", cfg)
@@ -528,15 +528,15 @@ class TestPrepRecipeHandoff:
 
     def test_add_source_uses_prep_recipe_not_glob(self, tmp_path, monkeypatch):
         """add_source with .py must find exact prep file, not stem glob."""
-        import lore_mcp.server as srv
-        from lore_mcp.config import LoreConfig
-        from lore_mcp.store import open_db
+        import lorme.server as srv
+        from lorme.config import LormeConfig
+        from lorme.store import open_db
 
         orig = tmp_path / "src"
         orig.mkdir()
         self._make_py_file(orig, "helper.py")
 
-        cfg = LoreConfig.defaults()
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path / "data")
         cfg.default_collection = "test-single"
         monkeypatch.setattr(srv, "_config", cfg)
@@ -590,8 +590,8 @@ class TestPrepRecipeHandoff:
             "sources": [{"file": "doc.md"}],
         }))
 
-        from lore_mcp.config import LoreConfig
-        cfg = LoreConfig(
+        from lorme.config import LormeConfig
+        cfg = LormeConfig(
             build_dir=str(tmp_path / "build"),
             orig_dir=str(orig),
             output_level="quiet",
@@ -599,7 +599,7 @@ class TestPrepRecipeHandoff:
         prep_recipe = tmp_path / "build" / "recipe-prep.yaml"
         cfg.preprocess_recipe_out = str(prep_recipe)
 
-        from lore_mcp.preprocess import preprocess_sources
+        from lorme.preprocess import preprocess_sources
         preprocess_sources(str(recipe), str(orig), cfg)
 
         assert prep_recipe.exists(), f"Prep recipe not written to {prep_recipe}"
@@ -654,14 +654,14 @@ class TestCleanupIntermediates:
 
     def test_add_source_cleans_prep(self, tmp_path, monkeypatch):
         """MCP add_source: prep/ and .work/ deleted after success."""
-        import lore_mcp.server as srv
-        from lore_mcp.config import LoreConfig
+        import lorme.server as srv
+        from lorme.config import LormeConfig
 
         orig = tmp_path / "src"
         orig.mkdir()
         self._make_py_file(orig, "mod.py")
 
-        cfg = LoreConfig.defaults()
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path / "data")
         cfg.default_collection = "test-cleanup"
         monkeypatch.setattr(srv, "_config", cfg)
@@ -691,14 +691,14 @@ class TestCleanupIntermediates:
 
     def test_add_source_keeps_prep_if_keep_intermediates(self, tmp_path, monkeypatch):
         """MCP add_source with keep_intermediates: prep/ preserved."""
-        import lore_mcp.server as srv
-        from lore_mcp.config import LoreConfig
+        import lorme.server as srv
+        from lorme.config import LormeConfig
 
         orig = tmp_path / "src"
         orig.mkdir()
         self._make_py_file(orig, "mod.py")
 
-        cfg = LoreConfig.defaults()
+        cfg = LormeConfig.defaults()
         cfg.db_dir = str(tmp_path / "data")
         cfg.default_collection = "test-keep"
         cfg.keep_intermediates = True
@@ -729,8 +729,8 @@ class TestCleanupIntermediates:
     def test_build_cleans_prep_and_work(self, tmp_path):
         """run_build cleans prep/ and .work/ after successful build."""
         import yaml
-        from lore_mcp.build import run_build
-        from lore_mcp.config import LoreConfig
+        from lorme.build import run_build
+        from lorme.config import LormeConfig
 
         orig = tmp_path / "src"
         orig.mkdir()
@@ -752,7 +752,7 @@ class TestCleanupIntermediates:
         embedder.unload = MagicMock()
 
         build_dir = tmp_path / "build"
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             skip_optimize=True, output_level="quiet",
             preprocess=True, force=True,
             build_dir=str(build_dir),

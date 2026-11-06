@@ -14,7 +14,7 @@ Le code actuel ne respecte pas ce design :
 - `docs_base_dir` encore paramètre de
   `preprocess_sources()` et `_phase1_worker()`
 - `preprocess_orig_dir` et `preprocess_prep_dir`
-  encore dans LoreConfig (défaut `"."`)
+  encore dans LormeConfig (défaut `"."`)
 - Branch legacy (old model) et branch E12.90
   (new model) coexistent dans server.py
 - 12 occurrences de `or "."` comme sentinel
@@ -58,11 +58,11 @@ anti-pattern.
 
 ## Design cible (E12.90 respecté)
 
-### LoreConfig — 2 chemins seulement
+### LormeConfig — 2 chemins seulement
 
 ```python
 @dataclass
-class LoreConfig:
+class LormeConfig:
     # Directories (2 only, per E12.90)
     orig_dir: str = ""     # read-only sources
     build_dir: str = ""    # everything else
@@ -116,7 +116,7 @@ cfg.build_dir = str(Path(build_input).resolve()) if build_input else ""
 
 ### MVP1 — Supprimer les fields legacy
 
-- Supprimer de LoreConfig :
+- Supprimer de LormeConfig :
   `preprocess_orig_dir`, `preprocess_prep_dir`
 - Remplacer toutes les refs par `orig_dir` et
   properties dérivées de `build_dir`
@@ -158,7 +158,7 @@ preprocess/__init__.py, build.py
 
 ## DoD
 
-- LoreConfig : `orig_dir` + `build_dir`
+- LormeConfig : `orig_dir` + `build_dir`
   seulement (2 fields chemins)
 - `preprocess_orig_dir`, `preprocess_prep_dir`
   supprimés

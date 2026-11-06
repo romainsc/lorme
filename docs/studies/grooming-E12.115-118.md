@@ -50,7 +50,7 @@ the build pipeline.
 
 Investigation needed in build.py / CLI path.
 
-DoD: lore-mcp build --orig-dir . indexes all
+DoD: lorme build --orig-dir . indexes all
 supported files. Test. CI green.
 
 ## E12.118 — add_source enrich="" no-op

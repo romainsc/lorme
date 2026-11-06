@@ -128,8 +128,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from lore_mcp.embedder import Embedder
-from lore_mcp.store import open_db
+from lorme.embedder import Embedder
+from lorme.store import open_db
 
 
 SUPPORTED_FORMATS = {".pdf", ".html", ".md", ".docx"}
@@ -214,8 +214,8 @@ chunking and embedding strategies.
 - import os
 - from pathlib import Path
 - from typing import Optional
-- from lore_mcp.embedder import Embedder
-- from lore_mcp.store import open_db
+- from lorme.embedder import Embedder
+- from lorme.store import open_db
 
 ## Constants
 
@@ -410,7 +410,7 @@ Câblage :
 ### Itération 2 — tree-sitter multi-langage
 
 Dépendance optionnelle : `tree-sitter` (MIT).
-Install : `pip install lore-mcp[code]`.
+Install : `pip install lorme[code]`.
 
 `_narrate_treesitter(text, filename, language)`.
 Supporter : Python, JavaScript/TypeScript,

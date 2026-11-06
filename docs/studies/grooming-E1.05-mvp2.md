@@ -89,7 +89,7 @@ def open_db(path):
 ```
 
 Actually: no wrappers. All consumers are in
-lore-mcp (no external users pre-release).
+lorme (no external users pre-release).
 Migrate all at once.
 
 ## server.py _get_db

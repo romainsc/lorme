@@ -1,6 +1,6 @@
 # Configuration
 
-All lore-mcp configuration is via `config.yaml`.
+All lorme configuration is via `config.yaml`.
 No environment variables — everything in the
 config file.
 
@@ -61,10 +61,10 @@ is the per-request inference timeout (default
 180s).
 
 **Start/stop commands must be self-contained.**
-lore-mcp executes them as-is via `shell=True`.
+lorme executes them as-is via `shell=True`.
 Each command must handle its own prerequisites:
 create directories, remove stale containers,
-check if already running. lore-mcp does not
+check if already running. lorme does not
 validate, parse, or pre-process the command.
 Example for podman with log files:
 ```bash
@@ -126,7 +126,7 @@ resolved in cascade:
    — highest priority, local overrides
 2. **Custom file** (`enrich.prompts_file`)
    — shared prompts file
-3. **Distributed defaults** (`src/lore_mcp/prompts.yaml`)
+3. **Distributed defaults** (`src/lorme/prompts.yaml`)
    — shipped with the package (FR + EN)
 4. **Fallback** — minimal EN prompt (last resort)
 
@@ -137,25 +137,25 @@ with `{heading}` and `{body}` placeholders.
 ### State management
 
 Pipeline state is stored in
-`~/.local/state/lore-mcp/<hash>/`. Manage with:
+`~/.local/state/lorme/<hash>/`. Manage with:
 
 ```bash
 # List all pipeline states
-lore-mcp state --list
+lorme state --list
 
 # Purge a specific state by hash prefix
-lore-mcp state --purge abc123
+lorme state --purge abc123
 
 # Purge states older than 7 days
-lore-mcp state --purge --older-than 7
+lorme state --purge --older-than 7
 
 # Purge all states
-lore-mcp state --purge --all
+lorme state --purge --all
 ```
 
 ## MCP transport
 
-lore-mcp supports two MCP transport modes
+lorme supports two MCP transport modes
 (see `server.py:main()`):
 
 ### HTTP/SSE (recommended)
@@ -164,7 +164,7 @@ Start the server manually, clients connect via
 URL. No PATH or virtualenv issues.
 
 ```bash
-lore-mcp serve --config config.yaml --transport sse
+lorme serve --config config.yaml --transport sse
 ```
 
 Client configuration:
@@ -188,7 +188,7 @@ binary in the virtualenv.
 {
   "mcpServers": {
     "lore": {
-      "command": "/path/to/.venv/bin/lore-mcp",
+      "command": "/path/to/.venv/bin/lorme",
       "args": ["serve", "--config", "/path/to/config.yaml"]
     }
   }
@@ -223,12 +223,12 @@ accept mutually exclusive output flags
 | `--quiet` | `quiet` | No console output. |
 | `--progress` | `progress` | Single overwriting line: global % + ETA, phase n/total, sub-progress %, model name. |
 | `--verbose` | `verbose` | Default + truncated questions table, per-iteration milestones with per-metric scores. |
-| `--debug` | `debug` | Verbose + HTTP request content (URL, model, batch, full input texts), response details. Only `lore_mcp` loggers at DEBUG; third-party (httpx, sentence_transformers) stay at WARNING. |
+| `--debug` | `debug` | Verbose + HTTP request content (URL, model, batch, full input texts), response details. Only `lorme` loggers at DEBUG; third-party (httpx, sentence_transformers) stay at WARNING. |
 
 Example:
 
 ```bash
-lore-mcp build recipe.yaml \
+lorme build recipe.yaml \
   --orig-dir /path/to/sources/ \
   --build-dir /path/to/output/ \
   --config config.yaml \
@@ -254,8 +254,8 @@ CLI `--num-questions` takes precedence over the
 ### Indexing documents
 
 Ingestion is currently done programmatically
-via `lore_mcp.ingest.ingest_directory()`.
-A `lore-mcp index` subcommand is planned.
+via `lorme.ingest.ingest_directory()`.
+A `lorme index` subcommand is planned.
 
 ### Chunking parameters
 
@@ -281,10 +281,10 @@ the chunk_size/overlap per collection.
 ## Collection manifest
 
 The manifest is the central entry point for the
-lore-mcp workflow. Sources are identified by their
+lorme workflow. Sources are identified by their
 metadata (title, url, license, author), not by
 file paths. `orig` and `path` are operational
-details, generated if absent. lore-mcp never
+details, generated if absent. lorme never
 modifies the manifest.
 
 ```yaml
@@ -457,7 +457,7 @@ If `file: sub/deep.pdf`, the generated `path` is
 
 ### Enriched recipe
 
-`lore-mcp preprocess` produces a `-prep` suffixed
+`lorme preprocess` produces a `-prep` suffixed
 copy with all resolved fields (path, title, etc.).
 The enriched recipe is used by `lint` and
 `build`.
@@ -500,13 +500,13 @@ Must implement the OpenAI-compatible chat API.
 Compatible services: vLLM, Llama Stack, Ollama.
 
 RAGAS metrics require a judge LLM configured.
-Without RAGAS installed (`pip install lore-mcp[eval]`),
+Without RAGAS installed (`pip install lorme[eval]`),
 basic text-overlap scoring is used (no LLM needed).
 
 - **`verify_ssl`**: boolean, default `true`. Set
   to `false` for self-signed certificates.
 
-When RAGAS metrics are requested, lore-mcp probes
+When RAGAS metrics are requested, lorme probes
 the judge endpoint at startup
 (`eval.py:_probe_judge()`). If unreachable, a
 `ConnectionError` is raised immediately (fail

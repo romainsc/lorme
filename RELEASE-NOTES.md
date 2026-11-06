@@ -1,4 +1,4 @@
-# Release Notes — lore-mcp v0.1.0-dev
+# Release Notes — lorme v0.1.0-dev
 
 ## Overview
 
@@ -52,12 +52,12 @@ Protocol.
 
 ### AutoRAG evaluation
 
-- **`lore-mcp eval`** — evaluate retrieval
+- **`lorme eval`** — evaluate retrieval
   quality with 3 metric levels:
   - Embedding (no LLM): score_spread, source_diversity
   - Retrieval (with ground truth): hit, word_overlap, MRR
   - LLM-based (RAGAS, optional): faithfulness, context_recall
-- **`lore-mcp optimize`** — auto-optimize
+- **`lorme optimize`** — auto-optimize
   chunking params (chunk_size × overlap × top_k)
 - **Multi-model optimization** — compare
   embedding models alongside chunk params via
@@ -67,7 +67,7 @@ Protocol.
 
 ### Build workflow
 
-- **`lore-mcp build`** — single command:
+- **`lorme build`** — single command:
   manifest + models → optimized `.db` + metadata
   + build report
 - **Pre-flight validation** of all models before

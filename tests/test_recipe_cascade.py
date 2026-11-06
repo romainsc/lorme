@@ -3,7 +3,7 @@
 import pytest
 import yaml
 
-from lore_mcp.recipe import resolve_source_fields, parse_recipe
+from lorme.recipe import resolve_source_fields, parse_recipe
 
 
 class TestDefaultsCascade:

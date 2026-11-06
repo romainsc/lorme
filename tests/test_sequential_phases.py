@@ -6,14 +6,14 @@ from unittest.mock import patch, MagicMock
 import pytest
 import yaml
 
-from lore_mcp.config import LoreConfig
-from lore_mcp.preprocess import preprocess_sources
+from lorme.config import LormeConfig
+from lorme.preprocess import preprocess_sources
 
 
-def _cfg(**overrides) -> LoreConfig:
+def _cfg(**overrides) -> LormeConfig:
     defaults = {"force": True, "output_level": "quiet"}
     defaults.update(overrides)
-    return LoreConfig(**defaults)
+    return LormeConfig(**defaults)
 
 
 def _write_manifest(path, sources, collection="test", level="libre"):
@@ -28,14 +28,14 @@ class TestColumnReorder:
     """Tests for _reorder_columns on Docling document objects."""
 
     def test_reorder_noop_on_no_body(self):
-        from lore_mcp.preprocess.parse import _reorder_columns
+        from lorme.preprocess.parse import _reorder_columns
 
         class FakeDoc:
             body = None
         _reorder_columns(FakeDoc())
 
     def test_reorder_noop_on_single_column(self):
-        from lore_mcp.preprocess.parse import _reorder_columns
+        from lorme.preprocess.parse import _reorder_columns
 
         doc = MagicMock()
         ref1 = MagicMock()
@@ -60,7 +60,7 @@ class TestColumnReorder:
         assert doc.body.children == [ref1, ref2]
 
     def test_reorder_two_columns(self):
-        from lore_mcp.preprocess.parse import _reorder_columns
+        from lorme.preprocess.parse import _reorder_columns
 
         doc = MagicMock()
         refs = []

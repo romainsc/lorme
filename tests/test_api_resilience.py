@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lore_mcp.embedder import Embedder
+from lorme.embedder import Embedder
 
 
 class MockResponse:
@@ -36,7 +36,7 @@ class TestRetryOnTransientErrors:
     """MVP1: retry with backoff on 429/500/503."""
 
     def test_retry_on_429(self):
-        from lore_mcp.embedder import _embed_api_with_retry
+        from lorme.embedder import _embed_api_with_retry
         emb = _make_api_embedder()
         call_count = [0]
 
@@ -52,7 +52,7 @@ class TestRetryOnTransientErrors:
             assert call_count[0] == 3
 
     def test_retry_on_500(self):
-        from lore_mcp.embedder import _embed_api_with_retry
+        from lorme.embedder import _embed_api_with_retry
         emb = _make_api_embedder()
         call_count = [0]
 
@@ -67,7 +67,7 @@ class TestRetryOnTransientErrors:
             assert call_count[0] == 2
 
     def test_exhaust_retries_raises(self):
-        from lore_mcp.embedder import _embed_api_with_retry, EmbeddingAPIError
+        from lorme.embedder import _embed_api_with_retry, EmbeddingAPIError
         emb = _make_api_embedder()
 
         def mock_post(*args, **kwargs):
@@ -82,7 +82,7 @@ class TestBatchReduction:
     """MVP2: halve batch on 422."""
 
     def test_reduce_batch_on_422(self):
-        from lore_mcp.embedder import _embed_api_with_retry
+        from lorme.embedder import _embed_api_with_retry
         emb = _make_api_embedder()
         batch_sizes_seen = []
 
@@ -107,7 +107,7 @@ class TestFailFast:
     """MVP3: fail fast on 401/404."""
 
     def test_fail_fast_401(self):
-        from lore_mcp.embedder import _embed_api_with_retry, EmbeddingAPIError
+        from lorme.embedder import _embed_api_with_retry, EmbeddingAPIError
         emb = _make_api_embedder()
 
         def mock_post(*args, **kwargs):
@@ -118,7 +118,7 @@ class TestFailFast:
                 _embed_api_with_retry(emb, ["test"])
 
     def test_fail_fast_404(self):
-        from lore_mcp.embedder import _embed_api_with_retry, EmbeddingAPIError
+        from lorme.embedder import _embed_api_with_retry, EmbeddingAPIError
         emb = _make_api_embedder()
 
         def mock_post(*args, **kwargs):
@@ -129,7 +129,7 @@ class TestFailFast:
                 _embed_api_with_retry(emb, ["test"])
 
     def test_no_retry_on_401(self):
-        from lore_mcp.embedder import _embed_api_with_retry, EmbeddingAPIError
+        from lorme.embedder import _embed_api_with_retry, EmbeddingAPIError
         emb = _make_api_embedder()
         call_count = [0]
 
@@ -147,7 +147,7 @@ class TestConsecutiveErrorThreshold:
     """MVP3: stop build after N consecutive failures."""
 
     def test_threshold_raises(self):
-        from lore_mcp.ingest import ConsecutiveErrorThreshold
+        from lorme.ingest import ConsecutiveErrorThreshold
         threshold = ConsecutiveErrorThreshold(max_consecutive=3)
         threshold.record_error("file1.md", "err")
         threshold.record_error("file2.md", "err")
@@ -155,7 +155,7 @@ class TestConsecutiveErrorThreshold:
             threshold.record_error("file3.md", "err")
 
     def test_success_resets_counter(self):
-        from lore_mcp.ingest import ConsecutiveErrorThreshold
+        from lorme.ingest import ConsecutiveErrorThreshold
         threshold = ConsecutiveErrorThreshold(max_consecutive=3)
         threshold.record_error("file1.md", "err")
         threshold.record_error("file2.md", "err")

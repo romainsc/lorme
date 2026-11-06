@@ -56,7 +56,7 @@ Code-Switching Diarization", Vast.ai
 "Speaker Diarization with Pyannote", Fora Soft
 "Pyannote in Production".
 
-**lore-mcp operates in this pipeline.**
+**lorme operates in this pipeline.**
 The architecture is correct. The implementation
 has bugs.
 
@@ -73,7 +73,7 @@ There is no auto-detection — this is by design.
 Source: NVIDIA NeMo docs, Canary-1B HuggingFace
 model card, MarkTechPost Canary guide.
 
-Impact on lore-mcp: E12.152 removed `source_lang`
+Impact on lorme: E12.152 removed `source_lang`
 from per-speaker STT to "let auto-detection work".
 But auto-detection doesn't exist in Canary →
 everything transcribed as English.
@@ -85,7 +85,7 @@ everything transcribed as English.
 
 ### 2.2 Reconstruction ignores STT timestamps
 
-lore-mcp's `reconstruct_timeline` distributes text
+lorme's `reconstruct_timeline` distributes text
 proportionally by character position. The consensus
 uses **temporal alignment** via:
 
@@ -96,7 +96,7 @@ uses **temporal alignment** via:
 3. Each STT segment is placed at its absolute
    position on the original timeline
 
-lore-mcp already HAS `seg_table` from
+lorme already HAS `seg_table` from
 `extract_speaker_audio` and requests `verbose_json`
 from Canary. But `_extract_stt_segments` (line 48
 of `__init__.py`) discards the real timestamps and
@@ -232,7 +232,7 @@ better accuracy than Canary-1B-v2 for non-English
 languages. Model assessment needed (level, license,
 benchmarks vs 1B).
 
-## 4. Recommendations for lore-mcp
+## 4. Recommendations for lorme
 
 ### Priority 1: Fix reconstruction (timestamps)
 

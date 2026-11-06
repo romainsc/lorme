@@ -2,14 +2,14 @@
 
 - **Status:** Reference
 - **Date:** 2026-09-18
-- **Module:** `src/lore_mcp/preprocess/`
+- **Module:** `src/lorme/preprocess/`
 
 ## Overview
 
-`lore-mcp preprocess` converts raw sources (PDF,
+`lorme preprocess` converts raw sources (PDF,
 HTML, DOCX, PPTX, XLSX, images, CSV, JSON, MD)
 into clean, enriched markdown ready for
-`lore-mcp build`.
+`lorme build`.
 
 **Input:**
 - Manifest YAML (source list with metadata)

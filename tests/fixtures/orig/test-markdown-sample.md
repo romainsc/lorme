@@ -1,6 +1,6 @@
 ---
 title: Sample Markdown Document
-author: lore-mcp project
+author: lorme project
 license: AGPL-3.0-or-later
 date: 2026-09-10
 ---
@@ -8,15 +8,15 @@ date: 2026-09-10
 # Sample Markdown Document
 
 This document tests the markdown passthrough path
-in lore-mcp preprocessing. It contains structured
+in lorme preprocessing. It contains structured
 content with headings, lists, tables, and code blocks.
 
 ## Installation
 
-Install lore-mcp from PyPI:
+Install lorme from PyPI:
 
 ```bash
-pip install lore-mcp[parse]
+pip install lorme[parse]
 ```
 
 For GPU support, ensure CUDA toolkit is available.
@@ -48,5 +48,5 @@ to clean markdown ready for indexing:
 
 ## License
 
-This document is part of the lore-mcp project,
+This document is part of the lorme project,
 licensed under AGPL-3.0-or-later.

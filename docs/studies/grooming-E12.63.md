@@ -30,17 +30,17 @@ on startup → resume from where it stopped.
 `--intermediates-dir` (optional): where to store
 phase files (phase1-parse.md, caption-*.md,
 docling.json, is-logs). If absent → default to
-`XDG_STATE_HOME/lore-mcp/<hash>/`.
+`XDG_STATE_HOME/lorme/<hash>/`.
 
 Intermediates are always persistent (needed for
 resume). Conserved after success (reusable for
-different params). Purge via `lore-mcp state`
+different params). Purge via `lorme state`
 (E12.66).
 
 ### State directory (default intermediates)
 
 ```
-~/.local/state/lore-mcp/
+~/.local/state/lorme/
 └── <collection-hash>/
     ├── phase1-parse/
     ├── phase2-caption/
@@ -54,20 +54,20 @@ collection-hash = SHA-256 of manifest + config.
 
 ```bash
 # Default: report in ./ intermediates in XDG
-lore-mcp build ... --preprocess
+lorme build ... --preprocess
 
 # Named report
-lore-mcp build ... --preprocess --report run.json
+lorme build ... --preprocess --report run.json
 
 # Resume (report exists)
-lore-mcp build ... --preprocess --report run.json
+lorme build ... --preprocess --report run.json
 
 # Intermediates visible
-lore-mcp build ... --preprocess \
+lorme build ... --preprocess \
   --intermediates-dir ./intermediates/
 
 # Force restart
-lore-mcp build ... --preprocess --report run.json --force
+lorme build ... --preprocess --report run.json --force
 ```
 
 ### Container
@@ -75,7 +75,7 @@ lore-mcp build ... --preprocess --report run.json --force
 Volume mount for intermediates:
 ```bash
 podman run \
-  -v ~/.local/state/lore-mcp:/home/app/.local/state/lore-mcp:Z \
+  -v ~/.local/state/lorme:/home/app/.local/state/lorme:Z \
   ...
 ```
 

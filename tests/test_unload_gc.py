@@ -3,7 +3,7 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
-from lore_mcp.embedder import Embedder
+from lorme.embedder import Embedder
 
 
 class TestUnloadGarbageCollection:
@@ -13,8 +13,8 @@ class TestUnloadGarbageCollection:
         emb._model = MagicMock()
 
         call_order = []
-        with patch("lore_mcp.embedder.gc") as mock_gc, \
-             patch("lore_mcp.embedder.torch") as mock_torch:
+        with patch("lorme.embedder.gc") as mock_gc, \
+             patch("lorme.embedder.torch") as mock_torch:
             mock_torch.cuda.is_available.return_value = True
             mock_gc.collect.side_effect = lambda: call_order.append("gc")
             mock_torch.cuda.empty_cache.side_effect = lambda: call_order.append("cache")

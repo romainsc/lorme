@@ -5,14 +5,14 @@
 E3.40 implemented `get_config` MCP tool. The
 parse section only exposes `ocr_engine`,
 `ocr_lang`, `caption_primary`, `stt_model`.
-Several LoreConfig parse fields are missing
+Several LormeConfig parse fields are missing
 from the output.
 
 ## Bug
 
 `_build_config_yaml()` in server.py (line 562)
 builds the parse section with only 4 fields.
-LoreConfig has 10 parse-related fields:
+LormeConfig has 10 parse-related fields:
 
 | Field | In get_config | Status |
 |-------|:---:|--------|

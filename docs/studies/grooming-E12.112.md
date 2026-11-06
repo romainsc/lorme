@@ -17,7 +17,7 @@ before `podman run`.
 **Start commands must be self-contained.**
 Everything provided by the user (start/stop
 commands in config.yaml) must be autonomous
-and coherent. lore-mcp executes the command
+and coherent. lorme executes the command
 as-is — it does not parse, validate, or
 compensate for missing prerequisites.
 
@@ -47,7 +47,7 @@ add a section:
 > The `start` command is executed as a single
 > shell command. It must handle all prerequisites:
 > create directories, remove stale containers,
-> check if already running. lore-mcp does not
+> check if already running. lorme does not
 > validate or pre-process the command.
 
 ### 3. Fix bootstrap.yaml example
@@ -60,5 +60,5 @@ log directories.
 
 - Rule documented in configuration.md
 - bootstrap.yaml example is self-contained
-- No code change in lore-mcp
+- No code change in lorme
 - User informed to fix their config.yaml

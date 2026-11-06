@@ -17,7 +17,7 @@ def _read_embedding_key(data: dict, path: str) -> list:
 
 @dataclass
 class BuildConfig:
-    """Unified configuration for lore-mcp build."""
+    """Unified configuration for lorme build."""
     embedding_models: list[dict] = field(default_factory=list)
     judge_model: str = ""
     judge_api_url: str = ""

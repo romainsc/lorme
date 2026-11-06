@@ -1,6 +1,6 @@
 ---
 title: Sample Markdown Document
-author: lore-mcp project
+author: lorme project
 license: AGPL-3.0-or-later
 date: 2026-09-10
 ---
@@ -10,35 +10,35 @@ date: 2026-09-10
 
 # Sample Markdown Document
 
-In this document, the section titled "# Sample Markdown Document" serves as a practical demonstration of the markdown passthrough functionality within the lore-mcp preprocessing pipeline. It encompasses a variety of markdown elements, including headings, lists, tables, and code blocks, to showcase their preservation and rendering capabilities. This section is pivotal in validating the robustness and versatility of the preprocessing tool in handling diverse markdown structures.
+In this document, the section titled "# Sample Markdown Document" serves as a practical demonstration of the markdown passthrough functionality within the lorme preprocessing pipeline. It encompasses a variety of markdown elements, including headings, lists, tables, and code blocks, to showcase their preservation and rendering capabilities. This section is pivotal in validating the robustness and versatility of the preprocessing tool in handling diverse markdown structures.
 
 
 This document tests the markdown passthrough path
-in lore-mcp preprocessing. It contains structured
+in lorme preprocessing. It contains structured
 content with headings, lists, tables, and code blocks.
 
 
 
 
 Q: What is the purpose of the "# Sample Markdown Document" section in this document?
-Q: How does the "# Sample Markdown Document" section demonstrate the markdown passthrough functionality in the lore-mcp preprocessing pipeline?
+Q: How does the "# Sample Markdown Document" section demonstrate the markdown passthrough functionality in the lorme preprocessing pipeline?
 Q: What types of markdown elements are included in the "# Sample Markdown Document" section to validate the preprocessing tool's capabilities?
 
 
 
-Summary: The "# Sample Markdown Document" section illustrates the markdown passthrough functionality in the lore-mcp preprocessing pipeline, demonstrating the preservation and rendering of various markdown elements like headings, lists, tables, and code blocks.
+Summary: The "# Sample Markdown Document" section illustrates the markdown passthrough functionality in the lorme preprocessing pipeline, demonstrating the preservation and rendering of various markdown elements like headings, lists, tables, and code blocks.
 
-Keywords: markdown passthrough, lore-mcp preprocessing pipeline, headings, lists, tables, code blocks, robustness, versatility.
+Keywords: markdown passthrough, lorme preprocessing pipeline, headings, lists, tables, code blocks, robustness, versatility.
 
 ## Installation
 
-In the document, the "Installation" section follows the "Getting Started" guide and precedes the "Usage" section. This part provides detailed instructions on how to install the lore-mcp package from PyPI using pip, including the specific command for installation with parse functionality. It also highlights the prerequisite for GPU support, which is the availability of the CUDA toolkit.
+In the document, the "Installation" section follows the "Getting Started" guide and precedes the "Usage" section. This part provides detailed instructions on how to install the lorme package from PyPI using pip, including the specific command for installation with parse functionality. It also highlights the prerequisite for GPU support, which is the availability of the CUDA toolkit.
 
 
-Install lore-mcp from PyPI:
+Install lorme from PyPI:
 
 ```bash
-pip install lore-mcp[parse]
+pip install lorme[parse]
 ```
 
 For GPU support, ensure CUDA toolkit is available.
@@ -46,15 +46,15 @@ For GPU support, ensure CUDA toolkit is available.
 
 
 
-Q: How can I install the lore-mcp package from PyPI?
-Q: What is the specific command for installing lore-mcp with parse functionality?
-Q: What is the prerequisite for enabling GPU support in lore-mcp?
+Q: How can I install the lorme package from PyPI?
+Q: What is the specific command for installing lorme with parse functionality?
+Q: What is the prerequisite for enabling GPU support in lorme?
 
 
 
-Summary: The "Installation" section guides users on installing the lore-mcp package from PyPI using pip, emphasizing the need for CUDA toolkit for GPU support.
+Summary: The "Installation" section guides users on installing the lorme package from PyPI using pip, emphasizing the need for CUDA toolkit for GPU support.
 
-Keywords: Installation, lore-mcp, PyPI, pip, CUDA toolkit, GPU support, parse functionality.
+Keywords: Installation, lorme, PyPI, pip, CUDA toolkit, GPU support, parse functionality.
 
 ## Configuration
 
@@ -131,18 +131,18 @@ Keywords: Preprocessing pipeline, raw data sources, markdown, normalization, lar
 
 ## License
 
-In the lore-mcp project documentation, the "License" section is a crucial component that outlines the legal framework governing the use and distribution of the project's content. This section is typically found towards the end of the document, following the main content and any appendices. It provides essential information about the AGPL-3.0-or-later license under which the project operates, ensuring transparency and compliance with open-source licensing requirements.
+In the lorme project documentation, the "License" section is a crucial component that outlines the legal framework governing the use and distribution of the project's content. This section is typically found towards the end of the document, following the main content and any appendices. It provides essential information about the AGPL-3.0-or-later license under which the project operates, ensuring transparency and compliance with open-source licensing requirements.
 
 
-This document is part of the lore-mcp project,
+This document is part of the lorme project,
 licensed under AGPL-3.0-or-later.
 
 
-Q: What legal framework governs the use and distribution of the lore-mcp project's content?
-Q: Under which open-source license does the lore-mcp project operate?
-Q: Where in the document can one find the information about the lore-mcp project's license?
+Q: What legal framework governs the use and distribution of the lorme project's content?
+Q: Under which open-source license does the lorme project operate?
+Q: Where in the document can one find the information about the lorme project's license?
 
 
-Summary: The "License" section in the lore-mcp project documentation details the AGPL-3.0-or-later license, ensuring transparency and compliance with open-source licensing requirements.
+Summary: The "License" section in the lorme project documentation details the AGPL-3.0-or-later license, ensuring transparency and compliance with open-source licensing requirements.
 
-Keywords: License, AGPL-3.0-or-later, open-source, transparency, compliance, lore-mcp project, documentation.
+Keywords: License, AGPL-3.0-or-later, open-source, transparency, compliance, lorme project, documentation.

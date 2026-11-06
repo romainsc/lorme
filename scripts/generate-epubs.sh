@@ -33,7 +33,7 @@ generate_epub() {
     local output_dir="$2"
     local name
     name="$(basename "$md_file" .md)"
-    local epub_file="$output_dir/lore-mcp-${name}-v${VERSION}.epub"
+    local epub_file="$output_dir/lorme-${name}-v${VERSION}.epub"
 
     if [ "$FORCE" != "true" ] && [ -f "$epub_file" ] && \
        [ "$epub_file" -nt "$md_file" ]; then
@@ -51,12 +51,12 @@ generate_epub() {
         --toc-depth=3 \
         -V lang=en \
         --css="$EPUB_CSS" \
-        --metadata title="lore-mcp — $title" \
+        --metadata title="lorme — $title" \
         --metadata author="Romain Chantereau" \
         --metadata date="$(date +%Y-%m-%d)" \
         --split-level=2 \
         2>/dev/null; then
-        echo -e "  ${YELLOW}changed${NC} : lore-mcp-${name}-v${VERSION}.epub ($(du -h "$epub_file" | cut -f1))"
+        echo -e "  ${YELLOW}changed${NC} : lorme-${name}-v${VERSION}.epub ($(du -h "$epub_file" | cut -f1))"
         CHANGED=$((CHANGED + 1))
     else
         echo -e "  ${RED}ERROR${NC}   : ${name}.epub"
@@ -68,7 +68,7 @@ mkdir -p "$OUTPUT_DIR"
 
 echo ""
 echo "════════════════════════════════════════════════"
-echo "  EPUB generation — lore-mcp v${VERSION}"
+echo "  EPUB generation — lorme v${VERSION}"
 echo "  $(date +%Y-%m-%d)"
 echo "════════════════════════════════════════════════"
 echo ""
@@ -94,8 +94,8 @@ if [ -d "$ADR_DIR" ]; then
     generate_epub "$ADR_COMBINED" "$OUTPUT_DIR"
     rm -f "$ADR_COMBINED"
     # Rename from combined temp name
-    for f in "$OUTPUT_DIR"/lore-mcp-.adr-combined-*.epub; do
-        [ -f "$f" ] && mv "$f" "$OUTPUT_DIR/lore-mcp-adr-v${VERSION}.epub"
+    for f in "$OUTPUT_DIR"/lorme-.adr-combined-*.epub; do
+        [ -f "$f" ] && mv "$f" "$OUTPUT_DIR/lorme-adr-v${VERSION}.epub"
     done
 fi
 

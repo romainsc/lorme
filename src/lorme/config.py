@@ -1,6 +1,6 @@
-"""Unified configuration for lore-mcp. See docs/configuration.md.
+"""Unified configuration for lorme. See docs/configuration.md.
 
-Single config.yaml for all lore-mcp configuration. No env var fallback.
+Single config.yaml for all lorme configuration. No env var fallback.
 No env var fallback — everything comes from the config file.
 """
 
@@ -11,8 +11,8 @@ import yaml
 
 
 @dataclass
-class LoreConfig:
-    """Complete configuration for all lore-mcp commands."""
+class LormeConfig:
+    """Complete configuration for all lorme commands."""
 
     # Database
     db_dir: str = ""
@@ -145,7 +145,7 @@ class LoreConfig:
         return True
 
     @classmethod
-    def from_file(cls, path: str) -> "LoreConfig":
+    def from_file(cls, path: str) -> "LormeConfig":
         """Load config from a YAML file."""
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
@@ -226,7 +226,7 @@ class LoreConfig:
         )
 
     @classmethod
-    def defaults(cls) -> "LoreConfig":
+    def defaults(cls) -> "LormeConfig":
         """Return config with all defaults."""
         return cls()
 
@@ -236,7 +236,7 @@ class LoreConfig:
         """Base directory for all collection data. XDG default."""
         if self.db_dir:
             return Path(self.db_dir)
-        return Path.home() / ".local" / "share" / "lore-mcp"
+        return Path.home() / ".local" / "share" / "lorme"
 
     def collection_dir(self, collection: str = "") -> Path:
         """Resolve directory for a collection."""
@@ -246,7 +246,7 @@ class LoreConfig:
     def collection_db(self, collection: str = "") -> Path:
         """Resolve .db path for a collection.
 
-        Prefers data_dir/name.db (flat — produced by lore-mcp build).
+        Prefers data_dir/name.db (flat — produced by lorme build).
         Falls back to data_dir/name/name.db (nested — created by add_source).
         """
         name = collection or self.default_collection

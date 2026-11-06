@@ -1,9 +1,9 @@
-# Docling capabilities analysis — what lore-mcp reimplements
+# Docling capabilities analysis — what lorme reimplements
 
 - **Date:** 2026-09-20
 - **Docling version:** 2.127.0
 - **Purpose:** Identify what Docling does natively that
-  lore-mcp reimplements, and what lore-mcp adds
+  lorme reimplements, and what lorme adds
 
 ## 1. Docling native capabilities (exhaustive)
 
@@ -73,9 +73,9 @@ chandra_ocr2, unlimited_ocr, dots_ocr, dots_mocr
 - `--page-batch-size` for parallelism
 - `--profiling` for performance analysis
 
-## 2. What lore-mcp reimplements unnecessarily
+## 2. What lorme reimplements unnecessarily
 
-| lore-mcp feature | Code | Docling equivalent | Migrate? |
+| lorme feature | Code | Docling equivalent | Migrate? |
 |------------------|------|-------------------|:--------:|
 | Image captioning (inline) | `caption_inline_images()` ~150 lines | `do_picture_description` + `PictureDescriptionApiOptions` → granite-vision IS | **YES** |
 | Image classification | `_build_classify_prompt()` VLM call per image | `do_picture_classification` trained classifier | **YES** (verify quality) |
@@ -89,7 +89,7 @@ Migrating to Docling native replaces ~300 lines
 of custom captioning code with ~10 lines of
 Docling configuration.
 
-## 3. What lore-mcp adds (Docling cannot do)
+## 3. What lorme adds (Docling cannot do)
 
 | Feature | Why needed |
 |---------|-----------|

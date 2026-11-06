@@ -1,4 +1,4 @@
-# Grooming E10.02 — lore-mcp eval
+# Grooming E10.02 — lorme eval
 
 > Retrospective artifact — grooming occurred in
 > conversation (2026-08-31), documented after
@@ -12,7 +12,7 @@ should not need to build ad hoc eval pipelines.
 
 ## Definition of Done
 
-1. `lore-mcp eval` CLI subcommand
+1. `lorme eval` CLI subcommand
 2. Generate N questions from indexed chunks
    (extractive fallback, RAGAS if installed)
 3. For each question: embed → search → score

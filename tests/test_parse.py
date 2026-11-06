@@ -1,10 +1,10 @@
-"""Tests for lore_mcp.preprocess.parse. See docs/studies/grooming-E6.06.md."""
+"""Tests for lorme.preprocess.parse. See docs/studies/grooming-E6.06.md."""
 
 from unittest.mock import patch
 
 import pytest
 
-from lore_mcp.preprocess.parse import (
+from lorme.preprocess.parse import (
     parse_to_markdown, detect_format, FormatNotSupported,
     unload_docling, classify_parse_result,
     IMAGE_EXTENSIONS,
@@ -121,7 +121,7 @@ class TestParseHTML:
         f = tmp_path / "page.html"
         f.write_text("<html><body><p>Content</p></body></html>")
 
-        import lore_mcp.preprocess.parse as parse_mod
+        import lorme.preprocess.parse as parse_mod
         monkeypatch.setattr(parse_mod, "_HAVE_TRAFILATURA", False)
 
         with pytest.raises(ImportError, match="trafilatura"):
@@ -135,7 +135,7 @@ class TestParsePDF:
         f = tmp_path / "doc.pdf"
         f.write_bytes(b"%PDF-1.4 fake")
 
-        import lore_mcp.preprocess.parse as parse_mod
+        import lorme.preprocess.parse as parse_mod
         monkeypatch.setattr(parse_mod, "_HAVE_DOCLING", False)
 
         with pytest.raises(ImportError, match="docling"):
@@ -149,7 +149,7 @@ class TestParseCSV:
         f = tmp_path / "data.csv"
         f.write_text("a,b,c\n1,2,3\n")
 
-        import lore_mcp.preprocess.parse as parse_mod
+        import lorme.preprocess.parse as parse_mod
         monkeypatch.setattr(parse_mod, "_HAVE_MARKITDOWN", False)
 
         with pytest.raises(ImportError, match="markitdown"):
@@ -159,8 +159,8 @@ class TestParseCSV:
 class TestUnloadDocling:
 
     def test_unload_clears_converter(self, monkeypatch):
-        import lore_mcp.preprocess.parse as parse_mod
-        from lore_mcp.preprocess.parse import Parser
+        import lorme.preprocess.parse as parse_mod
+        from lorme.preprocess.parse import Parser
         fake_parser = Parser()
         fake_parser._converter = "fake"
         monkeypatch.setattr(parse_mod, "_default_parser", fake_parser)
@@ -191,7 +191,7 @@ class TestDoclingJsonSave:
 
     def test_caption_with_docling_import(self):
         """caption_with_docling is importable."""
-        from lore_mcp.preprocess.parse import caption_with_docling
+        from lorme.preprocess.parse import caption_with_docling
         assert callable(caption_with_docling)
 
 
@@ -223,7 +223,7 @@ class TestTranscribeAudio:
     """E12.48: audio transcription via STT API."""
 
     def test_transcribe_audio_importable(self):
-        from lore_mcp.preprocess.parse import transcribe_audio
+        from lorme.preprocess.parse import transcribe_audio
         assert callable(transcribe_audio)
 
     def test_returns_markdown_with_timestamps(self, tmp_path):
@@ -246,7 +246,7 @@ class TestTranscribeAudio:
         mock_resp.__exit__ = MagicMock(return_value=False)
 
         with _patch("urllib.request.urlopen", return_value=mock_resp):
-            from lore_mcp.preprocess.parse import transcribe_audio
+            from lorme.preprocess.parse import transcribe_audio
             result = transcribe_audio(
                 str(audio), "http://localhost:8093/v1", "whisper-large",
             )
@@ -279,7 +279,7 @@ class TestTranscribeAudio:
             return mock_resp
 
         with _patch("urllib.request.urlopen", mock_urlopen):
-            from lore_mcp.preprocess.parse import transcribe_audio
+            from lorme.preprocess.parse import transcribe_audio
             result = transcribe_audio(
                 str(audio), "http://localhost:8093/v1", "canary",
                 language="fr", params={"task": "asr", "initial_prompt": ""},
@@ -312,7 +312,7 @@ class TestTranscribeAudio:
             return mock_resp
 
         with _patch("urllib.request.urlopen", mock_urlopen):
-            from lore_mcp.preprocess.parse import transcribe_audio
+            from lorme.preprocess.parse import transcribe_audio
             transcribe_audio(str(audio), "http://localhost:8093/v1", "whisper")
 
         body_str = captured["body"].decode("utf-8", errors="replace")
@@ -342,7 +342,7 @@ class TestTranscribeAudio:
         mock_resp.__exit__ = MagicMock(return_value=False)
 
         with _patch("urllib.request.urlopen", return_value=mock_resp):
-            from lore_mcp.preprocess.parse import transcribe_audio
+            from lorme.preprocess.parse import transcribe_audio
             result = transcribe_audio(
                 str(audio), "http://localhost:8093/v1", "canary",
                 title="Meeting",
@@ -377,7 +377,7 @@ class TestTranscribeAudio:
         mock_resp.__exit__ = MagicMock(return_value=False)
 
         with _patch("urllib.request.urlopen", return_value=mock_resp):
-            from lore_mcp.preprocess.parse import transcribe_audio
+            from lorme.preprocess.parse import transcribe_audio
             result = transcribe_audio(
                 str(audio), "http://localhost:8093/v1", "canary",
                 title="Audio",
@@ -391,7 +391,7 @@ class TestParseVideo:
     """E12.49: video → markdown with transcription + inline frames."""
 
     def test_parse_video_importable(self):
-        from lore_mcp.preprocess.parse import parse_video
+        from lorme.preprocess.parse import parse_video
         assert callable(parse_video)
 
 
@@ -402,7 +402,7 @@ class TestSttCache:
         """parse_video reuses .stt.json cache instead of re-transcribing."""
         import json
         from unittest.mock import patch, MagicMock
-        from lore_mcp.preprocess.parse import parse_video
+        from lorme.preprocess.parse import parse_video
 
         video = tmp_path / "test.webm"
         video.write_bytes(b"\x00" * 100)
@@ -415,7 +415,7 @@ class TestSttCache:
             "language": "en",
         }))
 
-        with patch("lore_mcp.preprocess.parse.transcribe_audio") as mock_stt, \
+        with patch("lorme.preprocess.parse.transcribe_audio") as mock_stt, \
              patch("subprocess.run"):
             result = parse_video(
                 str(video), "http://fake:8093/v1/audio/transcriptions",
@@ -431,7 +431,7 @@ class TestSttCache:
         import json
         from pathlib import Path
         from unittest.mock import patch, MagicMock
-        from lore_mcp.preprocess.parse import parse_video
+        from lorme.preprocess.parse import parse_video
 
         video = tmp_path / "test.webm"
         video.write_bytes(b"\x00" * 100)
@@ -445,9 +445,9 @@ class TestSttCache:
                 audio.write_bytes(b"\x00" * 1000)
             return MagicMock(returncode=0, stderr="")
 
-        with patch("lore_mcp.preprocess.parse.transcribe_audio") as mock_stt, \
+        with patch("lorme.preprocess.parse.transcribe_audio") as mock_stt, \
              patch("subprocess.run", side_effect=fake_run), \
-             patch("lore_mcp.preprocess.parse._get_audio_duration", return_value=10.0):
+             patch("lorme.preprocess.parse._get_audio_duration", return_value=10.0):
             mock_stt.return_value = {
                 "text": "# test\n\n## [00:00:00]\n\nHello world.\n",
                 "language": "en",
@@ -476,7 +476,7 @@ class TestCaptionTimeout:
 
         with _patch("docling_core.types.doc.document.DoclingDocument") as mock_cls:
             mock_cls.load_from_json.return_value = mock_doc
-            from lore_mcp.preprocess.parse import caption_with_docling
+            from lorme.preprocess.parse import caption_with_docling
             result = caption_with_docling(
                 "fake.json", "http://localhost:8090/v1", "model", timeout=600,
             )
@@ -486,7 +486,7 @@ class TestCaptionTimeout:
     def test_default_timeout_is_180(self):
         """Default timeout matches Docling's default (180s)."""
         import inspect
-        from lore_mcp.preprocess.parse import caption_with_docling
+        from lorme.preprocess.parse import caption_with_docling
         sig = inspect.signature(caption_with_docling)
         assert sig.parameters["timeout"].default == 180
 
@@ -496,7 +496,7 @@ class TestCaptionStandaloneImage:
 
     def test_caption_standalone_image_importable(self):
         """caption_standalone_image is importable."""
-        from lore_mcp.preprocess.parse import caption_standalone_image
+        from lorme.preprocess.parse import caption_standalone_image
         assert callable(caption_standalone_image)
 
     def test_returns_markdown_with_description(self, tmp_path):
@@ -515,7 +515,7 @@ class TestCaptionStandaloneImage:
         mock_resp.__exit__ = MagicMock(return_value=False)
 
         with _patch("urllib.request.urlopen", return_value=mock_resp):
-            from lore_mcp.preprocess.parse import caption_standalone_image
+            from lorme.preprocess.parse import caption_standalone_image
             result = caption_standalone_image(
                 str(img), "http://localhost:8090/v1", "test-model",
             )
@@ -525,7 +525,7 @@ class TestCaptionStandaloneImage:
     def test_default_timeout(self):
         """Default timeout is 180s."""
         import inspect
-        from lore_mcp.preprocess.parse import caption_standalone_image
+        from lorme.preprocess.parse import caption_standalone_image
         sig = inspect.signature(caption_standalone_image)
         assert sig.parameters["timeout"].default == 180
 
@@ -545,7 +545,7 @@ class TestCaptionStandaloneImage:
         mock_resp.__exit__ = MagicMock(return_value=False)
 
         with _patch("urllib.request.urlopen", return_value=mock_resp) as mock_open:
-            from lore_mcp.preprocess.parse import caption_standalone_image
+            from lorme.preprocess.parse import caption_standalone_image
             caption_standalone_image(
                 str(img), "http://localhost:8090/v1", "model", timeout=600,
             )
@@ -567,7 +567,7 @@ class TestSmartFrameFilter:
         """Frame with readable OCR text → VLM called."""
         import json
         from unittest.mock import patch as _patch, MagicMock
-        from lore_mcp.preprocess.parse import caption_inline_frames
+        from lorme.preprocess.parse import caption_inline_frames
 
         md = self._make_frame_md()
 
@@ -587,7 +587,7 @@ class TestSmartFrameFilter:
         mock_resp.__exit__ = MagicMock(return_value=False)
 
         with _patch("subprocess.run", side_effect=fake_subprocess_run), \
-             _patch("lore_mcp.preprocess.parse._fetch_api") as mock_fetch:
+             _patch("lorme.preprocess.parse._fetch_api") as mock_fetch:
             mock_fetch.return_value = {
                 "choices": [{"message": {"content": "A detailed slide description."}}]
             }
@@ -600,7 +600,7 @@ class TestSmartFrameFilter:
     def test_frame_without_text_skipped(self):
         """Frame with no readable text → VLM NOT called."""
         from unittest.mock import patch as _patch, MagicMock
-        from lore_mcp.preprocess.parse import caption_inline_frames
+        from lorme.preprocess.parse import caption_inline_frames
 
         md = self._make_frame_md()
 
@@ -612,7 +612,7 @@ class TestSmartFrameFilter:
             return r
 
         with _patch("subprocess.run", side_effect=fake_subprocess_run), \
-             _patch("lore_mcp.preprocess.parse._fetch_api") as mock_fetch:
+             _patch("lorme.preprocess.parse._fetch_api") as mock_fetch:
             result = caption_inline_frames(md, "http://fake:8090/v1", "model")
 
         mock_fetch.assert_not_called()
@@ -638,7 +638,7 @@ class TestFrameResume:
         import base64
         from pathlib import Path
         from unittest.mock import patch as _patch, MagicMock
-        from lore_mcp.preprocess.parse import caption_inline_frames
+        from lorme.preprocess.parse import caption_inline_frames
 
         b64 = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 50).decode()
         original = self._make_two_frames_md()
@@ -667,7 +667,7 @@ class TestFrameResume:
             return {"choices": [{"message": {"content": "Second slide description."}}]}
 
         with _patch("subprocess.run", side_effect=fake_subprocess_run), \
-             _patch("lore_mcp.preprocess.parse._fetch_api", side_effect=fake_fetch):
+             _patch("lorme.preprocess.parse._fetch_api", side_effect=fake_fetch):
             result = caption_inline_frames(
                 original, "http://fake:8090/v1", "model",
                 intermediate_path=str(inter_path),
@@ -683,7 +683,7 @@ class TestVttToMarkdown:
     """E12.73: convert WebVTT captions to markdown with timestamps."""
 
     def test_basic_vtt_conversion(self):
-        from lore_mcp.preprocess.parse import _vtt_to_markdown
+        from lorme.preprocess.parse import _vtt_to_markdown
         vtt = (
             "WEBVTT\n\n"
             "00:00:01.000 --> 00:00:05.000\n"
@@ -701,7 +701,7 @@ class TestVttToMarkdown:
         assert "After two minutes." in result
 
     def test_empty_vtt(self):
-        from lore_mcp.preprocess.parse import _vtt_to_markdown
+        from lorme.preprocess.parse import _vtt_to_markdown
         result = _vtt_to_markdown("WEBVTT\n\n", title="Empty")
         assert "# Empty" in result
 
@@ -711,7 +711,7 @@ class TestDownloadVideo:
 
     def test_download_with_captions(self, tmp_path):
         from unittest.mock import MagicMock, patch as _patch
-        from lore_mcp.preprocess.parse import download_video
+        from lorme.preprocess.parse import download_video
 
         mock_ydl_instance = MagicMock()
         mock_ydl_instance.extract_info.return_value = {
@@ -752,7 +752,7 @@ class TestDownloadVideo:
 
     def test_download_without_captions(self, tmp_path):
         from unittest.mock import MagicMock, patch as _patch
-        from lore_mcp.preprocess.parse import download_video
+        from lorme.preprocess.parse import download_video
 
         mock_ydl_instance = MagicMock()
         mock_ydl_instance.extract_info.return_value = {
@@ -786,7 +786,7 @@ class TestDownloadVideo:
         assert result["captions_source"] == "none"
 
     def test_ytdlp_not_installed(self, tmp_path):
-        from lore_mcp.preprocess.parse import download_video
+        from lorme.preprocess.parse import download_video
         import sys
         # Ensure yt_dlp is not importable
         saved = sys.modules.get("yt_dlp")
@@ -806,7 +806,7 @@ class TestDownloadVideo:
 
     def test_download_with_auto_captions(self, tmp_path):
         from unittest.mock import MagicMock, patch as _patch
-        from lore_mcp.preprocess.parse import download_video
+        from lorme.preprocess.parse import download_video
 
         mock_ydl_instance = MagicMock()
         mock_ydl_instance.extract_info.return_value = {
@@ -848,17 +848,17 @@ class TestBatchDoclingParse:
     """E12.87: batch document conversion via convert_all()."""
 
     def test_batch_parse_importable(self):
-        from lore_mcp.preprocess.parse import parse_batch_docling
+        from lorme.preprocess.parse import parse_batch_docling
         assert callable(parse_batch_docling)
 
     def test_batch_empty_list(self):
-        from lore_mcp.preprocess.parse import parse_batch_docling
+        from lorme.preprocess.parse import parse_batch_docling
         results = parse_batch_docling([], [], "", [])
         assert results == {}
 
     def test_batch_returns_dict_with_text(self, tmp_path, monkeypatch):
         """Batch parse returns dict keyed by path with text and docling_json."""
-        from lore_mcp.preprocess.parse import parse_batch_docling
+        from lorme.preprocess.parse import parse_batch_docling
         from unittest.mock import MagicMock
 
         mock_doc = MagicMock()
@@ -873,8 +873,8 @@ class TestBatchDoclingParse:
         mock_converter = MagicMock()
         mock_converter.convert_all.return_value = iter([mock_result])
 
-        import lore_mcp.preprocess.parse as parse_mod
-        from lore_mcp.preprocess.parse import Parser
+        import lorme.preprocess.parse as parse_mod
+        from lorme.preprocess.parse import Parser
         fake_parser = Parser()
         fake_parser._converter = mock_converter
         monkeypatch.setattr(parse_mod, "_default_parser", fake_parser)
@@ -892,24 +892,24 @@ class TestIsVideoPlatformUrl:
     """E12.81: detect video platform URLs before HTTP fetch."""
 
     def test_youtube_detected(self):
-        from lore_mcp.preprocess import _is_video_platform_url
+        from lorme.preprocess import _is_video_platform_url
         assert _is_video_platform_url("https://www.youtube.com/watch?v=eEBv0STiYhI")
         assert _is_video_platform_url("https://youtube.com/watch?v=abc123")
         assert _is_video_platform_url("https://youtu.be/abc123")
 
     def test_regular_url_not_detected(self):
-        from lore_mcp.preprocess import _is_video_platform_url
+        from lorme.preprocess import _is_video_platform_url
         assert not _is_video_platform_url("https://opensource.org/ai/open-source-ai-definition")
         assert not _is_video_platform_url("https://example.com/page.html")
 
     def test_other_platforms_detected(self):
-        from lore_mcp.preprocess import _is_video_platform_url
+        from lorme.preprocess import _is_video_platform_url
         assert _is_video_platform_url("https://vimeo.com/123456")
         assert _is_video_platform_url("https://www.dailymotion.com/video/x123")
 
     def test_video_id_in_filename(self):
         """YouTube URLs must produce unique filenames using video ID."""
-        from lore_mcp.preprocess import _video_filename_from_url
+        from lorme.preprocess import _video_filename_from_url
         name1 = _video_filename_from_url("https://www.youtube.com/watch?v=eEBv0STiYhI")
         name2 = _video_filename_from_url("https://www.youtube.com/watch?v=WYszRcHzqw8")
         name3 = _video_filename_from_url("https://www.youtube.com/watch?v=T3UKZGEXbVk")
@@ -952,6 +952,6 @@ class TestCaptionWithDoclingRGBA:
     def test_safe_rgb_in_caption_with_docling(self):
         """caption_with_docling must use safe RGBA conversion for P mode images."""
         import inspect
-        from lore_mcp.preprocess.parse import Parser
+        from lorme.preprocess.parse import Parser
         source = inspect.getsource(Parser.caption_with_docling)
         assert 'convert("RGBA")' in source, "caption_with_docling must convert P images to RGBA before RGB"

@@ -23,7 +23,7 @@ preprocess_source(
 ```
 
 Config: `diarization_device: cpu`, `diarization_model: pyannote-diarize`.
-MCP server with `--debug` + stderr wrapper (`/tmp/lore-mcp-stderr.log`).
+MCP server with `--debug` + stderr wrapper (`/tmp/lorme-stderr.log`).
 
 ## Output files
 

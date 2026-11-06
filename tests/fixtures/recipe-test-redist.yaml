@@ -76,7 +76,7 @@ sources:
   # --- MD passthrough ---
 
   - title: Sample Markdown Document
-    author: lore-mcp project
+    author: lorme project
     date: '2026-09-10'
     license: AGPL-3.0-or-later
     lang: eng
@@ -85,7 +85,7 @@ sources:
   # --- CSV (markitdown) ---
 
   - title: Embedding Models Comparison
-    author: lore-mcp project
+    author: lorme project
     license: AGPL-3.0-or-later
     lang: eng
     file: test-data-sample.csv

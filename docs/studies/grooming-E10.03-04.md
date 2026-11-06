@@ -16,7 +16,7 @@ metadata during parameter sweep.
 
 ### E10.03 — optimize
 
-1. `lore-mcp optimize` CLI subcommand
+1. `lorme optimize` CLI subcommand
 2. Vary chunk_size (512, 1024, 2048), overlap
    (64, 128), top_k (3, 5, 10)
 3. Generate questions once, reuse across configs

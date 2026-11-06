@@ -26,7 +26,7 @@ embedding) → new env vars `LORE_LLM_URL`,
 `LORE_LLM_MODEL`.
 
 Heavy dependency (~500 MB, pulls langchain) →
-must be **optional** (`pip install lore-mcp[eval]`).
+must be **optional** (`pip install lorme[eval]`).
 
 ### SDG Hub (Red Hat, Apache 2.0)
 
@@ -38,7 +38,7 @@ evaluation Q&A. Not needed for E10.
 Built-in question generation from chunk content
 (no LLM needed). Text-overlap scoring (hit,
 word_overlap) without external dependencies.
-Ensures `lore-mcp eval` works without RAGAS.
+Ensures `lorme eval` works without RAGAS.
 
 ## Design decisions
 

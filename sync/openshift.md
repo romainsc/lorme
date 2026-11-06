@@ -1,17 +1,18 @@
-# Sync lore-mcp → openshift
+# Sync lorme → openshift
 
-> Dernière MàJ : 2026-10-09 (sync 48)
-> Source : sessions lore-mcp 3-9 oct
-> Ce fichier est maintenu par le dépôt lore-mcp.
+> Dernière MàJ : 2026-11-06 (sync 49)
+> Source : session lorme 6 nov (renommage)
+> Ce fichier est maintenu par le dépôt lorme.
 > Il est lu par le dépôt openshift au `sync`.
 
 ## État du projet
 
 ### Statistiques
 
-- 19 modules Python (dont preprocess/), 713 tests
-- Branche active : feat/E12-preprocessing-tool
-- Release tag : v0.1.0
+- 19 modules Python (dont preprocess/), 735 tests
+- Branche active : feat/E0.10-rename-lorme
+- Release tag : v0.1.1
+- **PyPI** : https://pypi.org/project/lorme/ (v0.1.1)
 - 22 outils MCP (add_source, add_sources, add_recipe,
   add_directory, remove_source, search_docs,
   list_indexed_sources, list_collections,
@@ -79,7 +80,7 @@ même titre que TEI, Canary STT, Granite Vision.
 - API : custom (build_transcription_messages +
   generate_transcription), pas OpenAI-compatible
 
-**Utilisation** : lore-mcp appelle le service pour
+**Utilisation** : lorme appelle le service pour
 transcription + diarization en un pass. Remplace
 le pipeline multi-étapes (Canary + pyannote) pour
 les cas multi-speakers.
@@ -112,7 +113,7 @@ Workaround local RGBA en place.
 ### Contexte
 
 Étude study-E12.153-diarization-reconstruction.md
-réalisée dans lore-mcp. Devrait être traitée dans
+réalisée dans lorme. Devrait être traitée dans
 openshift (étude Veille).
 
 ### Recherche effectuée
@@ -125,7 +126,7 @@ Vast.ai, Fora Soft, NVIDIA NeMo, DISPLACE 2024).
 
 **Architecture validée** : per-speaker STT est le
 consensus pour multilingue. L'architecture
-lore-mcp est correcte.
+lorme est correcte.
 
 **3 bugs d'implémentation identifiés** :
 1. Canary ne fait PAS d'auto-détection de langue
@@ -156,7 +157,63 @@ lore-mcp est correcte.
 - Crossfade impact sur qualité STT
 
 Étude source : `docs/studies/study-E12.153-diarization-reconstruction.md`
-dans le repo lore-mcp branche feat/E12-preprocessing-tool.
+dans le repo lorme branche feat/E12-preprocessing-tool.
+
+## NOUVEAU — Renommage lore-mcp → lorme (E0.10)
+
+**Date** : 2026-11-06
+
+**Raison** : `lore-mcp` est pris sur PyPI (v1.0.17,
+ctx-stack, 15 releases). 8 repos GitHub homonymes.
+Bloqueur pour publication PyPI.
+
+**Nouveau nom** : **lorme** (fusion LORE + MCP).
+LORME = Local Offline Retrieval & MCP Engine.
+
+**Déjà fait côté lorme** :
+- Renommage code complet (183 fichiers, 735 tests OK)
+- GitHub repo renommé : github.com/romainsc/lorme
+- Répertoire local renommé : ~/EspacePrivé/lorme/
+- Publié sur PyPI : `pip install lorme` (v0.1.1)
+- ADR-006 documenté
+- Mémoire Claude Code migrée
+
+**Actions requises côté openshift** :
+
+1. **Renommer le fichier sync** :
+   ```bash
+   git mv sync/lore-mcp.md sync/lorme.md
+   ```
+
+2. **Mettre à jour `sync/links.md`** :
+   - Chemin workspace : `~/EspacePrivé/lorme/`
+   - Fichier sync entrant : `sync/openshift.md`
+   (pas de changement sur le nom du fichier
+   entrant, seulement le chemin)
+
+3. **Mettre à jour toutes les références** :
+   ```bash
+   grep -rl "lore-mcp" . --include="*.md" \
+     --include="*.yaml" --include="*.json" \
+     | grep -v .git/ | xargs sed -i 's/lore-mcp/lorme/g'
+   grep -rl "lore_mcp" . --include="*.py" \
+     --include="*.yaml" | grep -v .git/ \
+     | xargs sed -i 's/lore_mcp/lorme/g'
+   ```
+
+4. **MCP config clients** (si applicable) :
+   - CLI : `lorme` au lieu de `lore-mcp`
+   - Config JSON : `"command": "lorme"`
+   - `pip install lorme` (ou `pip install -e .`
+     depuis ~/EspacePrivé/lorme)
+
+5. **Mémoire Claude Code openshift** :
+   Mettre à jour les références à lore-mcp dans
+   les fichiers mémoire projet si applicable.
+
+6. **Scripts IS** (si applicable) :
+   Vérifier les scripts de démarrage des services
+   d'inférence qui référencent lore-mcp.
 
 ## Prochaines étapes
 

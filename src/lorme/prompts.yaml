@@ -1,4 +1,4 @@
-# Enrichment prompt templates — distributed with lore-mcp.
+# Enrichment prompt templates — distributed with lorme.
 # Override via config.yaml enrich.prompts (inline) or enrich.prompts_file.
 # Placeholders: {heading} = section heading, {body} = section content (truncated to 500 chars).
 

@@ -1,4 +1,4 @@
-"""Tests for E11.01: lore-mcp build workflow."""
+"""Tests for E11.01: lorme build workflow."""
 
 import json
 import os
@@ -9,22 +9,22 @@ import numpy as np
 import pytest
 
 from conftest import DIMS, make_embedding
-from lore_mcp.config import LoreConfig
+from lorme.config import LormeConfig
 
 
-def _build_cfg(**overrides) -> LoreConfig:
-    """Build a LoreConfig for build tests."""
+def _build_cfg(**overrides) -> LormeConfig:
+    """Build a LormeConfig for build tests."""
     defaults = {
         "force": False,
         "output_level": "quiet",
         "skip_optimize": True,
     }
     defaults.update(overrides)
-    return LoreConfig(**defaults)
+    return LormeConfig(**defaults)
 
 
 def _make_mock_embedder(model_name="test-model", dim=DIMS):
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name=model_name, mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = dim
@@ -101,7 +101,7 @@ sources:
 class TestPreflightValidation:
     def test_validate_local_model_cached(self):
         """Model in HF cache passes validation."""
-        from lore_mcp.build import validate_models
+        from lorme.build import validate_models
         emb = _make_mock_embedder()
         configs = [{"name": "test-model", "mode": "cpu"}]
         errors = validate_models(configs, embedders={"test-model": emb})
@@ -109,7 +109,7 @@ class TestPreflightValidation:
 
     def test_validate_api_unreachable(self):
         """Unreachable API endpoint fails validation."""
-        from lore_mcp.build import validate_models
+        from lorme.build import validate_models
         configs = [{"name": "remote-model", "mode": "api",
                      "api_url": "http://localhost:99999/v1/embeddings"}]
         errors = validate_models(configs)
@@ -118,7 +118,7 @@ class TestPreflightValidation:
 
     def test_validate_reports_all_failures(self):
         """All failures reported at once, not one by one."""
-        from lore_mcp.build import validate_models
+        from lorme.build import validate_models
         configs = [
             {"name": "bad1", "mode": "api", "api_url": "http://localhost:99998/v1/embeddings"},
             {"name": "bad2", "mode": "api", "api_url": "http://localhost:99997/v1/embeddings"},
@@ -130,7 +130,7 @@ class TestPreflightValidation:
 class TestBuildSkipOptimize:
     def test_produces_db_and_metadata(self, build_env):
         """build --skip-optimize produces .db + .json + .bib + .md."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
         result = run_build(
@@ -149,7 +149,7 @@ class TestBuildSkipOptimize:
 
     def test_build_report_written(self, build_env):
         """Build report JSON is written."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
         result = run_build(
@@ -171,7 +171,7 @@ class TestBuildSkipOptimize:
 class TestBuildWithOptimize:
     def test_produces_optimized_db(self, build_env):
         """build with optimize selects best config and produces final .db."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
         cfg = _build_cfg(
@@ -194,7 +194,7 @@ class TestBuildWithOptimize:
 
     def test_build_multi_model(self, build_env):
         """build with multiple models selects best model+config."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
         from unittest.mock import patch
 
         embedders = {
@@ -226,7 +226,7 @@ class TestBuildWithOptimize:
 class TestResumability:
     def test_resume_skips_completed(self, build_env):
         """Second run skips already-completed optimization configs."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
         cfg = _build_cfg(
@@ -255,8 +255,8 @@ class TestResumability:
 
     def test_empty_db_reindexed_without_force(self, build_env):
         """E12.78: existing empty .db must be re-indexed, not skipped."""
-        from lore_mcp.build import run_build
-        from lore_mcp.store import open_db
+        from lorme.build import run_build
+        from lorme.store import open_db
 
         emb = _make_mock_embedder()
         output = Path(build_env["output_dir"])
@@ -277,8 +277,8 @@ class TestResumability:
 
     def test_mismatched_db_reindexed_without_force(self, build_env):
         """E12.78: existing .db with wrong chunk config must be re-indexed."""
-        from lore_mcp.build import run_build
-        from lore_mcp.store import open_db
+        from lorme.build import run_build
+        from lorme.store import open_db
 
         emb = _make_mock_embedder()
         output = Path(build_env["output_dir"])
@@ -310,7 +310,7 @@ class TestResumability:
 
     def test_force_ignores_cache(self, build_env):
         """--force reruns everything."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
         cfg = _build_cfg(

@@ -13,7 +13,7 @@ import types
 
 import yaml
 
-from lore_mcp.progress import ProgressReporter
+from lorme.progress import ProgressReporter
 
 
 def _apply_ragas_stub() -> None:
@@ -30,7 +30,7 @@ def _apply_ragas_stub() -> None:
         mod.ChatVertexAI = type("ChatVertexAI", (), {})
         sys.modules[key] = mod
 
-from lore_mcp.store import ChunkStore
+from lorme.store import ChunkStore
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ def validate_metrics_prerequisites(
     except ImportError:
         raise ImportError(
             f"RAGAS metrics {requested_ragas} require the ragas package. "
-            f"Install with: pip install lore-mcp[eval]"
+            f"Install with: pip install lorme[eval]"
         )
 
     _probe_judge(judge_url, verify=verify_ssl)
@@ -189,7 +189,7 @@ class EvalConfig:
 
     @classmethod
     def from_config(cls, config) -> "EvalConfig":
-        """Read eval configuration from LoreConfig."""
+        """Read eval configuration from LormeConfig."""
         return cls(
             llm_url=config.llm_api_url,
             llm_model=config.llm_model,
@@ -236,7 +236,7 @@ def generate_questions_from_sources(
     docs_path = Path(docs_dir)
 
     if recipe_path:
-        from lore_mcp.recipe import parse_recipe
+        from lorme.recipe import parse_recipe
         recipe = parse_recipe(recipe_path)
         md_files = [docs_path / s["path"] for s in recipe["sources"]]
     else:
@@ -694,7 +694,7 @@ def evaluate_retrieval(
 
 
 class _RagasEmbeddingsWrapper:
-    """Adapt lore-mcp Embedder to the RAGAS/langchain embeddings interface.
+    """Adapt lorme Embedder to the RAGAS/langchain embeddings interface.
 
     Inherits from langchain Embeddings so that RAGAS async methods
     (aembed_text → aembed_documents → embed_documents) work via
@@ -994,7 +994,7 @@ def _optimize_ingest(
     chunk_overlap: int,
 ) -> str:
     """Ingest for one optimization config. Returns the .db path."""
-    from lore_mcp.ingest import ingest_directory, ingest_with_manifest
+    from lorme.ingest import ingest_directory, ingest_with_manifest
 
     db_name = f"opt-{chunk_size}-{chunk_overlap}"
     db_path = str(db_dir_path / f"{db_name}.db")
@@ -1007,7 +1007,7 @@ def _optimize_ingest(
             recipe_path, docs_dir, str(db_dir_path), embedder,
             chunk_size=chunk_size, chunk_overlap=chunk_overlap,
         )
-        from lore_mcp.recipe import parse_recipe
+        from lorme.recipe import parse_recipe
         collection = parse_recipe(recipe_path)["collection"]
         manifest_db = str(db_dir_path / f"{collection}.db")
         if Path(manifest_db).exists() and manifest_db != db_path:

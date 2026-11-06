@@ -211,7 +211,7 @@ RapidOCR direct).
 - Pas de resize : l'image est envoyée telle
   quelle. Si un modèle ne supporte pas la
   résolution, c'est un problème de configuration
-  IS, pas de lore-mcp
+  IS, pas de lorme
 
 ## Provenance
 

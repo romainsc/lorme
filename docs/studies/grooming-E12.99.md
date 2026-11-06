@@ -69,7 +69,7 @@ Replace `chunk_document()` call with
 
 ### Remove MarkdownTextSplitter
 
-Docling is a hard dependency of lore-mcp (required
+Docling is a hard dependency of lorme (required
 for parse). No fallback needed for chunking.
 Remove `langchain-text-splitters` from pyproject.toml.
 

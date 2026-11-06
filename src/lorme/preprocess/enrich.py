@@ -8,7 +8,7 @@ Language detection ensures enrichment matches document language.
 import logging
 import re
 
-from lore_mcp.preprocess.llm import LLMConfig, call_llm, call_llm_batch
+from lorme.preprocess.llm import LLMConfig, call_llm, call_llm_batch
 
 logger = logging.getLogger(__name__)
 

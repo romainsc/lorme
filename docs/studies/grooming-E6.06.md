@@ -5,7 +5,7 @@
 
 ## Problem
 
-lore-mcp preprocess only handles markdown files.
+lorme preprocess only handles markdown files.
 Raw sources come in PDF, HTML, DOCX and other
 formats. E12.03 needs a parsing backend to
 convert these to markdown.
@@ -168,10 +168,10 @@ parse = [
 ```
 
 Install by need:
-- `pip install lore-mcp[html]` — HTML only
-- `pip install lore-mcp[pdf]` — PDF/DOCX/PPTX/XLSX/EPUB/images
-- `pip install lore-mcp[office]` — CSV/JSON/XML/other
-- `pip install lore-mcp[parse]` — all formats
+- `pip install lorme[html]` — HTML only
+- `pip install lorme[pdf]` — PDF/DOCX/PPTX/XLSX/EPUB/images
+- `pip install lorme[office]` — CSV/JSON/XML/other
+- `pip install lorme[parse]` — all formats
 
 ### Correction: trafilatura license
 

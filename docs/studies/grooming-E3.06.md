@@ -16,7 +16,7 @@ model (~15%) is not documented.
 
 ## Platform enabling context
 
-lore-mcp is a Platform component in the openshift
+lorme is a Platform component in the openshift
 Team Topologies. The openshift workspace indexes
 large corpora (94k+ chunks, 7 collections) and
 encounters quality issues that preprocessing
@@ -61,7 +61,7 @@ practical guidance for preparing markdown sources.
    - Numeric sequences (ANN weights, coordinates)
    - Trivial content ("P", "f", single characters)
    - OCR artifacts
-   - Use `lore-mcp lint` to detect before indexing
+   - Use `lorme lint` to detect before indexing
 
 5. **Text quality checklist**
    - Text density > 0.7 (alpha chars / total)
@@ -83,7 +83,7 @@ practical guidance for preparing markdown sources.
 - `docs/architecture.md` → link from evaluation
   section
 - `docs/tutorial.md` → link from build workflow
-- `lore-mcp lint` → reference in preprocessing
+- `lorme lint` → reference in preprocessing
   guide
 - openshift E14.17 study → sourced data and
   academic references
@@ -98,21 +98,21 @@ data for this guide:
   54%, FloTorch 2026)
 - Context cliff: >~2500 tokens/chunk → quality
   drops (validates 512-1024 range)
-- Scope: lore-mcp = steps 4-6 (split, enrich,
+- Scope: lorme = steps 4-6 (split, enrich,
   index); steps 1-3 (parse, clean, dedup) are
   upstream consumer responsibility
 - Multi-collection: "3 targeted stores > 1 noisy
   store" (OpenAI)
 - LLM enrichments (contextual retrieval, Q&A mode)
-  are upstream, not lore-mcp code
+  are upstream, not lorme code
 
 The guide should reference these findings with
 proper attribution to E14.17.
 
 ## Decision: preprocessing tool scope
 
-The preprocessing tool (E12) stays in lore-mcp
-as a separable module (`src/lore_mcp/preprocess/`)
+The preprocessing tool (E12) stays in lorme
+as a separable module (`src/lorme/preprocess/`)
 rather than a separate project.
 
 **Rationale:**
@@ -127,7 +127,7 @@ rather than a separate project.
 **Extraction criteria:** if the preprocessing
 module grows to the point where it has its own
 release cadence, its own consumers outside
-lore-mcp, or license conflicts — extract to a
+lorme, or license conflicts — extract to a
 separate project.
 
 ## DoD
@@ -135,7 +135,7 @@ separate project.
 1. `docs/preprocessing.md` with all 7 sections
 2. Cross-referenced from architecture and tutorial
 3. Practical examples (good vs bad markdown)
-4. Reference to `lore-mcp lint`
+4. Reference to `lorme lint`
 5. Measured data (cosine similarity, impact %)
 6. E14.17 study findings integrated with
    attribution

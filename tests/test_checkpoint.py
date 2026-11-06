@@ -5,16 +5,16 @@ import os
 import time
 import pytest
 
-from lore_mcp.checkpoint import (
+from lorme.checkpoint import (
     Checkpoint, phase_hash, list_states, purge_state_by_hash, purge_states,
 )
-from lore_mcp.config import LoreConfig
+from lorme.config import LormeConfig
 
 
 @pytest.fixture(autouse=True)
 def _isolate_state_dir(monkeypatch, tmp_path):
     """All checkpoint tests use an isolated state dir."""
-    import lore_mcp.checkpoint as cp_mod
+    import lorme.checkpoint as cp_mod
     monkeypatch.setattr(cp_mod, "_state_dir", lambda: tmp_path)
 
 
@@ -38,79 +38,79 @@ class TestPhaseHash:
 
     def test_different_frame_strategy_different_hash(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(video_frame_strategy="scene")
-        cfg2 = LoreConfig(video_frame_strategy="ocr")
+        cfg1 = LormeConfig(video_frame_strategy="scene")
+        cfg2 = LormeConfig(video_frame_strategy="ocr")
         assert phase_hash(m, cfg1, "phase1") != phase_hash(m, cfg2, "phase1")
 
     def test_same_config_same_hash(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(video_frame_strategy="ocr", ocr_engine="tesseract")
-        cfg2 = LoreConfig(video_frame_strategy="ocr", ocr_engine="tesseract")
+        cfg1 = LormeConfig(video_frame_strategy="ocr", ocr_engine="tesseract")
+        cfg2 = LormeConfig(video_frame_strategy="ocr", ocr_engine="tesseract")
         assert phase_hash(m, cfg1, "phase1") == phase_hash(m, cfg2, "phase1")
 
     def test_enrich_change_does_not_affect_phase1(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(enrich_techniques=["context"])
-        cfg2 = LoreConfig(enrich_techniques=["context", "qa"])
+        cfg1 = LormeConfig(enrich_techniques=["context"])
+        cfg2 = LormeConfig(enrich_techniques=["context", "qa"])
         assert phase_hash(m, cfg1, "phase1") == phase_hash(m, cfg2, "phase1")
 
     def test_different_ocr_engine_different_phase1(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(ocr_engine="tesseract")
-        cfg2 = LoreConfig(ocr_engine="rapidocr")
+        cfg1 = LormeConfig(ocr_engine="tesseract")
+        cfg2 = LormeConfig(ocr_engine="rapidocr")
         assert phase_hash(m, cfg1, "phase1") != phase_hash(m, cfg2, "phase1")
 
     def test_different_frame_interval_different_phase1(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(video_frame_interval=30)
-        cfg2 = LoreConfig(video_frame_interval=10)
+        cfg1 = LormeConfig(video_frame_interval=30)
+        cfg2 = LormeConfig(video_frame_interval=10)
         assert phase_hash(m, cfg1, "phase1") != phase_hash(m, cfg2, "phase1")
 
     def test_different_caption_primary_different_phase2(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(caption_primary="granite-vision")
-        cfg2 = LoreConfig(caption_primary="molmo-7b")
+        cfg1 = LormeConfig(caption_primary="granite-vision")
+        cfg2 = LormeConfig(caption_primary="molmo-7b")
         assert phase_hash(m, cfg1, "phase2") != phase_hash(m, cfg2, "phase2")
 
     def test_caption_change_does_not_affect_phase1(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(caption_primary="granite-vision")
-        cfg2 = LoreConfig(caption_primary="molmo-7b")
+        cfg1 = LormeConfig(caption_primary="granite-vision")
+        cfg2 = LormeConfig(caption_primary="molmo-7b")
         assert phase_hash(m, cfg1, "phase1") == phase_hash(m, cfg2, "phase1")
 
     def test_different_enrich_different_phase3(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(enrich_techniques=["context"])
-        cfg2 = LoreConfig(enrich_techniques=["context", "qa"])
+        cfg1 = LormeConfig(enrich_techniques=["context"])
+        cfg2 = LormeConfig(enrich_techniques=["context", "qa"])
         assert phase_hash(m, cfg1, "phase3") != phase_hash(m, cfg2, "phase3")
 
     def test_enrich_change_does_not_affect_phase2(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(enrich_techniques=["context"])
-        cfg2 = LoreConfig(enrich_techniques=["context", "qa"])
+        cfg1 = LormeConfig(enrich_techniques=["context"])
+        cfg2 = LormeConfig(enrich_techniques=["context", "qa"])
         assert phase_hash(m, cfg1, "phase2") == phase_hash(m, cfg2, "phase2")
 
     def test_different_caption_selection_different_phase2(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(caption_primary="granite", caption_selection="first_nonempty")
-        cfg2 = LoreConfig(caption_primary="granite", caption_selection="judge")
+        cfg1 = LormeConfig(caption_primary="granite", caption_selection="first_nonempty")
+        cfg2 = LormeConfig(caption_primary="granite", caption_selection="judge")
         assert phase_hash(m, cfg1, "phase2") != phase_hash(m, cfg2, "phase2")
 
     def test_caption_selection_does_not_affect_phase3(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(caption_selection="first_nonempty")
-        cfg2 = LoreConfig(caption_selection="judge")
+        cfg1 = LormeConfig(caption_selection="first_nonempty")
+        cfg2 = LormeConfig(caption_selection="judge")
         assert phase_hash(m, cfg1, "phase3") == phase_hash(m, cfg2, "phase3")
 
     def test_different_stt_model_different_stt_hash(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg1 = LoreConfig(stt_model="canary")
-        cfg2 = LoreConfig(stt_model="whisper")
+        cfg1 = LormeConfig(stt_model="canary")
+        cfg2 = LormeConfig(stt_model="whisper")
         assert phase_hash(m, cfg1, "stt") != phase_hash(m, cfg2, "stt")
 
     def test_deterministic(self, tmp_path):
         m = _manifest(tmp_path)
-        cfg = LoreConfig(ocr_engine="tesseract", video_frame_strategy="ocr")
+        cfg = LormeConfig(ocr_engine="tesseract", video_frame_strategy="ocr")
         h1 = phase_hash(m, cfg, "phase1")
         h2 = phase_hash(m, cfg, "phase1")
         assert h1 == h2

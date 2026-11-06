@@ -49,7 +49,7 @@ white), then drops alpha cleanly.
 - Tests pass (existing + new P mode test)
 - Compliant with Docling contribution guidelines
 
-## E12.80 — Improve Docling usage in lore-mcp
+## E12.80 — Improve Docling usage in lorme
 
 ### Scope
 

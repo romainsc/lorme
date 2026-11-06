@@ -3,8 +3,8 @@
 import yaml
 import pytest
 
-from lore_mcp.config import LoreConfig
-from lore_mcp.preprocess.enrich import _get_prompt
+from lorme.config import LormeConfig
+from lorme.preprocess.enrich import _get_prompt
 
 
 class TestPromptCascade:
@@ -24,7 +24,7 @@ class TestPromptCascade:
 
     def test_inline_override(self):
         """Config with enrich_prompts overrides default."""
-        cfg = LoreConfig(enrich_prompts={
+        cfg = LormeConfig(enrich_prompts={
             "en": {"context": "CUSTOM: {heading} | {body}"}
         })
         result = _get_prompt("en", "context", "H1", "B1", config=cfg)
@@ -36,7 +36,7 @@ class TestPromptCascade:
         custom.write_text(yaml.dump({
             "en": {"context": "FROM FILE: {heading} — {body}"}
         }))
-        cfg = LoreConfig(enrich_prompts_file=str(custom))
+        cfg = LormeConfig(enrich_prompts_file=str(custom))
         result = _get_prompt("en", "context", "H1", "B1", config=cfg)
         assert result == "FROM FILE: H1 — B1"
 
@@ -46,7 +46,7 @@ class TestPromptCascade:
         custom.write_text(yaml.dump({
             "en": {"context": "FROM FILE: {heading}"}
         }))
-        cfg = LoreConfig(
+        cfg = LormeConfig(
             enrich_prompts={"en": {"context": "INLINE: {heading} {body}"}},
             enrich_prompts_file=str(custom),
         )

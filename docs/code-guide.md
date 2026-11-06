@@ -348,10 +348,10 @@ def parse_recipe(recipe_path: str) -> dict:
 ```
 
 Minimal extraction — only the three fields
-that lore-mcp uses. Additional keys in the YAML
+that lorme uses. Additional keys in the YAML
 are silently ignored, allowing recipes to carry
 consumer-specific metadata without breaking
-lore-mcp.
+lorme.
 
 Expected input format:
 ```yaml
@@ -483,12 +483,12 @@ see `None` and create duplicate instances.
 def _get_config():
     global _config
     if _config is None:
-        from lore_mcp.config import LoreConfig
-        _config = LoreConfig.defaults()
+        from lorme.config import LormeConfig
+        _config = LormeConfig.defaults()
     return _config
 ```
 
-All config is via `LoreConfig` — no env vars.
+All config is via `LormeConfig` — no env vars.
 The config is set during `main()` from
 `config.yaml`; defaults are used if no config
 file is provided.
@@ -593,14 +593,14 @@ build_parser.add_argument("--force", action="store_true")
 ### Dependencies
 
 - `mcp.server.MCPServer` — MCP SDK v2
-- `lore_mcp.config` — `LoreConfig`
-- `lore_mcp.collections` — `collection_db_path()`
-- `lore_mcp.embedder` — query-time embedding
-- `lore_mcp.store` — database operations
-- `lore_mcp.task_manager` — background tasks
-- `lore_mcp.eval` — eval/optimize (lazy import)
-- `lore_mcp.build` — build workflow (lazy import)
-- `lore_mcp.preprocess` — preprocessing (lazy)
+- `lorme.config` — `LormeConfig`
+- `lorme.collections` — `collection_db_path()`
+- `lorme.embedder` — query-time embedding
+- `lorme.store` — database operations
+- `lorme.task_manager` — background tasks
+- `lorme.eval` — eval/optimize (lazy import)
+- `lorme.build` — build workflow (lazy import)
+- `lorme.preprocess` — preprocessing (lazy)
 
 ---
 
@@ -720,12 +720,12 @@ collected in the return dict, not raised.
 
 - `docling` + `docling_core` — `DocumentConverter`,
   `HybridChunker`
-- `lore_mcp.collections` — `collection_db_path()`
-- `lore_mcp.recipe` — `parse_recipe()`,
+- `lorme.collections` — `collection_db_path()`
+- `lorme.recipe` — `parse_recipe()`,
   `extract_source_metadata()`
-- `lore_mcp.preprocess` — `clean_text()`
-- `lore_mcp.store` — all database operations
-- `lore_mcp.embedder` — `Embedder` type hint
+- `lorme.preprocess` — `clean_text()`
+- `lorme.store` — all database operations
+- `lorme.embedder` — `Embedder` type hint
 
 ---
 
@@ -821,7 +821,7 @@ collections.
 
 ### Dependencies
 
-- `lore_mcp.store` — `open_db()`,
+- `lorme.store` — `open_db()`,
   `get_all_sources()`, `list_sources()`
 - Standard library only (hashlib, json, datetime,
   pathlib)
@@ -849,11 +849,11 @@ integration for LLM-based scoring.
 | `recall_at_k(relevances, total_relevant, k)` | Recall at k: fraction of relevant items found in top-k |
 | `parse_model_configs(config_path)` | Parse YAML model config file |
 | `EvalConfig` | Configuration dataclass |
-| `EvalConfig.from_config(config)` | Read config from LoreConfig |
+| `EvalConfig.from_config(config)` | Read config from LormeConfig |
 | `generate_questions_from_sources(docs_dir, num_questions)` | Heading-based QA pairs from markdown source files (pre-chunking) |
 | `generate_questions_from_db(db_path, n, llm)` | Extractive questions from indexed chunks (fallback) |
 | `_is_good_sentence(s)` | Filter garbage sentences: min alpha ratio, min word count, skip headers |
-| `_RagasEmbeddingsWrapper(embedder)` | Adapts lore-mcp Embedder to RAGAS embeddings interface |
+| `_RagasEmbeddingsWrapper(embedder)` | Adapts lorme Embedder to RAGAS embeddings interface |
 | `evaluate_retrieval(db_path, embedder, questions, top_k)` | Score retrieval quality |
 | `generate_eval_report(results, path)` | Write JSON report |
 | `run_eval(db_path, embedder, config, output_path)` | Full eval pipeline |
@@ -872,7 +872,7 @@ class EvalConfig:
     verify_ssl: bool = True
 ```
 
-`from_config()` reads from a `LoreConfig`
+`from_config()` reads from a `LormeConfig`
 instance. All config comes from `config.yaml`.
 
 ### Question generation
@@ -1053,11 +1053,11 @@ parse_model_configs("config.yaml")
 
 ### Dependencies
 
-- `lore_mcp.store` — `open_db()`, `search()`
-- `lore_mcp.ingest` — `ingest_directory()`,
+- `lorme.store` — `open_db()`, `search()`
+- `lorme.ingest` — `ingest_directory()`,
   `ingest_with_manifest()` (lazy import in
   `run_optimize`)
-- `lore_mcp.recipe` — `parse_recipe()` (in
+- `lorme.recipe` — `parse_recipe()` (in
   `_optimize_ingest`)
 - `yaml` — model config parsing
 - `ragas` — optional, for LLM-based scoring
@@ -1077,7 +1077,7 @@ See `docs/architecture.md`.
 
 | Function/Class | Purpose |
 |---|---|
-| `configure_logging(level)` | Set log levels: `lore_mcp` at DEBUG, third-party at WARNING (debug mode); root at ERROR (quiet); root at WARNING (default/verbose/progress) |
+| `configure_logging(level)` | Set log levels: `lorme` at DEBUG, third-party at WARNING (debug mode); root at ERROR (quiet); root at WARNING (default/verbose/progress) |
 | `output_level_from_args(args)` | Map CLI flags (`--quiet`, `--progress`, `--verbose`, `--debug`) to level string |
 | `_fmt_duration(seconds)` | Human-readable duration: `45s`, `1m30s`, `1h01m` |
 | `ProgressReporter(collection, models, total_configs, level, phases)` | Structured output adapted to the current level |
@@ -1093,7 +1093,7 @@ See `docs/architecture.md`.
   (truncated), per-iteration milestones with
   score breakdown
 - **debug**: verbose + all `logger.debug()` from
-  `lore_mcp.*` modules (HTTP requests, search
+  `lorme.*` modules (HTTP requests, search
   results, scores)
 
 ### Phase tracking
@@ -1108,7 +1108,7 @@ uses phase position to calculate global ETA:
 
 ### Logging strategy
 
-`configure_logging()` sets `lore_mcp` logger at
+`configure_logging()` sets `lorme` logger at
 DEBUG while keeping third-party loggers (httpx,
 httpcore, sentence_transformers, huggingface_hub,
 numexpr, transformers) at WARNING. httpx is set
@@ -1154,7 +1154,7 @@ use defaults.
 
 Note: `BuildConfig` is a legacy module from the
 early build workflow. Most of its functionality
-is now handled by `LoreConfig` in `config.py`.
+is now handled by `LormeConfig` in `config.py`.
 
 ### Dependencies
 
@@ -1277,32 +1277,32 @@ starts fresh.
 
 ### Dependencies
 
-- `lore_mcp.eval` — `run_optimize()`
-- `lore_mcp.ingest` — `ingest_with_manifest()`
-- `lore_mcp.recipe` — `parse_recipe()`
-- `lore_mcp.metadata` — `generate_all()`
-- `lore_mcp.preprocess` — `preprocess_sources()`
-- `lore_mcp.store` — `open_db()`, `list_sources()`
-- `lore_mcp.embedder` — `Embedder`
+- `lorme.eval` — `run_optimize()`
+- `lorme.ingest` — `ingest_with_manifest()`
+- `lorme.recipe` — `parse_recipe()`
+- `lorme.metadata` — `generate_all()`
+- `lorme.preprocess` — `preprocess_sources()`
+- `lorme.store` — `open_db()`, `list_sources()`
+- `lorme.embedder` — `Embedder`
 
 ---
 
 ## config.py — Unified configuration
 
-All lore-mcp configuration is centralized in the
-`LoreConfig` dataclass. No environment variable
+All lorme configuration is centralized in the
+`LormeConfig` dataclass. No environment variable
 fallback — everything comes from `config.yaml`.
 
 ### Public API
 
 | Name | Purpose |
 |------|---------|
-| `LoreConfig` | Dataclass with all config fields |
-| `LoreConfig.from_file(path)` | Load from YAML file |
-| `LoreConfig.defaults()` | Return config with all defaults |
-| `LoreConfig.data_dir` | Property: XDG-compliant data directory |
-| `LoreConfig.collection_db(name)` | Resolve .db path for a collection |
-| `LoreConfig.get_llm(name)` | Look up model in LLM registry by name |
+| `LormeConfig` | Dataclass with all config fields |
+| `LormeConfig.from_file(path)` | Load from YAML file |
+| `LormeConfig.defaults()` | Return config with all defaults |
+| `LormeConfig.data_dir` | Property: XDG-compliant data directory |
+| `LormeConfig.collection_db(name)` | Resolve .db path for a collection |
+| `LormeConfig.get_llm(name)` | Look up model in LLM registry by name |
 
 ### Config sections in YAML
 

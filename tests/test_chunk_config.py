@@ -1,7 +1,7 @@
 """Tests for configurable chunking. See docs/architecture.md."""
 
-from lore_mcp.config import LoreConfig
-from lore_mcp.store import create_tables, open_db
+from lorme.config import LormeConfig
+from lorme.store import create_tables, open_db
 
 
 DIMS = 8
@@ -9,7 +9,7 @@ DIMS = 8
 
 class TestDefaultChunkSize:
     def test_default_is_1024(self):
-        from lore_mcp.ingest import DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
+        from lorme.ingest import DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
         assert DEFAULT_CHUNK_SIZE == 1024
         assert DEFAULT_CHUNK_OVERLAP == 128
 

@@ -1,4 +1,4 @@
-# Grooming E12.18 — CLI `lore-mcp enrich` standalone
+# Grooming E12.18 — CLI `lorme enrich` standalone
 
 - **Status:** Validé
 - **Date:** 2026-09-09
@@ -34,7 +34,7 @@ Combined impacts (E14.17 Anthropic):
 
 ```bash
 # Standalone
-lore-mcp enrich manifest-prep.yaml \
+lorme enrich manifest-prep.yaml \
   --docs-dir /corpus/prep/ \
   --output-dir /corpus/enriched/ \
   --enrich context,qa \
@@ -42,7 +42,7 @@ lore-mcp enrich manifest-prep.yaml \
   --llm-model granite-3-2-8b-instruct
 
 # Shortcut via preprocess
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
   --orig-subdir orig --prep-subdir enriched \
   --enrich context,qa
@@ -56,7 +56,7 @@ routing only — no new logic.
 
 ## DoD
 
-1. `lore-mcp enrich` subcommand in server.py
+1. `lorme enrich` subcommand in server.py
 2. `--output-dir` required, input never modified
 3. `--enrich` on preprocess still works
 4. Test: standalone enrich produces same result

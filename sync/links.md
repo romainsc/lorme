@@ -2,5 +2,5 @@
 
 | Projet | Chemin workspace | Branche | Fichier sync entrant |
 |--------|------------------|---------|----------------------|
-| openshift | ~/EspacePrivé/openshift | master | sync/lore-mcp.md |
+| openshift | ~/EspacePrivé/openshift | master | sync/lore-mcp.md (rename to sync/lorme.md pending openshift) |
 | broadcast | ~/EspacePrivé/openshift | master | sync/broadcast.md |
