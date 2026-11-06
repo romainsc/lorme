@@ -19,9 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin/lore-mcp /usr/local/bin/lore-mcp
+COPY --from=builder /usr/local/bin/lorme /usr/local/bin/lorme
 
 WORKDIR /app
 
-ENTRYPOINT ["lore-mcp"]
+ENTRYPOINT ["lorme"]
 CMD ["serve"]

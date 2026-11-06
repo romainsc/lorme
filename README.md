@@ -30,25 +30,31 @@ file on your workstation.
 
 ### 1. Install
 
+From PyPI:
+
 ```bash
-git clone https://github.com/romainsc/lorme.git
-cd lorme
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[parse]"
+pip install lorme
 ```
 
 Install extras by need:
-- `pip install -e .` — core (markdown only)
-- `pip install -e ".[html]"` — add HTML support
+- `pip install lorme` — core (markdown only)
+- `pip install "lorme[html]"` — add HTML support
   (trafilatura)
-- `pip install -e ".[pdf]"` — add PDF/DOCX/PPTX
+- `pip install "lorme[pdf]"` — add PDF/DOCX/PPTX
   support (Docling)
-- `pip install -e ".[video]"` — add video/audio
+- `pip install "lorme[video]"` — add video/audio
   download from YouTube/platforms (yt-dlp)
-- `pip install -e ".[parse]"` — all format support
-- `pip install -e ".[eval]"` — RAG evaluation
+- `pip install "lorme[parse]"` — all format support
+- `pip install "lorme[eval]"` — RAG evaluation
   (RAGAS)
+
+From source:
+
+```bash
+git clone https://github.com/romainsc/lorme.git
+cd lorme
+pip install -e ".[parse]"
+```
 
 ### 2. Create a config file
 

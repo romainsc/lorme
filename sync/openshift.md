@@ -1,7 +1,7 @@
 # Sync lorme → openshift
 
-> Dernière MàJ : 2026-10-09 (sync 48)
-> Source : sessions lorme 3-9 oct
+> Dernière MàJ : 2026-11-06 (sync 49)
+> Source : session lorme 6 nov (renommage)
 > Ce fichier est maintenu par le dépôt lorme.
 > Il est lu par le dépôt openshift au `sync`.
 
@@ -9,9 +9,10 @@
 
 ### Statistiques
 
-- 19 modules Python (dont preprocess/), 713 tests
-- Branche active : feat/E12-preprocessing-tool
-- Release tag : v0.1.0
+- 19 modules Python (dont preprocess/), 735 tests
+- Branche active : feat/E0.10-rename-lorme
+- Release tag : v0.1.1
+- **PyPI** : https://pypi.org/project/lorme/ (v0.1.1)
 - 22 outils MCP (add_source, add_sources, add_recipe,
   add_directory, remove_source, search_docs,
   list_indexed_sources, list_collections,
