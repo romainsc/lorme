@@ -405,7 +405,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Revue` E0.07 [P] README skeleton with quickstart placeholder and roadmap
 - `Revue` E0.08 [P] pyproject.toml skeleton with dependencies and entry points
 - `Revue` E0.09 [D] CONTRIBUTING.md with git workflow, AI guidelines, and license terms
-- `En cours` E0.10 [E] Project rename: lore-mcp taken on PyPI (v1.0.17, blocker). 8 GitHub homonyms. Selected: lorme (LORE+MCP fusion). Rename across all artifacts. Blocks E4.02. See grooming-E0.10.md
+- `Implémenté` E0.10 [E] Project rename: lore-mcp taken on PyPI (v1.0.17, blocker). 8 GitHub homonyms. Selected: lorme (LORE+MCP fusion). Renamed 183 files, 735 tests pass. ADR-006. See grooming-E0.10.md
 
 ### E1. Core (MVP v0.1.0)
 
@@ -451,7 +451,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 ### E4. Packaging
 
 - `Revue` E4.01 [P] MCP client configuration example (examples/mcp-config.example.json)
-- `Implémenté` E4.02 [P] pip installable package: wheel builds, installs, CLI works. Version 0.1.0.dev1. Missing deps added (charset-normalizer, pyyaml). PyPI publish pending (needs account + token)
+- `Implémenté` E4.02 [P] pip installable package: wheel builds, installs, CLI works. Published on PyPI as `lorme` v0.1.1 (2026-11-06). `pip install lorme`
 - `Implémenté` E4.03 [P] Container image (Podman/Docker): Containerfile multi-stage, all commands, volume mounts, docs/docker.md, mcp-config example updated. See grooming-E4.03.md
 - E4.04 — removed (covered by `lorme build --skip-optimize` since E11.01)
 - E4.05 — moved to openshift workspace (data repository, not tooling)
