@@ -1,0 +1,204 @@
+"""Inference service lifecycle management. See docs/studies/grooming-E12.25.md."""
+
+import atexit
+import logging
+import signal
+import subprocess
+import sys
+import time
+import urllib.request
+
+logger = logging.getLogger(__name__)
+
+_running_services: list[dict] = []
+
+
+def _cleanup_services():
+    """Stop all running services on exit."""
+    for entry in list(_running_services):
+        name = entry.get("name", "unknown")
+        print(f"    Stopping {name}...", flush=True)
+        try:
+            stop_service(entry)
+        except Exception:
+            pass
+
+
+atexit.register(_cleanup_services)
+
+
+_shutdown_requested = False
+
+
+def _signal_handler(signum, frame):
+    """Handle SIGINT/SIGTERM for immediate graceful shutdown."""
+    global _shutdown_requested
+    if _shutdown_requested:
+        logger.warning("Second signal received, forcing exit...")
+        import os
+        os._exit(128 + signum)
+    _shutdown_requested = True
+    try:
+        from lorme.task_manager import _global_shutdown
+        _global_shutdown.set()
+    except ImportError:
+        pass
+    print("\n  Interrupt received, stopping services...", flush=True)
+    logger.info("Signal %d received, stopping services...", signum)
+    _cleanup_services()
+    print("  Cleanup done.", flush=True)
+    sys.exit(128 + signum)
+
+
+import threading as _threading
+if _threading.current_thread() is _threading.main_thread():
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
+
+def run_with_interrupt(fn, *args, **kwargs):
+    """Run a blocking function in a thread, interruptible by SIGINT."""
+    import threading
+    result = [None]
+    error = [None]
+    done = threading.Event()
+
+    def worker():
+        try:
+            result[0] = fn(*args, **kwargs)
+        except Exception as e:
+            error[0] = e
+        finally:
+            done.set()
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+    from lorme.task_manager import check_cancelled
+    while not done.wait(timeout=0.5):
+        check_cancelled()
+
+    if error[0]:
+        raise error[0]
+    return result[0]
+
+
+def start_service(llm_entry: dict, timeout: int = 300) -> None:
+    """Start an inference service and wait for it to be ready."""
+    start_cmd = llm_entry.get("start")
+    if not start_cmd:
+        return
+
+    timeout = llm_entry.get("start_timeout", timeout)
+
+    _log_vram()
+    logger.info("Starting service: %s", start_cmd)
+    proc = subprocess.Popen(
+        start_cmd, shell=True,
+        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+
+    time.sleep(2)
+    rc = proc.poll()
+    if rc is not None and rc != 0:
+        err = proc.stderr.read().decode(errors="replace").strip()
+        raise RuntimeError(
+            f"Start command failed (exit {rc}): {start_cmd}\n{err}"
+        )
+
+    _running_services.append(llm_entry)
+
+    api_url = llm_entry.get("api_url", "")
+    if api_url:
+        _wait_for_health(api_url, timeout)
+
+
+
+def _log_vram() -> None:
+    """Log current GPU VRAM usage for diagnostic."""
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.free,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5,
+        )
+        logger.debug("VRAM: %s MiB (used, free, total)", result.stdout.strip())
+    except Exception:
+        pass
+
+
+def stop_service(llm_entry: dict) -> None:
+    """Stop an inference service."""
+    stop_cmd = llm_entry.get("stop")
+    if not stop_cmd:
+        return
+
+    if llm_entry in _running_services:
+        _running_services.remove(llm_entry)
+
+    logger.info("Stopping service: %s", stop_cmd)
+    _log_vram()
+    subprocess.run(
+        stop_cmd, shell=True,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        timeout=30,
+    )
+    _log_vram()
+
+
+def check_service(llm_entry: dict) -> bool:
+    """Check if a service is accessible."""
+    api_url = llm_entry.get("api_url", "")
+    if not api_url:
+        return False
+
+    for probe in (_health_url(api_url), _models_url(api_url)):
+        try:
+            req = urllib.request.Request(probe)
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status == 200:
+                    return True
+        except Exception:
+            continue
+    return False
+
+
+def _health_url(api_url: str) -> str:
+    """Derive /health URL from an API URL."""
+    base = api_url.rstrip("/")
+    if "/v1" in base:
+        return base.split("/v1")[0] + "/health"
+    return base + "/health"
+
+
+def _models_url(api_url: str) -> str:
+    """Derive /v1/models URL from an API URL."""
+    base = api_url.rstrip("/")
+    if base.endswith("/v1"):
+        return base + "/models"
+    if "/v1/" in base:
+        return base.split("/v1/")[0] + "/v1/models"
+    return base + "/v1/models"
+
+
+def _wait_for_health(api_url: str, timeout: int = 60) -> None:
+    """Poll /health until service reports ready or timeout.
+
+    IS containers return {"status": "ok"} on /health when
+    the model is loaded and ready for inference.
+    """
+    deadline = time.time() + timeout
+    health = _health_url(api_url)
+
+    while time.time() < deadline:
+        try:
+            req = urllib.request.Request(health)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status == 200:
+                    logger.info("Service ready (%s)", health)
+                    return
+        except Exception:
+            pass
+        time.sleep(2)
+
+    raise TimeoutError(f"Service at {api_url} not ready after {timeout}s")

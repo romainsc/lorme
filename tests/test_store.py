@@ -1,19 +1,41 @@
-"""Tests for lore_mcp.store. See docs/architecture.md for design context."""
+"""Tests for lorme.store. See docs/architecture.md for design context."""
 
 import pytest
 from conftest import DIMS, make_embedding
 
-from lore_mcp.store import (
+from lorme.store import (
     create_tables,
+    delete_source_chunks,
+    get_meta,
+    get_source_hashes,
     insert_chunk,
     insert_chunks,
     list_sources,
     search,
+    set_source_hash,
     validate_model,
 )
 
 
 MODEL = "test-model"
+
+
+class TestGetMeta:
+    """E10.08: read model metadata from DB."""
+
+    def test_returns_model_name(self, db):
+        create_tables(db, MODEL, DIMS)
+        meta = get_meta(db)
+        assert meta["model_name"] == MODEL
+
+    def test_returns_model_dim(self, db):
+        create_tables(db, MODEL, DIMS)
+        meta = get_meta(db)
+        assert meta["model_dim"] == str(DIMS)
+
+    def test_empty_db_returns_empty(self, db):
+        meta = get_meta(db)
+        assert meta == {}
 
 
 class TestCreateTables:
@@ -136,6 +158,49 @@ class TestSearch:
         results = search(db, make_embedding(0.1), top_k=5)
         assert results == []
 
+    def test_prefilter_source_file(self, db):
+        """E5.13: pre-filter by source_file returns only matching source."""
+        self._populate(db)
+        results = search(db, make_embedding(0.1), top_k=3,
+                         filters={"source_file": "a.md"})
+        assert len(results) == 2
+        assert all(r["source_file"] == "a.md" for r in results)
+
+    def test_prefilter_no_match(self, db):
+        """E5.13: pre-filter with no matching source returns empty."""
+        self._populate(db)
+        results = search(db, make_embedding(0.1), top_k=3,
+                         filters={"source_file": "nonexistent.md"})
+        assert len(results) == 0
+
+    def test_prefilter_level(self, db):
+        """E5.13: pre-filter by level via metadata column."""
+        create_tables(db, MODEL, DIMS)
+        from lorme.store import upsert_source
+        upsert_source(db, "a.md", level="libre")
+        upsert_source(db, "b.md", level="nda")
+        insert_chunk(db, "a0", "a.md", 0, "alpha", make_embedding(0.1))
+        insert_chunk(db, "b0", "b.md", 0, "beta", make_embedding(0.5))
+        results = search(db, make_embedding(0.1), top_k=5,
+                         filters={"level": "libre"})
+        assert len(results) == 1
+        assert results[0]["source_file"] == "a.md"
+
+    def test_prefilter_guarantees_top_k(self, db):
+        """E5.13: pre-filter returns top_k results from filtered set."""
+        from lorme.store import upsert_source
+        create_tables(db, MODEL, DIMS)
+        upsert_source(db, "a.md")
+        upsert_source(db, "b.md")
+        for i in range(10):
+            insert_chunk(db, f"a{i}", "a.md", i, f"text {i}", make_embedding(0.1 * i))
+        for i in range(10):
+            insert_chunk(db, f"b{i}", "b.md", i, f"other {i}", make_embedding(0.05 * i))
+        results = search(db, make_embedding(0.1), top_k=5,
+                         filters={"source_file": "b.md"})
+        assert len(results) == 5
+        assert all(r["source_file"] == "b.md" for r in results)
+
 
 class TestListSources:
     def test_returns_sources_with_counts(self, db):
@@ -150,3 +215,58 @@ class TestListSources:
     def test_empty_db(self, db):
         create_tables(db, MODEL, DIMS)
         assert list_sources(db) == []
+
+
+class TestSourceHashes:
+    """E6.01: content hash tracking for declarative sync."""
+
+    def test_set_and_get_hash(self, db):
+        create_tables(db, MODEL, DIMS)
+        set_source_hash(db, "doc.md", "abc123")
+        hashes = get_source_hashes(db)
+        assert hashes["file:doc.md"] == "abc123"
+
+    def test_update_hash(self, db):
+        create_tables(db, MODEL, DIMS)
+        set_source_hash(db, "doc.md", "old")
+        set_source_hash(db, "doc.md", "new")
+        hashes = get_source_hashes(db)
+        assert hashes["file:doc.md"] == "new"
+
+    def test_empty_db_returns_empty(self, db):
+        create_tables(db, MODEL, DIMS)
+        assert get_source_hashes(db) == {}
+
+    def test_multiple_sources(self, db):
+        create_tables(db, MODEL, DIMS)
+        set_source_hash(db, "a.md", "hash_a")
+        set_source_hash(db, "b.md", "hash_b")
+        hashes = get_source_hashes(db)
+        assert len(hashes) == 2
+        assert hashes["file:a.md"] == "hash_a"
+
+
+class TestDeleteSourceChunks:
+    """E6.01: delete all chunks for a given source."""
+
+    def test_deletes_chunks_for_source(self, db):
+        create_tables(db, MODEL, DIMS)
+        insert_chunk(db, "a0", "a.md", 0, "text a", make_embedding(0.1))
+        insert_chunk(db, "b0", "b.md", 0, "text b", make_embedding(0.2))
+        delete_source_chunks(db, "file:a.md")
+        sources = list_sources(db)
+        assert len(sources) == 1
+        assert sources[0]["source_file"] == "b.md"
+
+    def test_deletes_source_metadata(self, db):
+        from lorme.store import upsert_source, get_source
+        create_tables(db, MODEL, DIMS)
+        upsert_source(db, "a.md", title="Doc A")
+        insert_chunk(db, "a0", "a.md", 0, "text", make_embedding(0.1))
+        set_source_hash(db, "a.md", "hash_a")
+        delete_source_chunks(db, "file:a.md")
+        assert get_source(db, "file:a.md") is None
+
+    def test_delete_nonexistent_source_no_error(self, db):
+        create_tables(db, MODEL, DIMS)
+        delete_source_chunks(db, "file:nonexistent.md")

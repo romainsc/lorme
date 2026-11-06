@@ -1,4 +1,4 @@
-# Grooming E11.01 — `lore-mcp build`
+# Grooming E11.01 — `lorme build`
 
 - **Status:** Grooming — en attente de validation
 - **Date:** 2026-08-31
@@ -54,7 +54,7 @@ In `--output-dir`:
 ## CLI
 
 ```bash
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --models models.yaml \
   --docs-dir /path/to/sources/ \
   --output-dir /path/to/output/ \
@@ -131,7 +131,7 @@ starts fresh.
 
 ## DoD
 
-1. `lore-mcp build` CLI subcommand
+1. `lorme build` CLI subcommand
 2. Full pipeline: validate → optimize → index →
    metadata
 3. Single command produces ready-to-distribute
@@ -155,9 +155,9 @@ starts fresh.
 
 ## MVPs
 
-- **MVP1**: `lore-mcp build --skip-optimize`
+- **MVP1**: `lorme build --skip-optimize`
   (validate + index + metadata, no optimization)
-- **MVP2**: `lore-mcp build` with optimization
+- **MVP2**: `lorme build` with optimization
   (full pipeline, not resumable)
 - **MVP3**: resumability (skip completed configs,
   persist questions/scores)

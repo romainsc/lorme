@@ -7,10 +7,11 @@ import numpy as np
 import pytest
 
 from conftest import DIMS, make_embedding
+from lorme.config import LormeConfig
 
 
 def _make_mock_embedder(name="test-model"):
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name=name, mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = DIMS
@@ -29,7 +30,7 @@ def _make_mock_embedder(name="test-model"):
 class TestBuildCleansUp:
     def test_unload_all_before_final_reindex(self, tmp_path):
         """build.py: all embedders unloaded before final indexing."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -52,16 +53,14 @@ sources:
         emb_a.unload = lambda: (unload_calls.append("a"), None)
         emb_b.unload = lambda: (unload_calls.append("b"), None)
 
+        cfg = LormeConfig(
+            skip_optimize=False, output_level="quiet",
+            optimize_chunk_sizes=[1024], optimize_chunk_overlaps=[64],
+            optimize_top_ks=[3], optimize_num_questions=2,
+        )
         run_build(
-            manifest_path=str(manifest),
-            docs_dir=str(docs_dir),
-            output_dir=str(tmp_path / "out"),
+            str(manifest), str(docs_dir), str(tmp_path / "out"), cfg,
             embedders={"model-a": emb_a, "model-b": emb_b},
-            skip_optimize=False,
-            chunk_sizes=[1024],
-            chunk_overlaps=[64],
-            top_ks=[3],
-            num_questions=2,
         )
 
         assert "a" in unload_calls
@@ -69,7 +68,7 @@ sources:
 
     def test_final_embedder_unloaded_after_build(self, tmp_path):
         """build.py: winning embedder unloaded after final indexing."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -88,12 +87,10 @@ sources:
         unloaded = []
         emb.unload = lambda: unloaded.append(True)
 
+        cfg = LormeConfig(skip_optimize=True, output_level="quiet")
         run_build(
-            manifest_path=str(manifest),
-            docs_dir=str(docs_dir),
-            output_dir=str(tmp_path / "out"),
+            str(manifest), str(docs_dir), str(tmp_path / "out"), cfg,
             embedder=emb,
-            skip_optimize=True,
         )
 
         assert len(unloaded) >= 1
@@ -102,7 +99,7 @@ sources:
 class TestOptimizeCleansUp:
     def test_last_model_unloaded(self, tmp_path):
         """run_optimize: last model is unloaded at end."""
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()

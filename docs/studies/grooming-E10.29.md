@@ -5,7 +5,7 @@
 
 ## Problem
 
-`lore-mcp optimize` only varies chunking params
+`lorme optimize` only varies chunking params
 (chunk_size, overlap, top_k). The full pipeline
 has more dimensions that affect retrieval quality:
 preprocessing (enrich techniques), chunking, and

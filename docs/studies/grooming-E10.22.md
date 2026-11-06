@@ -6,7 +6,7 @@
 ## Context
 
 A Platform component should be understandable.
-New users need to see what lore-mcp does at each
+New users need to see what lorme does at each
 step — not just the final result. Demo mode is a
 pedagogical tool that explains the system by
 running it transparently.

@@ -1,4 +1,4 @@
-# Tutorial — Running lore-mcp
+# Tutorial — Running lorme
 
 This guide covers the full workflow: preprocessing
 sources, building optimized collections, and
@@ -13,14 +13,14 @@ For design rationale, see
 ## 1. Installation
 
 ```bash
-pip install lore-mcp
+pip install lorme
 
 # Multi-format parsing (PDF, HTML, DOCX)
-pip install lore-mcp[parse]
+pip install lorme[parse]
 
 # Or install specific format support
-pip install lore-mcp[html]   # HTML via trafilatura
-pip install lore-mcp[pdf]    # PDF/DOCX via Docling
+pip install lorme[html]   # HTML via trafilatura
+pip install lorme[pdf]    # PDF/DOCX via Docling
 ```
 
 ## 2. Configuration
@@ -77,7 +77,7 @@ runs use the cache (`~/.cache/huggingface/`).
 
 For persistent embedding services, run
 HuggingFace Text Embeddings Inference (TEI)
-containers. lore-mcp connects via API mode.
+containers. lorme connects via API mode.
 
 ### GPU prerequisites
 
@@ -154,42 +154,132 @@ an enriched manifest.
 ### Basic preprocess
 
 ```bash
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
-  --orig-subdir raw/ \
-  --prep-subdir clean/ \
+  --orig-dir raw/ \
+  --prep-dir clean/ \
   --config config.yaml
 ```
 
 This:
 1. Converts formats (PDF→md via Docling,
-   HTML→md via trafilatura)
-2. Cleans content (NFC, HTML strip, images→alt)
+   HTML→md via trafilatura, audio→md via STT,
+   video→md+frames via STT+ffmpeg)
+2. Cleans content (NFC, HTML strip, images→alt,
+   collapse repeated characters)
 3. Detects duplicates (SHA-256 + MinHash, report)
 4. Warns on PII (emails, IPs, API keys)
-5. Validates quality (lint gate)
+5. Validates quality (lint gate with structure
+   scoring)
 6. Produces enriched manifest (`manifest-prep.yaml`)
 
 ### With LLM enrichment
 
 ```bash
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
-  --orig-subdir raw/ \
-  --prep-subdir clean/ \
-  --enrich context,qa \
+  --orig-dir raw/ \
+  --prep-dir clean/ \
+  --enrich context,qa,meta \
   --config config.yaml
 ```
 
-### Standalone enrichment
+### Audio and video sources
+
+Audio (.mp3, .wav, .opus) and video (.mp4, .webm)
+files are transcribed via STT (configured as
+`parse.stt_model` in config). Video frames are
+extracted at scene changes and captioned by VLM.
+
+The `lang` field in the manifest sets the
+transcription language:
+
+```yaml
+sources:
+  - orig: talk.opus
+    lang: eng
+  - orig: conference.webm
+    lang: fra
+    video_frame_strategy: ocr  # scene|interval|hybrid|ocr
+```
+
+Frame extraction strategies:
+- `scene` (default): ffmpeg scene change detection
+- `interval`: fixed interval (every N seconds)
+- `hybrid`: scene + interval merged
+- `ocr`: OCR-guided — keeps only frames where
+  slide content changes (best for filmed
+  presentations)
+
+URL sources require `--allow-download`:
 
 ```bash
-lore-mcp enrich manifest-prep.yaml \
-  --docs-dir /corpus/clean/ \
-  --output-dir /corpus/enriched/ \
-  --enrich context,qa \
+lorme preprocess manifest.yaml \
+  --docs-base-dir /corpus/ \
+  --allow-download \
   --config config.yaml
 ```
+
+### YouTube / platform video download (yt-dlp)
+
+For YouTube and other video platforms, use a URL
+in the manifest — no manual download needed.
+If captions are available (auto-generated or
+manual), lorme downloads them and skips the
+STT service entirely.
+
+```yaml
+sources:
+  - url: https://www.youtube.com/watch?v=eEBv0STiYhI
+    lang: en
+  - url: https://www.youtube.com/watch?v=WYszRcHzqw8
+    lang: fr
+```
+
+Requires the `[video]` extra:
+```bash
+pip install -e ".[video]"  # installs yt-dlp
+```
+
+Files are named by video ID (short, unique) —
+full title is stored in the enriched manifest.
+`--allow-download` is required.
+
+### Pipeline state management
+
+Pipeline state (checkpoint, intermediates) is
+stored in `~/.local/state/lorme/`. Manage
+with:
+
+```bash
+# List all states
+lorme state --list
+
+# Purge a specific state
+lorme state --purge <hash-prefix>
+
+# Purge old states (> 7 days)
+lorme state --purge --older-than 7
+
+# Purge all
+lorme state --purge --all
+```
+
+### Keep intermediate files
+
+```bash
+lorme preprocess manifest.yaml \
+  --docs-base-dir /corpus/ \
+  --intermediates-dir /corpus/intermediates/ \
+  --config config.yaml
+```
+
+Saves phase files (`.phase1-parse.md`,
+`.caption-*.md`, `.phase3-enrich.md`) to the
+specified directory for diagnosis. Without this
+flag, intermediates go to
+`~/.local/state/lorme/` and are cleaned up
+after success.
 
 See [preprocessing guide](preprocessing.md) for
 best practices. Source quality has ~60% impact on
@@ -203,7 +293,7 @@ indexing, and metadata generation.
 ### Minimal build (no optimization)
 
 ```bash
-lore-mcp build manifest-prep.yaml \
+lorme build manifest-prep.yaml \
   --docs-dir /corpus/clean/ \
   --output-dir /path/to/output/ \
   --skip-optimize \
@@ -216,22 +306,26 @@ Produces: `.db` + `.json` + `.bib` + `.md` +
 ### Build with optimization
 
 ```bash
-lore-mcp build manifest-prep.yaml \
+lorme build manifest-prep.yaml \
   --docs-dir /corpus/clean/ \
   --output-dir /path/to/output/ \
   --config config.yaml
 ```
 
-Where `config.yaml` includes optimization params:
+Where `config.yaml` includes models in the
+unified registry and optimization params:
 
 ```yaml
-embedding:
-  model: nomic-ai/nomic-embed-text-v2-moe
-  mode: builtin
-
 llm:
-  model: granite-3-2-8b-instruct
-  api_url: http://127.0.0.1:11434/v1
+  - name: nomic-embed
+    model: nomic-ai/nomic-embed-text-v2-moe
+    api_url: http://127.0.0.1:8082/v1/embeddings
+    start: podman run -d --name tei-nomic ...
+    stop: podman stop tei-nomic
+
+embedding:
+  model: nomic-embed   # references llm registry
+  mode: api
 
 optimize:
   chunk_sizes: [512, 1024, 2048]
@@ -240,27 +334,48 @@ optimize:
   num_questions: 50
 ```
 
-### Build with integrated preprocess
+All models (embedding, VLM, STT, LLM) are in the
+`llm:` registry with start/stop lifecycle.
+Specialized sections reference them by name.
+Services are auto-started and auto-stopped.
+
+### Full pipeline (preprocess + optimize + build)
 
 ```bash
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --docs-dir /corpus/ \
-  --output-dir /path/to/output/ \
+  --output-dir /output/ \
   --preprocess \
+  --orig-dir raw/ \
+  --prep-dir prep/ \
+  --intermediates-dir /output/intermediates/ \
+  --allow-download \
   --config config.yaml
 ```
+
+Single command: preprocess → optimize → build.
+Produces: `.db` + `.json` + `.bib` + `.md` +
+`manifest-prep.yaml` + intermediate files.
+
+### Declarative DB sync
+
+Subsequent builds are incremental: unchanged
+sources are skipped (SHA-256 hash comparison),
+changed sources are re-indexed, sources removed
+from the manifest are purged. `--force` rebuilds
+everything.
 
 ### Output control
 
 ```bash
 # Progress bar
-lore-mcp build ... --progress
+lorme build ... --progress
 
 # Verbose (questions, per-iteration scores)
-lore-mcp build ... --verbose
+lorme build ... --verbose
 
 # Debug (HTTP requests, internals)
-lore-mcp build ... --debug
+lorme build ... --debug
 ```
 
 ### Resumability
@@ -272,7 +387,7 @@ skipped. Use `--force` to start fresh.
 ## 6. Quality check
 
 ```bash
-lore-mcp lint manifest-prep.yaml \
+lorme lint manifest-prep.yaml \
   --docs-dir /corpus/clean/
 ```
 
@@ -284,7 +399,7 @@ sections, and verdict (good/warn/poor) per file.
 ### SSE (recommended)
 
 ```bash
-lore-mcp --transport sse --config config.yaml
+lorme --transport sse --config config.yaml
 ```
 
 Client connects to `http://localhost:8000/sse`.
@@ -295,7 +410,7 @@ Client connects to `http://localhost:8000/sse`.
 {
   "mcpServers": {
     "lore": {
-      "command": "/path/to/.venv/bin/lore-mcp",
+      "command": "/path/to/.venv/bin/lorme",
       "args": ["--config", "/path/to/config.yaml"]
     }
   }

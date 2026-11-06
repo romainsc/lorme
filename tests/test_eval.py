@@ -9,11 +9,11 @@ import numpy as np
 import pytest
 
 from conftest import DIMS, make_embedding
-from lore_mcp.store import create_tables, insert_chunk, open_db, upsert_source
+from lorme.store import create_tables, insert_chunk, open_db, upsert_source
 
 
 def _make_mock_embedder():
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name="test-model", mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = DIMS
@@ -42,7 +42,7 @@ def eval_db(tmp_path):
     db = open_db(db_path)
     create_tables(db, "test-model", DIMS, chunk_size=1024, chunk_overlap=128)
     chunks = [
-        ("c1", "intro.md", 0, "lore-mcp uses sqlite-vec for vector storage in a single portable file."),
+        ("c1", "intro.md", 0, "lorme uses sqlite-vec for vector storage in a single portable file."),
         ("c2", "intro.md", 1, "Embedding generation falls back automatically: GPU, API, then CPU."),
         ("c3", "config.md", 0, "Set LORE_DB_PATH to configure the database location."),
         ("c4", "config.md", 1, "Set LORE_EMBED_MODE to auto, gpu, api, or cpu."),
@@ -58,28 +58,25 @@ def eval_db(tmp_path):
 
 
 class TestEvalConfig:
-    def test_eval_config_from_env(self):
-        from lore_mcp.eval import EvalConfig
-        with patch.dict(os.environ, {
-            "LORE_LLM_URL": "http://localhost:8000/v1",
-            "LORE_LLM_MODEL": "granite-8b",
-        }):
-            config = EvalConfig.from_env()
-            assert config.llm_url == "http://localhost:8000/v1"
-            assert config.llm_model == "granite-8b"
-
-    def test_eval_config_missing_llm_url(self):
-        from lore_mcp.eval import EvalConfig
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("LORE_LLM_URL", None)
-            with pytest.raises(ValueError, match="LORE_LLM_URL"):
-                EvalConfig.from_env()
+    def test_eval_config_from_config(self):
+        from lorme.eval import EvalConfig
+        from lorme.config import LormeConfig
+        cfg = LormeConfig(
+            llm_registry=[{
+                "name": "test-llm",
+                "model": "granite-8b",
+                "api_url": "http://localhost:8000/v1/chat/completions",
+            }],
+        )
+        config = EvalConfig.from_config(cfg)
+        assert config.llm_url == "http://localhost:8000/v1/chat/completions"
+        assert config.llm_model == "granite-8b"
 
 
 class TestGenerateTestset:
     def test_generate_questions_from_db(self, eval_db):
         """Generate Q&A pairs from indexed chunks (mocked LLM)."""
-        from lore_mcp.eval import generate_questions_from_db
+        from lorme.eval import generate_questions_from_db
         questions = generate_questions_from_db(
             eval_db, num_questions=3, llm=MagicMock()
         )
@@ -91,7 +88,7 @@ class TestGenerateTestset:
 class TestRetrievalEval:
     def test_evaluate_retrieval(self, eval_db):
         """Evaluate retrieval quality with mock scoring."""
-        from lore_mcp.eval import evaluate_retrieval
+        from lorme.eval import evaluate_retrieval
         embedder = _make_mock_embedder()
         questions = [
             {"question": "How does vector storage work?", "ground_truth": "sqlite-vec"},
@@ -105,9 +102,33 @@ class TestRetrievalEval:
         assert all("contexts" in d for d in results["details"])
 
 
+class TestEmptyQueryHandling:
+    """E10.35: empty/whitespace queries must not crash eval."""
+
+    def test_empty_query_skipped(self, eval_db):
+        from lorme.eval import evaluate_retrieval
+        embedder = _make_mock_embedder()
+        questions = [
+            {"question": "", "ground_truth": "something"},
+            {"question": "How does vector storage work?", "ground_truth": "sqlite-vec"},
+        ]
+        results = evaluate_retrieval(eval_db, embedder, questions, top_k=3)
+        assert len(results["details"]) == 1
+
+    def test_whitespace_query_skipped(self, eval_db):
+        from lorme.eval import evaluate_retrieval
+        embedder = _make_mock_embedder()
+        questions = [
+            {"question": "   ", "ground_truth": "something"},
+            {"question": "What is embedding?", "ground_truth": "GPU then CPU"},
+        ]
+        results = evaluate_retrieval(eval_db, embedder, questions, top_k=3)
+        assert len(results["details"]) == 1
+
+
 class TestEvalReport:
     def test_generate_report_json(self, tmp_path):
-        from lore_mcp.eval import generate_eval_report
+        from lorme.eval import generate_eval_report
         results = {
             "db_path": "/tmp/test.db",
             "num_questions": 2,

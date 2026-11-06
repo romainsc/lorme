@@ -8,7 +8,7 @@ import pytest
 
 class TestBuildConfigFromFile:
     def test_parse_full_config(self, tmp_path):
-        from lore_mcp.build_config import BuildConfig
+        from lorme.build_config import BuildConfig
         config_path = tmp_path / "build-config.yaml"
         config_path.write_text("""
 embedding:
@@ -44,7 +44,7 @@ optimize:
         assert config.num_questions == 30
 
     def test_parse_minimal_config(self, tmp_path):
-        from lore_mcp.build_config import BuildConfig
+        from lorme.build_config import BuildConfig
         config_path = tmp_path / "minimal.yaml"
         config_path.write_text("""
 embedding:
@@ -57,13 +57,3 @@ embedding:
         assert config.num_questions == 50
 
 
-class TestBuildConfigFromEnv:
-    def test_reads_env_vars(self):
-        from lore_mcp.build_config import BuildConfig
-        with patch.dict(os.environ, {
-            "LORE_LLM_URL": "http://localhost:11434/v1",
-            "LORE_LLM_MODEL": "granite-8b",
-        }):
-            config = BuildConfig.from_env()
-            assert config.judge_api_url == "http://localhost:11434/v1"
-            assert config.judge_model == "granite-8b"

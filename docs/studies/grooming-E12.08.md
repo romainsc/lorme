@@ -43,7 +43,7 @@ conversion (E12.09 `--enrich` flag).
 ### Implementation approach (E12.09)
 
 ```bash
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --docs-base-dir /corpus/ \
   --orig-subdir orig --prep-subdir prep \
   --enrich context,qa

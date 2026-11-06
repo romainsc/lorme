@@ -15,10 +15,10 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from lore_mcp.embedder import Embedder
-from lore_mcp.ingest import ingest_directory
-from lore_mcp.server import format_search_results, format_sources
-from lore_mcp.store import list_sources, open_db, search, validate_model
+from lorme.embedder import Embedder
+from lorme.ingest import ingest_directory
+from lorme.server import format_search_results, format_sources
+from lorme.store import list_sources, open_db, search, validate_model
 
 
 DIMS = 64

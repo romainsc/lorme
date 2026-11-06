@@ -1,7 +1,7 @@
 # AI-assisted development guidelines
 
 This document defines the rules governing AI-assisted
-development in lore-mcp. It operationalizes principles
+development in lorme. It operationalizes principles
 from Red Hat's public and internal guidance on
 responsible AI use.
 

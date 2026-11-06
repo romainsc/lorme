@@ -5,7 +5,7 @@ import pytest
 
 class TestProgressHeader:
     def test_header_shows_collection_and_models(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(
             collection="ia-libre",
             models=["nomic-v2-moe", "granite-r2"],
@@ -20,7 +20,7 @@ class TestProgressHeader:
 
 class TestProgressTable:
     def test_row_format(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["m"], total_configs=10)
         r.print_table_header()
         r.print_row(1, "nomic-v2-moe", 512, 64, 3, 0.4821, is_best=False)
@@ -31,14 +31,14 @@ class TestProgressTable:
         assert "0.4821" in out
 
     def test_best_row_has_star(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["m"], total_configs=10)
         r.print_row(5, "granite-r2", 1024, 128, 5, 0.6543, is_best=True)
         out = capsys.readouterr().out
         assert "★" in out
 
     def test_non_best_row_no_star(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["m"], total_configs=10)
         r.print_row(1, "model", 512, 64, 3, 0.5, is_best=False)
         out = capsys.readouterr().out
@@ -47,7 +47,7 @@ class TestProgressTable:
 
 class TestProgressSections:
     def test_section_header(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["m"], total_configs=1)
         r.print_section("Pre-flight")
         out = capsys.readouterr().out
@@ -55,7 +55,7 @@ class TestProgressSections:
         assert "──" in out
 
     def test_step_timing(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["m"], total_configs=1)
         r.print_step("Indexing", elapsed=3.2)
         out = capsys.readouterr().out
@@ -63,7 +63,7 @@ class TestProgressSections:
         assert "Indexing" in out
 
     def test_check_mark(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["m"], total_configs=1)
         r.print_check("ia-libre.db (18.2 MB)")
         out = capsys.readouterr().out
@@ -72,7 +72,7 @@ class TestProgressSections:
 
 class TestProgressSummary:
     def test_summary_markdown_table(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="ia-libre", models=["m"], total_configs=1)
         r.print_summary(
             files=87, chunks=4231, configs_tested=36,
@@ -87,7 +87,7 @@ class TestProgressSummary:
 
 class TestFullResultsTable:
     def test_renders_with_best_marked(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["a", "b"], total_configs=4)
         results = [
             {"model_name": "a", "chunk_size": 512, "chunk_overlap": 64, "top_k": 3, "avg_score": 0.48},
@@ -102,7 +102,7 @@ class TestFullResultsTable:
         assert "0.62" in lines[0]  # best score
 
     def test_single_star_in_table(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["a"], total_configs=3)
         results = [
             {"model_name": "a", "chunk_size": 512, "chunk_overlap": 64, "top_k": 3, "avg_score": 0.48},
@@ -116,7 +116,7 @@ class TestFullResultsTable:
 
 class TestOutputLevels:
     def test_quiet_suppresses_all(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["a"], total_configs=3, level="quiet")
         r.print_header()
         r.print_section("Test")
@@ -131,7 +131,7 @@ class TestOutputLevels:
         assert out == ""
 
     def test_progress_compact(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["a"], total_configs=2, level="progress")
         r.print_header()
         r.print_milestone(config_num=1, msg="[1/2] a chunk=512/64 top_k=3: avg=0.50")
@@ -149,7 +149,7 @@ class TestOutputLevels:
         assert "ETA" in out
 
     def test_default_shows_table(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["a"], total_configs=1, level="default")
         r.print_header()
         results = [
@@ -161,7 +161,7 @@ class TestOutputLevels:
         assert "★" in out
 
     def test_verbose_shows_file_detail(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["a"], total_configs=1, level="verbose")
         r.print_file("doc.md", 12)
         out = capsys.readouterr().out
@@ -169,7 +169,7 @@ class TestOutputLevels:
         assert "12" in out
 
     def test_default_hides_file_detail(self, capsys):
-        from lore_mcp.progress import ProgressReporter
+        from lorme.progress import ProgressReporter
         r = ProgressReporter(collection="test", models=["a"], total_configs=1, level="default")
         r.print_file("doc.md", 12)
         out = capsys.readouterr().out
@@ -177,54 +177,53 @@ class TestOutputLevels:
 
 
 class TestConfigureLogging:
-    def test_debug_sets_lore_mcp_debug(self):
+    def test_debug_sets_lorme_debug(self):
         import logging
-        from lore_mcp.progress import configure_logging
+        from lorme.progress import configure_logging
         configure_logging("debug")
-        assert logging.getLogger("lore_mcp").level == logging.DEBUG
-        assert logging.getLogger("httpx").level == logging.INFO
+        assert logging.getLogger("lorme").level == logging.DEBUG
         assert logging.getLogger("httpcore").level == logging.WARNING
 
     def test_quiet_sets_root_error(self):
         import logging
-        from lore_mcp.progress import configure_logging
+        from lorme.progress import configure_logging
         configure_logging("quiet")
         assert logging.getLogger().level == logging.ERROR
 
     def test_default_sets_root_warning(self):
         import logging
-        from lore_mcp.progress import configure_logging
+        from lorme.progress import configure_logging
         configure_logging("default")
         assert logging.getLogger().level == logging.WARNING
 
 
 class TestOutputLevelFromArgs:
     def test_quiet_flag(self):
-        from lore_mcp.progress import output_level_from_args
+        from lorme.progress import output_level_from_args
         from types import SimpleNamespace
         args = SimpleNamespace(quiet=True, progress=False, verbose=False, debug=False)
         assert output_level_from_args(args) == "quiet"
 
     def test_progress_flag(self):
-        from lore_mcp.progress import output_level_from_args
+        from lorme.progress import output_level_from_args
         from types import SimpleNamespace
         args = SimpleNamespace(quiet=False, progress=True, verbose=False, debug=False)
         assert output_level_from_args(args) == "progress"
 
     def test_verbose_flag(self):
-        from lore_mcp.progress import output_level_from_args
+        from lorme.progress import output_level_from_args
         from types import SimpleNamespace
         args = SimpleNamespace(quiet=False, progress=False, verbose=True, debug=False)
         assert output_level_from_args(args) == "verbose"
 
     def test_debug_flag(self):
-        from lore_mcp.progress import output_level_from_args
+        from lorme.progress import output_level_from_args
         from types import SimpleNamespace
         args = SimpleNamespace(quiet=False, progress=False, verbose=False, debug=True)
         assert output_level_from_args(args) == "debug"
 
     def test_default_no_flag(self):
-        from lore_mcp.progress import output_level_from_args
+        from lorme.progress import output_level_from_args
         from types import SimpleNamespace
         args = SimpleNamespace(quiet=False, progress=False, verbose=False, debug=False)
         assert output_level_from_args(args) == "default"

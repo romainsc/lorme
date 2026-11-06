@@ -1,345 +1,224 @@
-# Sync lore-mcp → openshift
+# Sync lorme → openshift
 
-> Dernière MàJ : 2026-09-28 (sync 42)
-> Source : session lore-mcp 28 sept
-> Ce fichier est maintenu par le dépôt lore-mcp.
+> Dernière MàJ : 2026-11-06 (sync 49)
+> Source : session lorme 6 nov (renommage)
+> Ce fichier est maintenu par le dépôt lorme.
 > Il est lu par le dépôt openshift au `sync`.
 
 ## État du projet
 
 ### Statistiques
 
-- 17 modules Python (dont preprocess/), ~120 tests
-- Branche active : feat/E12-preprocessing-tool
-- Release tag : v0.1.0-dev
+- 19 modules Python (dont preprocess/), 735 tests
+- Branche active : feat/E0.10-rename-lorme
+- Release tag : v0.1.1
+- **PyPI** : https://pypi.org/project/lorme/ (v0.1.1)
+- 22 outils MCP (add_source, add_sources, add_recipe,
+  add_directory, remove_source, search_docs,
+  list_indexed_sources, list_collections,
+  preprocess_source, preprocess_sources_tool,
+  preprocess_directory, start_eval, start_optimize,
+  get_service_status, get_version, get_config,
+  lint_source, list_tasks, get_task_status,
+  cancel_task, list_pipeline_state,
+  purge_pipeline_state)
 
-### Backlog E12 — preprocessing (en cours)
+### Implémenté cette itération (3-7 oct)
 
-**`Implémenté`** cette itération (24 sept) :
-- E12.68 Démarrage différé du service embedding (après preprocessing)
-- E12.69 Report écrit progressivement (après chaque source)
-- E12.70 Cache STT séparé (.stt.json) — changement de frame strategy sans refaire la STT
-- E12.67 Hash par phase câblé — changement de config → invalidation auto de phase 1
-- E12.63 corrections : structure prep_base_dir/<collection>/, intermédiaires dans state dir, cascade invalidation, scan_directory audio/vidéo, extensions .md, feedback Ctrl+C
-- E12.53/54/55 Stratégies frame extraction (interval, hybrid, OCR-guided) — déjà implémentées, backlog mis à jour
-- E2.04 Tests checkpoint (41 tests : force, resume, cascade, per-source, per-image, state)
-- E10.34 Étude RAG par type de corpus (verdict B : backends spécialisés chunking, orchestration unifiée)
+**Refactoring architecture** :
+- E1.05 MVP2-4 : ChunkStore, Evaluator, Parser classes
+  (90 fonctions encapsulées, SQL/DB isolé)
+- E3.29 source_id comme PK (cascade DOI/ISBN/URL/file,
+  migration auto)
+- E12.67 Phase hash 2/3 (captioning + enrichment)
 
-**Itération précédente (22 sept)** :
-- E12.44-50, E12.10, E12.33, E6.01, E5.13, E10.08, E2.03, E4.02, E5.05
+**MCP tools** :
+- E3.43 Preprocess-only tools (preprocess_source,
+  preprocess_sources_tool, preprocess_directory)
+- E12.127 Params passthrough (dict `params` dans
+  LLM registry → API, STT/LLM/VLM)
+- E12.131 speakers param + E12.132 keep_intermediates
 
-**`À faire`** :
-- E3.05 Tutorial GPU prerequisites
-- E10.25 Per-model verify_ssl
-- E10.28 Detailed eval report
-- E10.31 Default models study
-- E10.34 benchmarks (après étude)
-- E12.52 correction libellé "video frames" vs "inline images"
+**Audio/Diarization** :
+- E12.125 Speaker diarization (pyannote + diarize,
+  dual backend, LLM speaker_id)
+- E12.134 Subtitle detection + timeout proportionnel
+- E12.135 Lazy stop (cleanup_services retiré des tasks)
+- E12.136 Diarization error surfacing
+
+**Bug fixes** : E12.122 guard _get_db, E12.123
+preprocess→ingest handoff, E12.126 cleanup
+intermediates, E12.128-E12.129 preprocess service
+lifecycle + STT placeholder detection
+
+### Évaluation MOSS-Transcribe-Diarize (E12.139)
+
+Modèle Apache 2.0, Level 2, 0.9B params.
+Single-pass transcription + diarization + timestamps.
+50+ langues, 1er INTERSPEECH 2026.
+
+**Résultats** :
+- FR transcription correcte, 3 speakers détectés
+- CPU RTF ~1x (viable pour audio <30 min)
+- GPU OOM sur RTX 500 4GB (nécessite >8 GB VRAM)
+
+**Verdict** : GO pour intégration comme option
+complémentaire (pas remplacement).
+
+## Demande à IA Serving
+
+### NOUVEAU — Service MOSS-Transcribe-Diarize
+
+**Besoin** : servir MOSS-Transcribe-Diarize 0.9B
+comme service d'inférence API (conteneur), au
+même titre que TEI, Canary STT, Granite Vision.
+
+**Modèle** : OpenMOSS-Team/MOSS-Transcribe-Diarize
+- Apache 2.0, Level 2, ungated, 0.9 GB
+- Nécessite : transformers, torch, moss-transcribe-diarize
+- VRAM : ~2 GB (bf16), GPU >8 GB pour audio >5 min
+- API : custom (build_transcription_messages +
+  generate_transcription), pas OpenAI-compatible
+
+**Utilisation** : lorme appelle le service pour
+transcription + diarization en un pass. Remplace
+le pipeline multi-étapes (Canary + pyannote) pour
+les cas multi-speakers.
+
+**Priorité** : moyenne — le pipeline multi-étapes
+fonctionne, MOSS est une optimisation.
+
+**Question** : quel framework de serving pour un
+modèle transformers custom ? vLLM ? TGI ? Wrapper
+FastAPI ?
+
+### PR Docling #4392
+
+Toujours en attente merge (reviewer IBM).
+Workaround local RGBA en place.
+
+### Implémenté cette itération (8-9 oct)
+
+**Diarization quality chain** (E12.148-E12.152) :
+- E12.148 ffmpeg filter labels contigus
+- E12.149 Service start fail fast
+- E12.150 reconstruct_timeline proportionnel
+- E12.151 Texte propre + word boundaries +
+  title=None pour per-speaker STT
+- E12.152 Merge turns adjacents + auto-detect
+  lang per speaker
+
+## Transfert d'étude — Diarization reconstruction
+
+### Contexte
+
+Étude study-E12.153-diarization-reconstruction.md
+réalisée dans lorme. Devrait être traitée dans
+openshift (étude Veille).
+
+### Recherche effectuée
+
+7 itérations, 3 sèches consécutives. 6 sources
+primaires (pyannoteAI, WhisperX INTERSPEECH 2023,
+Vast.ai, Fora Soft, NVIDIA NeMo, DISPLACE 2024).
 
 ### Résultats clés
 
-**Nouveautés majeures** :
+**Architecture validée** : per-speaker STT est le
+consensus pour multilingue. L'architecture
+lorme est correcte.
 
-- **Audio/vidéo** (E12.48/49) : ingestion de
-  fichiers audio (.opus, .mp3...) et vidéo
-  (.webm, .mp4...) via service STT. Transcription
-  markdown avec timestamps. Vidéo : frames
-  extraites par ffmpeg (scene change) + base64
-  inline. Corpus test : 1 audio + 2 vidéos (21
-  sources total)
-- **Pre-filtering** (E5.13) : filtrage avant KNN
-  via rowid IN. Remplace le post-filter. source,
-  level, license, title, author, date pré-filtrés
-- **Sync déclaratif** (E6.01) : manifest = source
-  de vérité. La DB est son reflet. Skip inchangés,
-  re-ingest modifiés, purge absents
-- **CI/CD** (E2.03) : GitHub Actions, pytest sur
-  push/PR
-- **pip install** (E4.02) : wheel construit et
-  installable, version 0.1.0.dev1
-- **Quantification** (E5.05) : étude complète.
-  int8 ~99.5% recall (4×), bit ~95% (32×).
-  Float32 suffit pour <50K chunks
+**3 bugs d'implémentation identifiés** :
+1. Canary ne fait PAS d'auto-détection de langue
+   — `source_lang` obligatoire, défaut EN
+2. Reconstruction devrait utiliser les timestamps
+   STT + seg_table (rel→abs), pas proportionnel
+3. `_extract_stt_segments` détruit les timestamps
+   réels (crée `end = start + 10.0`)
 
-### Contrat d'interface
+**6 concepts émergents à évaluer** :
+1. SpeechBrain VoxLingua107 (Apache 2.0, 93.3%,
+   107 langues) — détection langue pré-STT
+2. Hungarian Algorithm — mapping optimal
+   speaker→nom (scipy, BSD)
+3. Crossfade entre segments concaténés (ffmpeg)
+4. ±250ms tolérance alignement turn boundaries
+5. Canary-Qwen 2.5B — modèle plus récent
+6. Joint models (MOSS-TD, Sortformer) — bypass
+   reconciliation
 
-Ajouts depuis sync 39 :
-- `parse.video_frame_strategy` : scene/interval/ocr/hybrid
-- `parse.video_frame_interval` : intervalle frames (défaut 30s)
-- `parse.video_ocr_change_threshold` : seuil OCR (défaut 0.3)
-- Structure sortie : `prep_base_dir/<collection>/` pour les fichiers finaux
-- Intermédiaires dans `~/.local/state/lore-mcp/` par défaut
-- Cache STT `.stt.json` : réutilisé entre runs
-- Report progressif : écrit après chaque source
-- Hash par phase : invalidation auto sur changement de config
+### Demande
 
-## Retours IS captioning (2026-09-19, sync 36)
+Évaluer dans openshift/Veille :
+- SpeechBrain VoxLingua107 : niveau (Level 1-2?),
+  bench CPU latency, accuracy FR vs EN
+- Canary-Qwen 2.5B : niveau, licence, bench FR
+- Hungarian Algorithm vs LLM pour speaker mapping
+- Crossfade impact sur qualité STT
 
-### granite-vision 507 — diagnostic précis
+Étude source : `docs/studies/study-E12.153-diarization-reconstruction.md`
+dans le repo lorme branche feat/E12-preprocessing-tool.
 
-**Symptôme** : granite-vision retourne HTTP 507
-sur DUDH (2480×3548) systématiquement dans le
-pipeline lore-mcp, alors que le test IS isolé
-fonctionne en 25s.
+## NOUVEAU — Renommage lore-mcp → lorme (E0.10)
 
-**VRAM au moment du start** : 150 MiB utilisés,
-3670 MiB libres. Suffisant.
+**Date** : 2026-11-06
 
-**Cause racine** : `GET /health` retourne OK
-**avant** que le modèle soit prêt pour
-l'inférence. Le serveur IS répond "healthy"
-dès que uvicorn est up, mais le modèle est
-encore en cours de chargement GPU. La première
-requête d'inférence (DUDH, 70 patches) arrive
-pendant le chargement → OOM.
+**Raison** : `lore-mcp` est pris sur PyPI (v1.0.17,
+ctx-stack, 15 releases). 8 repos GitHub homonymes.
+Bloqueur pour publication PyPI.
 
-**Preuve** (logs IS capturés par lore-mcp) :
-le log se termine à "Loading weights: 100%" +
-"Application startup complete" + warning
-bitsandbytes. Pas de requête traitée avant le
-507.
+**Nouveau nom** : **lorme** (fusion LORE + MCP).
+LORME = Local Offline Retrieval & MCP Engine.
 
-**Timing** :
-- 17:43:38 : Service ready (/health OK)
-- 17:43:41 : Caption failed 507 (3s après ready)
+**Déjà fait côté lorme** :
+- Renommage code complet (183 fichiers, 735 tests OK)
+- GitHub repo renommé : github.com/romainsc/lorme
+- Répertoire local renommé : ~/EspacePrivé/lorme/
+- Publié sur PyPI : `pip install lorme` (v0.1.1)
+- ADR-006 documenté
+- Mémoire Claude Code migrée
 
-**Fixes demandés** :
-1. `/health` ne doit retourner OK qu'après
-   qu'une inférence de test ait réussi (pas
-   juste uvicorn up)
-2. Le script start doit vérifier la VRAM libre
-   avant de lancer le modèle et avertir si
-   marge < 1 Go (déjà mentionné sync IS E17.07)
-3. Le script stop doit s'assurer que la VRAM
-   GPU est libérée avant de retourner (podman
-   stop est asynchrone pour la libération VRAM)
+**Actions requises côté openshift** :
 
-**Côté lore-mcp (corrigé, E12.31)** :
-Phase 1 (Docling parse) tourne maintenant dans
-un **subprocess**. À sa sortie, le contexte CUDA
-PyTorch est entièrement libéré.
+1. **Renommer le fichier sync** :
+   ```bash
+   git mv sync/lore-mcp.md sync/lorme.md
+   ```
 
-VRAM mesurée au moment du start granite-vision :
-**22 MiB utilisés, 3798 MiB libres**. C'est la
-VRAM au repos, totalement propre. Rien de plus
-ne peut être libéré côté lore-mcp.
+2. **Mettre à jour `sync/links.md`** :
+   - Chemin workspace : `~/EspacePrivé/lorme/`
+   - Fichier sync entrant : `sync/openshift.md`
+   (pas de changement sur le nom du fichier
+   entrant, seulement le chemin)
 
-**Traces diagnostic détaillées (E12.32+34,
-2026-09-19, --debug)** :
+3. **Mettre à jour toutes les références** :
+   ```bash
+   grep -rl "lore-mcp" . --include="*.md" \
+     --include="*.yaml" --include="*.json" \
+     | grep -v .git/ | xargs sed -i 's/lore-mcp/lorme/g'
+   grep -rl "lore_mcp" . --include="*.py" \
+     --include="*.yaml" | grep -v .git/ \
+     | xargs sed -i 's/lore_mcp/lorme/g'
+   ```
 
-```
-Lancement lore-mcp :         VRAM 22/3798 MiB
-CUDA check (subprocess) :    VRAM 22/3798 MiB
-Après phase 1 subprocess :   VRAM 22/3798 MiB
-Avant start granite-vision : VRAM 22/3798 MiB
-Image :                      2480x3548 RGBA
-Après modèle chargé :        VRAM 2646/1174 MiB
-Après classify (1ère req) :  VRAM 3588/232 MiB
-507 sur caption (2ème req) : "GPU or VRAM shared"
-Après stop :                 VRAM 22/3798 MiB
-```
+4. **MCP config clients** (si applicable) :
+   - CLI : `lorme` au lieu de `lore-mcp`
+   - Config JSON : `"command": "lorme"`
+   - `pip install lorme` (ou `pip install -e .`
+     depuis ~/EspacePrivé/lorme)
 
-Côté consommateur, la VRAM est **totalement
-propre** à 22 MiB (le minimum absolu) au moment
-du start granite-vision. Le check CUDA se fait
-dans un subprocess (zéro impact VRAM). La phase 1
-Docling tourne aussi dans un subprocess.
+5. **Mémoire Claude Code openshift** :
+   Mettre à jour les références à lore-mcp dans
+   les fichiers mémoire projet si applicable.
 
-**Le problème est dans le serveur IS** :
-la 1ère requête (classify, prompt court) fait
-passer la VRAM de 2646 à 3588 MiB (+942 MiB
-d'activations). Ces activations ne sont pas
-libérées entre les requêtes. La 2ème requête
-(caption) trouve 232 MiB libres → OOM 507.
+6. **Scripts IS** (si applicable) :
+   Vérifier les scripts de démarrage des services
+   d'inférence qui référencent lore-mcp.
 
-**Test après mise à jour IS (empty_cache)** :
-le 507 persiste malgré l'ajout de
-`torch.cuda.empty_cache()` côté IS.
+## Prochaines étapes
 
-Body 507 détaillé (améliorations IS visibles) :
-```
-Tried to allocate 74.00 MiB
-GPU total: 3.73 GiB
-Free: 51.94 MiB
-Process uses: 3.65 GiB
-PyTorch allocated: 3.45 GiB
-PyTorch reserved but unallocated: 107.02 MiB
-```
-
-Le serveur a besoin de 74 MiB, 51.94 libres.
-107 MiB sont "reserved but unallocated" —
-`empty_cache` ne les a pas récupérés.
-C'est de la **fragmentation mémoire GPU**.
-
-PyTorch suggère `PYTORCH_CUDA_ALLOC_CONF=
-expandable_segments:True` pour éviter la
-fragmentation. Le fournisseur IS pourrait
-ajouter cette variable d'environnement au
-conteneur.
-
-**Pattern d'appel lore-mcp** :
-1. Probe health (image 1×1 pixel)
-2. Classify (image 2480×3548 + prompt court)
-3. Caption (image 2480×3548 + prompt long)
-→ chaque appel alloue/libère des activations
-  de tailles différentes → fragmentation.
-
-### granite-docling — mésusage corrigé
-
-granite-docling-258M n'est pas un modèle de
-captioning. IBM : "only as part of the Docling
-library", "not intended for general image
-understanding". Retiré de `caption_models`.
-Item E12.30 créé pour l'intégration via
-Docling VlmPipeline en phase 1.
-
-### molmo — fonctionne
-
-molmo-7b captioning fonctionne sur DUDH (CPU,
-~12 min). Le juge sélectionne correctement
-l'OCR quand il est plus complet que le caption
-Molmo.
-
-## Demande IS — nouveaux services (sync 38)
-
-### Bilan services IS existants
-
-| Service | Modèle | Usage | Statut |
-|---------|--------|-------|--------|
-| granite-vision | granite-3.2-4b-vision | VLM captioning | ✓ opérationnel |
-| molmo-7b | Molmo2-O-7B | VLM captioning | ✓ (timeout 600s nécessaire) |
-| granite-8b | granite-3-2-8b-instruct | LLM enrichissement + juge | ✓ opérationnel (distant) |
-| TEI nomic | nomic-embed-text-v2-moe | embedding | ✓ opérationnel |
-| TEI granite | granite-embedding-311m | embedding | ✓ opérationnel |
-
-### Service STT — retour d'expérience (E12.48)
-
-**Modèle déployé** : Canary-1B-v2 (CC-BY-4.0,
-Level 2). Faster-Whisper exclu (Level 4).
-
-**Performance observée** : ~11 min pour 12 min
-d'audio en CPU. Le démarrage conteneur ajoute
-~75s. Cache STT (.stt.json) évite la
-re-transcription au changement de stratégie frames.
-
-**Projet serveur** : `faster-whisper-server`
-(https://github.com/fedirz/faster-whisper-server)
-— expose une API OpenAI-compatible.
-
-**API attendue** :
-
-```
-POST /v1/audio/transcriptions
-Content-Type: multipart/form-data
-
-file: <audio file>
-model: <model name>
-language: fr (optional, ISO 639-1)
-response_format: verbose_json
-```
-
-**Réponse attendue** :
-
-```json
-{
-  "text": "transcription complète",
-  "segments": [
-    {"start": 0.0, "end": 5.2, "text": "segment"},
-    ...
-  ]
-}
-```
-
-**Config lore-mcp** :
-
-```yaml
-llm:
-  - name: whisper
-    model: Systran/faster-whisper-large-v3
-    api_url: http://127.0.0.1:8093/v1
-    start: ./scripts/start-whisper-server.sh
-    stop: podman stop whisper-server
-    start_timeout: 120
-    timeout: 600
-```
-
-**Priorité** : moyenne. Pas de consommateur
-immédiat mais le câblage côté lore-mcp est prêt
-(E12.48 groomé).
-
-**GPU** : GPU recommandé pour la vitesse
-(~4× realtime avec large-v3 sur GPU). CPU
-possible mais lent (~0.5× realtime).
-
-### Service futur : vidéo (E12.49)
-
-Même service STT que E12.48. L'extraction de
-frames est faite côté lore-mcp via ffmpeg (pas
-un service IS). Les frames capturées sont
-captionnées par le VLM existant (granite-vision
-ou molmo).
-
-Pas de nouveau service IS nécessaire pour la
-vidéo — réutilise STT + VLM existants.
-
-### STT Canary — fuite mémoire CPU (sync 42)
-
-**Symptôme** : la transcription STT ralentit
-exponentiellement entre les appels successifs.
-
-| Vidéo | Durée transcription | Vitesse |
-|-------|---------------------|---------|
-| 1ère (eEBv0STiYhI) | 5 min | 301 s/it |
-| 2ème (T3UKZGEXbVk) | 40 min | 2396 s/it |
-| 3ème (WYszRcHzqw8) | 57 min | 3413 s/it |
-| 4ème | bloqué indéfiniment | — |
-
-**Cause** : `model.transcribe()` de NeMo accumule
-des tensors/buffers internes entre les appels. En
-mode CPU, ces objets ne sont libérés que par le
-garbage collector Python. Le serveur
-(`stt-server.py`) fait `torch.cuda.empty_cache()`
-après chaque appel (ligne 261) mais :
-1. `empty_cache()` ne fait rien en mode CPU
-2. `gc.collect()` n'est pas appelé
-
-**Preuve** (logs IS capturés) :
-```
-Transcribing: 1it [05:01, 301s/it]   ← 1ère vidéo
-Transcribing: 1it [39:56, 2396s/it]  ← 2ème (8× plus lent)
-Transcribing: 1it [56:53, 3413s/it]  ← 3ème (11× plus lent)
-```
-
-Le `/health` reste OK même quand le serveur est
-bloqué — même pattern que le bug granite-vision
-(sync 36).
-
-**Fix demandé** :
-```python
-# Après model.transcribe(), ajouter :
-import gc
-gc.collect()
-if torch.cuda.is_available():
-    torch.cuda.empty_cache()
-```
-
-**Impact lore-mcp** : le pipeline se bloque sur
-la 3ème-4ème vidéo. Workaround actuel : restart
-du service STT entre les vidéos (côté lore-mcp).
-
-### Rappel demandes IS en attente (sync 36)
-
-1. `/health` ne doit retourner OK qu'après une
-   inférence de test réussie
-2. Script start : vérifier VRAM libre avant
-   lancement (marge < 1 Go = warning)
-3. Script stop : s'assurer que VRAM GPU est
-   libérée avant retour
-4. `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
-   dans le conteneur (fragmentation mémoire GPU)
-
-## Provenance
-
-> This document was produced with AI assistance
-> (Claude, Anthropic) and reviewed by
-> Romain Chantereau.
+- E12.153 Reconstruction par timestamps (dépend
+  de l'étude ci-dessus)
+- E12.140 Intégration MOSS quand service disponible
+- E12.124 Upstream contributions Docling (4 candidats)
+- Sessions validation E2.07-E2.10

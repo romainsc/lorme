@@ -1,9 +1,18 @@
-"""Tests for lore_mcp.preprocess. See docs/preprocessing.md."""
+"""Tests for lorme.preprocess. See docs/preprocessing.md."""
 
 import pytest
 import yaml
 
-from lore_mcp.preprocess import clean_text, preprocess_file, preprocess_sources
+from lorme.config import LormeConfig
+from lorme.preprocess import clean_text, preprocess_file, preprocess_sources
+from lorme.preprocess import _phase1_worker
+
+
+def _cfg(**overrides) -> LormeConfig:
+    """Build a LormeConfig with force=True and quiet output for tests."""
+    defaults = {"force": True, "output_level": "quiet"}
+    defaults.update(overrides)
+    return LormeConfig(**defaults)
 
 
 class TestCleanText:
@@ -100,6 +109,57 @@ class TestCleanText:
         assert "## Title" in result
 
 
+class TestCleanRepeatedChars:
+    """E12.51: collapse repeated non-alpha characters from Docling padding."""
+
+    def test_collapses_dot_padding(self):
+        text = "Name" + "." * 100 + "Value"
+        result = clean_text(text)
+        assert "." * 100 not in result
+        assert "Name" in result
+        assert "Value" in result
+
+    def test_collapses_space_padding(self):
+        text = "Column1" + " " * 80 + "Column2"
+        result = clean_text(text)
+        assert " " * 80 not in result
+        assert "Column1" in result
+        assert "Column2" in result
+
+    def test_removes_whitespace_only_lines(self):
+        text = "Paragraph 1\n" + " " * 50 + "\nParagraph 2"
+        result = clean_text(text)
+        assert " " * 50 not in result
+        assert "Paragraph 1" in result
+        assert "Paragraph 2" in result
+
+    def test_preserves_markdown_table_pipes(self):
+        text = "| Col1 | Col2 |\n| --- | --- |"
+        result = clean_text(text)
+        assert "| Col1 | Col2 |" in result
+
+    def test_preserves_ellipsis(self):
+        text = "and so on..."
+        result = clean_text(text)
+        assert "..." in result
+
+    def test_preserves_double_newline(self):
+        text = "Para 1\n\nPara 2"
+        result = clean_text(text)
+        assert "\n\n" in result
+
+
+class TestOcrHandling:
+    """OCR correction is handled by Tesseract, not clean_text (E12.43)."""
+
+    def test_clean_text_does_not_modify_ocr_artifacts(self):
+        """clean_text no longer applies OCR regex — Tesseract handles it."""
+        assert clean_text("I'homme") == "I'homme"
+
+    def test_clean_text_preserves_english_i(self):
+        assert "I am" in clean_text("I am here")
+
+
 class TestPreprocessFile:
     """Tests for single-file preprocessing."""
 
@@ -137,81 +197,121 @@ class TestPreprocessSources:
     """Tests for manifest-driven preprocessing v2."""
 
     def test_orig_field_reads_and_cleans(self, tmp_path):
-        orig = tmp_path / "orig"
+        orig = tmp_path / "file"
         orig.mkdir()
         (orig / "doc.md").write_text("## Title\n\nhello\x00world\n")
+        build = tmp_path / "build"
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md"}])
+        _write_manifest(manifest, [{"file": "doc.md"}])
 
         reports = preprocess_sources(
-            str(manifest), str(tmp_path), orig_dir="orig", force=True
+            str(manifest), str(tmp_path),
+            _cfg(orig_dir=str(orig), build_dir=str(build))
         )
 
         assert reports[0]["status"] == "ok"
-        assert (tmp_path / "doc.md").exists()
+        final_dir = build / "prep"
+        assert (final_dir / "doc.md").exists()
 
     def test_path_generated_from_orig(self, tmp_path):
         orig = tmp_path / "raw"
         orig.mkdir()
         (orig / "guide.md").write_text("content\n")
+        build = tmp_path / "build"
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "guide.md"}])
+        _write_manifest(manifest, [{"file": "guide.md"}])
 
         preprocess_sources(
-            str(manifest), str(tmp_path), orig_dir="raw", force=True
+            str(manifest), str(tmp_path),
+            _cfg(orig_dir=str(orig), build_dir=str(build))
         )
 
-        assert (tmp_path / "guide.md").exists()
+        final_dir = build / "prep"
+        assert (final_dir / "guide.md").exists()
 
     def test_explicit_path_overrides(self, tmp_path):
-        (tmp_path / "doc.md").write_text("content\n")
+        orig = tmp_path / "file"
+        orig.mkdir()
+        (orig / "doc.md").write_text("content\n")
+        build = tmp_path / "build"
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md", "path": "renamed.md"}])
+        _write_manifest(manifest, [{"file": "doc.md", "path": "renamed.md"}])
 
-        preprocess_sources(str(manifest), str(tmp_path), force=True)
+        preprocess_sources(str(manifest), str(tmp_path),
+                           _cfg(orig_dir=str(orig), build_dir=str(build)))
 
-        assert (tmp_path / "renamed.md").exists()
+        final_dir = build / "prep"
+        assert (final_dir / "renamed.md").exists()
 
     def test_prep_dir(self, tmp_path):
-        (tmp_path / "doc.md").write_text("content\n")
+        orig = tmp_path / "file"
+        orig.mkdir()
+        (orig / "doc.md").write_text("content\n")
+        build = tmp_path / "build"
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md"}])
+        _write_manifest(manifest, [{"file": "doc.md"}])
 
         preprocess_sources(
-            str(manifest), str(tmp_path), prep_dir="clean", force=True
+            str(manifest), str(tmp_path),
+            _cfg(orig_dir=str(orig), build_dir=str(build))
         )
 
-        assert (tmp_path / "clean" / "doc.md").exists()
+        assert (build / "prep" / "doc.md").exists()
 
     def test_orig_and_prep_dirs(self, tmp_path):
         raw = tmp_path / "raw"
         raw.mkdir()
         (raw / "doc.md").write_text("## Title\n\nContent.\n")
+        build = tmp_path / "build"
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md"}])
+        _write_manifest(manifest, [{"file": "doc.md"}])
 
         preprocess_sources(
             str(manifest), str(tmp_path),
-            orig_dir="raw", prep_dir="clean", force=True,
+            _cfg(orig_dir=str(raw), build_dir=str(build)),
         )
 
-        assert (tmp_path / "clean" / "doc.md").exists()
-        content = (tmp_path / "clean" / "doc.md").read_text()
+        final_dir = build / "prep"
+        assert (final_dir / "doc.md").exists()
+        content = (final_dir / "doc.md").read_text(encoding="utf-8")
         assert "## Title" in content
+
+    def test_recipe_orig_dir_used(self, tmp_path):
+        """E12.102: recipe orig_dir should be used when config has none."""
+        orig = tmp_path / "my_sources"
+        orig.mkdir()
+        (orig / "doc.md").write_text("## Title\n\nContent here.\n")
+
+        build = tmp_path / "build"
+        build.mkdir()
+
+        manifest = build / "manifest.yaml"
+        data = {
+            "collection": "test", "level": "libre",
+            "orig_dir": str(orig),
+            "sources": [{"file": "doc.md"}],
+        }
+        manifest.write_text(yaml.dump(data), encoding="utf-8")
+
+        reports = preprocess_sources(
+            str(manifest), str(build),
+            _cfg(build_dir=str(build)),
+        )
+        assert reports[0]["status"] == "ok", f"Expected ok, got {reports[0]}"
 
     def test_no_orig_no_url_reports_error(self, tmp_path):
         manifest = tmp_path / "manifest.yaml"
         _write_manifest(manifest, [{"title": "orphan"}])
 
-        reports = preprocess_sources(str(manifest), str(tmp_path), force=True)
+        reports = preprocess_sources(str(manifest), str(tmp_path), _cfg())
 
         assert reports[0]["status"] == "error"
 
     def test_missing_orig_file(self, tmp_path):
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "gone.md"}])
+        _write_manifest(manifest, [{"file": "gone.md"}])
 
-        reports = preprocess_sources(str(manifest), str(tmp_path), force=True)
+        reports = preprocess_sources(str(manifest), str(tmp_path), _cfg())
 
         assert reports[0]["status"] == "missing"
 
@@ -221,7 +321,7 @@ class TestPreprocessSources:
             {"url": "https://invalid.test.example/doc.pdf"},
         ])
 
-        reports = preprocess_sources(str(manifest), str(tmp_path), force=True)
+        reports = preprocess_sources(str(manifest), str(tmp_path), _cfg())
 
         assert reports[0]["status"] == "error"
         assert "fetch" in reports[0]["message"].lower() or "url" in reports[0]["message"].lower()
@@ -229,24 +329,25 @@ class TestPreprocessSources:
     def test_enriched_manifest_default_name(self, tmp_path):
         (tmp_path / "doc.md").write_text("---\ntitle: Hello\n---\nContent.\n")
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md"}])
+        _write_manifest(manifest, [{"file": "doc.md"}])
 
-        preprocess_sources(str(manifest), str(tmp_path), force=True)
+        preprocess_sources(str(manifest), str(tmp_path), _cfg())
 
         prep_manifest = tmp_path / "manifest-prep.yaml"
         assert prep_manifest.exists()
         data = yaml.safe_load(prep_manifest.read_text())
-        assert data["sources"][0]["orig"] == "doc.md"
+        assert data["sources"][0]["file"] == "doc.md"
         assert data["sources"][0]["path"] == "doc.md"
 
     def test_enriched_manifest_custom_name(self, tmp_path):
         (tmp_path / "doc.md").write_text("content\n")
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md"}])
+        _write_manifest(manifest, [{"file": "doc.md"}])
         custom = tmp_path / "custom.yaml"
 
         preprocess_sources(
-            str(manifest), str(tmp_path), manifest_out=str(custom), force=True
+            str(manifest), str(tmp_path),
+            _cfg(preprocess_recipe_out=str(custom)),
         )
 
         assert custom.exists()
@@ -256,9 +357,9 @@ class TestPreprocessSources:
             "---\ntitle: My Document\nauthor: RC\nlicense: Apache-2.0\n---\n\nContent.\n"
         )
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md"}])
+        _write_manifest(manifest, [{"file": "doc.md"}])
 
-        preprocess_sources(str(manifest), str(tmp_path), force=True)
+        preprocess_sources(str(manifest), str(tmp_path), _cfg())
 
         data = yaml.safe_load((tmp_path / "manifest-prep.yaml").read_text())
         src = data["sources"][0]
@@ -271,9 +372,9 @@ class TestPreprocessSources:
             "---\ntitle: From Frontmatter\n---\nContent.\n"
         )
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md", "title": "Override"}])
+        _write_manifest(manifest, [{"file": "doc.md", "title": "Override"}])
 
-        preprocess_sources(str(manifest), str(tmp_path), force=True)
+        preprocess_sources(str(manifest), str(tmp_path), _cfg())
 
         data = yaml.safe_load((tmp_path / "manifest-prep.yaml").read_text())
         assert data["sources"][0]["title"] == "Override"
@@ -282,17 +383,795 @@ class TestPreprocessSources:
         manifest = tmp_path / "manifest.yaml"
         _write_manifest(manifest, [])
 
-        reports = preprocess_sources(str(manifest), str(tmp_path), force=True)
+        reports = preprocess_sources(str(manifest), str(tmp_path), _cfg())
         assert reports == []
 
     def test_preserves_collection_and_level(self, tmp_path):
         (tmp_path / "doc.md").write_text("content\n")
         manifest = tmp_path / "manifest.yaml"
-        _write_manifest(manifest, [{"orig": "doc.md"}],
+        _write_manifest(manifest, [{"file": "doc.md"}],
                         collection="my-col", level="nda")
 
-        preprocess_sources(str(manifest), str(tmp_path), force=True)
+        preprocess_sources(str(manifest), str(tmp_path), _cfg())
 
         data = yaml.safe_load((tmp_path / "manifest-prep.yaml").read_text())
         assert data["collection"] == "my-col"
         assert data["level"] == "nda"
+
+
+class TestDirectoryTreePreservation:
+    """E12.61: preserve source directory tree in preprocess output."""
+
+    def test_subdirectory_preserved(self, tmp_path):
+        orig = tmp_path / "file"
+        (orig / "subdir1").mkdir(parents=True)
+        (orig / "subdir2").mkdir(parents=True)
+        (orig / "subdir1" / "doc.md").write_text("## Sub1\n\nContent 1.\n")
+        (orig / "subdir2" / "doc.md").write_text("## Sub2\n\nContent 2.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [
+            {"file": "subdir1/doc.md"},
+            {"file": "subdir2/doc.md"},
+        ])
+
+        build = tmp_path / "build"
+        reports = preprocess_sources(
+            str(manifest), str(tmp_path),
+            _cfg(orig_dir=str(orig), build_dir=str(build)),
+        )
+
+        final_dir = build / "prep"
+        assert len([r for r in reports if r["status"] == "ok"]) == 2
+        assert (final_dir / "subdir1" / "doc.md").exists()
+        assert (final_dir / "subdir2" / "doc.md").exists()
+        assert "Sub1" in (final_dir / "subdir1" / "doc.md").read_text()
+        assert "Sub2" in (final_dir / "subdir2" / "doc.md").read_text()
+
+
+class TestDirectoryAsCollection:
+    """E12.62: directory entries in manifest expand recursively."""
+
+    def test_directory_entry_expands(self, tmp_path):
+        orig = tmp_path / "file"
+        (orig / "docs").mkdir(parents=True)
+        (orig / "docs" / "guide.md").write_text("## Guide\n\nContent.\n")
+        (orig / "docs" / "faq.md").write_text("## FAQ\n\nQuestions.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [
+            {"file": "docs/", "license": "CC-BY-4.0"},
+        ])
+
+        build = tmp_path / "build"
+        reports = preprocess_sources(
+            str(manifest), str(tmp_path),
+            _cfg(orig_dir=str(orig), build_dir=str(build)),
+        )
+
+        ok = [r for r in reports if r["status"] == "ok"]
+        assert len(ok) == 2
+
+    def test_file_entry_overrides_directory(self, tmp_path):
+        orig = tmp_path / "file"
+        (orig / "docs").mkdir(parents=True)
+        (orig / "docs" / "guide.md").write_text("## Guide\n\nContent.\n")
+        (orig / "docs" / "special.md").write_text("## Special\n\nSpecial content.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [
+            {"file": "docs/", "lang": "eng"},
+            {"file": "docs/special.md", "lang": "fra", "title": "Spécial"},
+        ])
+
+        from lorme.recipe import parse_recipe, expand_directory_entries
+        m = parse_recipe(str(manifest))
+        m = expand_directory_entries(m, str(orig))
+        special = [s for s in m["sources"] if "special" in s.get("file", "")]
+        assert len(special) == 1
+        assert special[0]["lang"] == "fra"
+        assert special[0]["title"] == "Spécial"
+
+    def test_files_outside_directory_entries_ignored(self, tmp_path):
+        orig = tmp_path / "file"
+        (orig / "docs").mkdir(parents=True)
+        (orig / "docs" / "guide.md").write_text("## Guide\n\nContent.\n")
+        (orig / "other.md").write_text("## Other\n\nIgnored.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [
+            {"file": "docs/"},
+        ])
+
+        from lorme.recipe import parse_recipe, expand_directory_entries
+        m = parse_recipe(str(manifest))
+        m = expand_directory_entries(m, str(orig))
+        origs = [s["file"] for s in m["sources"]]
+        assert "docs/guide.md" in origs
+        assert "other.md" not in origs
+
+
+class TestAllowDownload:
+    """E12.58: URL-only sources require --allow-download."""
+
+    def test_url_only_without_flag_reports_error(self, tmp_path):
+        """URL-only source without allow_download produces error."""
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"url": "https://example.com/doc.html"}])
+
+        reports = preprocess_sources(
+            str(manifest), str(tmp_path),
+            _cfg(allow_download=False),
+        )
+        assert reports[0]["status"] == "error"
+        assert "allow-download" in reports[0].get("message", "").lower()
+
+    def test_url_only_with_flag_attempts_fetch(self, tmp_path):
+        """URL-only source with allow_download attempts fetch."""
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"url": "https://example.com/doc.html"}])
+
+        reports = preprocess_sources(
+            str(manifest), str(tmp_path),
+            _cfg(allow_download=True),
+        )
+        # Will fail to fetch (no network in test) but should attempt
+        assert reports[0]["status"] in ("error", "ok")
+        if reports[0]["status"] == "error":
+            assert "allow-download" not in reports[0].get("message", "").lower()
+
+
+class TestDownloadImmutability:
+    """E12.101: downloads must not write to orig_dir."""
+
+    def test_fetch_url_writes_to_work_dir_not_orig(self, tmp_path, monkeypatch):
+        """URL fetch should write to work dir, not orig_dir."""
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        build = tmp_path / "build"
+        build.mkdir()
+
+        manifest = build / "manifest.yaml"
+        _write_manifest(manifest, [{"url": "https://example.com/doc.html"}])
+
+        # Mock _fetch_url to succeed and write a file
+        def mock_fetch(url, dest):
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text("fetched content")
+            return {"ok": True, "path": str(dest)}
+
+        import lorme.preprocess as pp
+        monkeypatch.setattr(pp, "_fetch_url", mock_fetch)
+
+        reports = preprocess_sources(
+            str(manifest), str(build),
+            _cfg(allow_download=True, orig_dir=str(orig),
+                 build_dir=str(build)),
+        )
+
+        # orig_dir must not contain any new files
+        orig_files = list(orig.rglob("*"))
+        assert len(orig_files) == 0, (
+            f"orig_dir was modified with: {[f.name for f in orig_files]}"
+        )
+
+    def test_phase1_fetch_writes_to_downloads_dir(self, tmp_path, monkeypatch):
+        """_phase1_worker URL download should go to downloads subdir, not orig."""
+        import json
+        import lorme.preprocess as pp
+
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        prep = tmp_path / "prep"
+        prep.mkdir()
+
+        written_paths = []
+
+        def mock_fetch(url, dest):
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text("# Fetched\n\nContent from URL.\n")
+            written_paths.append(dest)
+            return {"ok": True, "path": str(dest)}
+
+        monkeypatch.setattr(pp, "_fetch_url", mock_fetch)
+
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"url": "https://example.com/test.html"}])
+
+        report_path = prep / "report.json"
+        _phase1_worker(
+            str(manifest), str(orig), str(prep),
+            str(report_path), "quiet", allow_download=True,
+        )
+
+        # Verify file was written somewhere
+        assert len(written_paths) > 0, "fetch was not called"
+
+        # orig_dir must not contain downloaded files
+        orig_files = [f for f in orig.rglob("*") if f.is_file()]
+        assert len(orig_files) == 0, (
+            f"orig_dir was modified with: {[f.name for f in orig_files]}"
+        )
+
+
+class TestExtensionFallback:
+    """E12.107: find pre-downloaded files with added extension."""
+
+    def test_finds_file_with_extension(self, tmp_path):
+        """URL basename 'doc' should find 'doc.html' in orig_dir."""
+        import json
+
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        (orig / "open-source-ai-definition.html").write_text(
+            "<html><body><h1>Title</h1><p>Content.</p></body></html>"
+        )
+
+        prep = tmp_path / "prep"
+        prep.mkdir()
+
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{
+            "url": "https://example.com/open-source-ai-definition",
+        }])
+
+        report_path = prep / "report.json"
+        _phase1_worker(
+            str(manifest), str(orig), str(prep),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        parsed_values = list(report["parsed"].values())
+        ok_count = sum(1 for v in parsed_values if v["status"] == "ok")
+        assert ok_count >= 1, (
+            f"Expected file found with extension fallback, got: {report}"
+        )
+
+
+class TestPoorSourcesIndexed:
+    """E12.109: poor sources indexed by default, skip_poor to exclude."""
+
+    _POOR_CONTENT = '{"a": 1, "b": [2,3,4], "c": {"d": "val"}}\n' * 50
+
+    def test_poor_source_indexed_by_default(self, tmp_path):
+        """Source with poor quality should still be written to prep/."""
+        orig = tmp_path / "file"
+        orig.mkdir()
+        (orig / "data.md").write_text(self._POOR_CONTENT)
+
+        build = tmp_path / "build"
+        manifest = build / "manifest.yaml"
+        build.mkdir()
+        _write_manifest(manifest, [{"file": "data.md"}])
+
+        reports = preprocess_sources(
+            str(manifest), str(build),
+            _cfg(force=False, build_dir=str(build), orig_dir=str(orig)),
+        )
+        assert reports[0]["status"] == "ok", f"Poor source not indexed: {reports[0]}"
+        prep_files = list((build / "prep").rglob("*.md"))
+        assert len(prep_files) >= 1, f"Poor source not written: {prep_files}"
+
+    def test_skip_poor_excludes_poor_source(self, tmp_path):
+        """skip_poor=True should exclude poor sources."""
+        orig = tmp_path / "file"
+        orig.mkdir()
+        (orig / "data.md").write_text(self._POOR_CONTENT)
+
+        build = tmp_path / "build"
+        manifest = build / "manifest.yaml"
+        build.mkdir()
+        _write_manifest(manifest, [{"file": "data.md"}])
+
+        reports = preprocess_sources(
+            str(manifest), str(build),
+            _cfg(force=False, build_dir=str(build), orig_dir=str(orig), skip_poor=True),
+        )
+        assert reports[0]["status"] == "poor"
+
+
+class TestReportCompleteness:
+    """E12.108: all sources must appear in report, no silent drops."""
+
+    def test_all_sources_in_phase1_report(self, tmp_path):
+        """N sources → N entries in phase1 report."""
+        import json
+
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        (orig / "doc.md").write_text("## Title\n\nContent.\n")
+
+        prep = tmp_path / "prep"
+        prep.mkdir()
+
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [
+            {"file": "doc.md"},
+            {"file": "missing.md"},
+            {"file": "also-missing.md"},
+        ])
+
+        report_path = prep / "report.json"
+        _phase1_worker(
+            str(manifest), str(orig), str(prep),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        all_files = set(report["parsed"].keys()) | {e["file"] for e in report["errors"]}
+        assert len(all_files) == 3, (
+            f"Expected 3 sources in report, got {len(all_files)}: {all_files}"
+        )
+
+    def test_all_sources_in_final_report(self, tmp_path):
+        """preprocess_sources reports all sources, including failed ones."""
+        orig = tmp_path / "file"
+        orig.mkdir()
+        (orig / "doc.md").write_text("## Title\n\nContent here.\n")
+
+        build = tmp_path / "build"
+        build.mkdir()
+
+        manifest = build / "manifest.yaml"
+        _write_manifest(manifest, [
+            {"file": "doc.md"},
+            {"file": "missing.md"},
+        ])
+
+        reports = preprocess_sources(
+            str(manifest), str(build),
+            _cfg(build_dir=str(build), orig_dir=str(orig)),
+        )
+        reported_files = {r["file"] for r in reports}
+        assert len(reported_files) == 2, (
+            f"Expected 2 in report, got {len(reported_files)}: {reported_files}"
+        )
+
+
+class TestExtensionFallback:
+    """E12.107: find pre-downloaded files with added extension."""
+
+    def test_finds_file_with_extension(self, tmp_path):
+        """URL basename 'doc' should find 'doc.html' in orig_dir."""
+        import json
+
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        (orig / "open-source-ai-definition.html").write_text(
+            "<html><body><h1>Title</h1><p>Content.</p></body></html>"
+        )
+
+        prep = tmp_path / "prep"
+        prep.mkdir()
+
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{
+            "url": "https://example.com/open-source-ai-definition",
+        }])
+
+        report_path = prep / "report.json"
+        _phase1_worker(
+            str(manifest), str(orig), str(prep),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        parsed_values = list(report["parsed"].values())
+        ok_count = sum(1 for v in parsed_values if v["status"] == "ok")
+        assert ok_count >= 1, (
+            f"Expected file found with extension fallback, got: {report}"
+        )
+
+    def test_finds_dotted_basename(self, tmp_path):
+        """Dotted basename like 2606.03019v1 should find 2606.03019v1.html."""
+        import json
+
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        (orig / "2606.03019v1.html").write_text(
+            "<html><body><h1>Paper</h1><p>Abstract content.</p></body></html>"
+        )
+
+        prep = tmp_path / "prep"
+        prep.mkdir()
+
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "2606.03019v1"}])
+
+        report_path = prep / "report.json"
+        _phase1_worker(
+            str(manifest), str(orig), str(prep),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        parsed_values = list(report["parsed"].values())
+        ok_count = sum(1 for v in parsed_values if v["status"] == "ok")
+        assert ok_count >= 1, f"Dotted basename not found: {report}"
+
+    def test_finds_extensionless_file(self, tmp_path):
+        """File without extension in orig_dir should be found and parsed."""
+        import json
+
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        (orig / "open-source-ai-definition").write_text(
+            "<html><body><h1>Open Source AI</h1><p>Definition content.</p></body></html>"
+        )
+
+        prep = tmp_path / "prep"
+        prep.mkdir()
+
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "open-source-ai-definition"}])
+
+        report_path = prep / "report.json"
+        _phase1_worker(
+            str(manifest), str(orig), str(prep),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        parsed_values = list(report["parsed"].values())
+        ok_count = sum(1 for v in parsed_values if v["status"] == "ok")
+        assert ok_count >= 1, f"Extensionless file not parsed: {report}"
+
+
+class TestPhasePipeline:
+    """Tests for phase-based pipeline (E12.26)."""
+
+    def test_accepts_llm_entry_dict(self, tmp_path):
+        """llm_entry and vlm_entry as dicts (not individual params)."""
+        (tmp_path / "doc.md").write_text("## Title\n\ncontent\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        reports = preprocess_sources(str(manifest), str(tmp_path), _cfg())
+        assert reports[0]["status"] == "ok"
+
+    def test_phase_pipeline_same_output(self, tmp_path):
+        """Phase pipeline produces same file output as before."""
+        orig = tmp_path / "file"
+        orig.mkdir()
+        (orig / "a.md").write_text("## Doc A\n\nContent A.\n")
+        (orig / "b.md").write_text("## Doc B\n\nContent B.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "a.md"}, {"file": "b.md"}])
+
+        build = tmp_path / "build"
+        reports = preprocess_sources(
+            str(manifest), str(tmp_path),
+            _cfg(orig_dir=str(orig), build_dir=str(build)),
+        )
+
+        assert len([r for r in reports if r["status"] == "ok"]) == 2
+        final_dir = build / "prep"
+        assert (final_dir / "a.md").exists()
+        assert (final_dir / "b.md").exists()
+
+    def test_no_caption_models_skips_captioning(self, tmp_path):
+        """No caption models in config = no captioning phase, no error."""
+        (tmp_path / "doc.md").write_text("content\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        reports = preprocess_sources(str(manifest), str(tmp_path), _cfg())
+        assert reports[0]["status"] == "ok"
+
+    def test_no_llm_skips_enrich(self, tmp_path):
+        """No LLM in config + enrich requested = clean only, no crash."""
+        (tmp_path / "doc.md").write_text("## Title\n\ncontent\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        reports = preprocess_sources(
+            str(manifest), str(tmp_path),
+            _cfg(enrich_techniques=["context"]),
+        )
+        assert reports[0]["status"] == "ok"
+
+
+class TestPreprocessConfig:
+    """E12.47: preprocess_sources with minimal signature (config only)."""
+
+    def test_config_only_signature(self, tmp_path):
+        """preprocess_sources works with just manifest + dir + config."""
+        from lorme.config import LormeConfig
+
+        (tmp_path / "doc.md").write_text("## Title\n\nContent here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        cfg = LormeConfig(force=True)
+        reports = preprocess_sources(str(manifest), str(tmp_path), cfg)
+        assert reports[0]["status"] == "ok"
+
+    def test_config_runtime_flags(self, tmp_path):
+        """Runtime flags (force, output_level) read from config."""
+        from lorme.config import LormeConfig
+
+        (tmp_path / "doc.md").write_text("## Title\n\nContent here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        cfg = LormeConfig(
+            force=True,
+            output_level="quiet",
+            ocr_engine="tesseract",
+            ocr_lang=["fra", "eng"],
+        )
+        reports = preprocess_sources(str(manifest), str(tmp_path), cfg)
+        assert reports[0]["status"] == "ok"
+
+    def test_config_enrich_techniques(self, tmp_path):
+        """Enrich techniques resolved from config."""
+        from lorme.config import LormeConfig
+
+        (tmp_path / "doc.md").write_text("## Title\n\nContent here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        cfg = LormeConfig(
+            force=True,
+            enrich_techniques=["context", "qa"],
+        )
+        reports = preprocess_sources(str(manifest), str(tmp_path), cfg)
+        assert reports[0]["status"] == "ok"
+
+
+class TestPhase1Worker:
+    """E12.33: direct tests for _phase1_worker subprocess function."""
+
+    def test_parses_markdown_file(self, tmp_path):
+        """Markdown file parsed and phase1 output written."""
+        import json
+
+        (tmp_path / "doc.md").write_text("## Title\n\nContent here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        manifest.write_text(yaml.dump({
+            "collection": "test", "level": "libre",
+            "sources": [{"file": "doc.md"}],
+        }))
+        report_path = tmp_path / "report.json"
+
+        _phase1_worker(
+            str(manifest), str(tmp_path), str(tmp_path),
+            str(report_path), "quiet",
+        )
+
+        assert report_path.exists()
+        report = json.loads(report_path.read_text())
+        assert "parsed" in report
+        assert len(report["errors"]) == 0
+        parsed = list(report["parsed"].values())
+        assert parsed[0]["status"] == "ok"
+        assert (tmp_path / "doc.phase1-parse.md").exists()
+
+    def test_missing_file_reported(self, tmp_path):
+        """Missing source file produces error in report."""
+        import json
+
+        manifest = tmp_path / "manifest.yaml"
+        manifest.write_text(yaml.dump({
+            "collection": "test", "level": "libre",
+            "sources": [{"file": "missing.md"}],
+        }))
+        report_path = tmp_path / "report.json"
+
+        _phase1_worker(
+            str(manifest), str(tmp_path), str(tmp_path),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        assert len(report["errors"]) == 1
+        assert report["errors"][0]["status"] == "missing"
+
+    def test_multiple_files(self, tmp_path):
+        """Multiple files all parsed."""
+        import json
+
+        (tmp_path / "a.md").write_text("## A\n\nContent A.\n")
+        (tmp_path / "b.md").write_text("## B\n\nContent B.\n")
+        manifest = tmp_path / "manifest.yaml"
+        manifest.write_text(yaml.dump({
+            "collection": "test", "level": "libre",
+            "sources": [{"file": "a.md"}, {"file": "b.md"}],
+        }))
+        report_path = tmp_path / "report.json"
+
+        _phase1_worker(
+            str(manifest), str(tmp_path), str(tmp_path),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        assert len(report["parsed"]) == 2
+        assert all(m["status"] == "ok" for m in report["parsed"].values())
+
+    def test_report_contains_text_file_path(self, tmp_path):
+        """Report includes path to phase1 output file."""
+        import json
+
+        (tmp_path / "doc.md").write_text("## Title\n\nContent.\n")
+        manifest = tmp_path / "manifest.yaml"
+        manifest.write_text(yaml.dump({
+            "collection": "test", "level": "libre",
+            "sources": [{"file": "doc.md"}],
+        }))
+        report_path = tmp_path / "report.json"
+
+        _phase1_worker(
+            str(manifest), str(tmp_path), str(tmp_path),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        parsed = list(report["parsed"].values())[0]
+        assert "text_file" in parsed
+        from pathlib import Path as P
+        assert P(parsed["text_file"]).exists()
+
+    def test_orig_dir_resolved(self, tmp_path):
+        """orig_dir parameter correctly resolves source paths."""
+        import json
+
+        orig = tmp_path / "raw"
+        orig.mkdir()
+        (orig / "doc.md").write_text("## Title\n\nContent.\n")
+        manifest = tmp_path / "manifest.yaml"
+        manifest.write_text(yaml.dump({
+            "collection": "test", "level": "libre",
+            "sources": [{"file": "doc.md"}],
+        }))
+        report_path = tmp_path / "report.json"
+
+        _phase1_worker(
+            str(manifest), str(tmp_path / "raw"), str(tmp_path),
+            str(report_path), "quiet",
+        )
+
+        report = json.loads(report_path.read_text())
+        parsed = list(report["parsed"].values())[0]
+        assert parsed["status"] == "ok"
+
+
+class TestOutputLayout:
+    """E12.90: build_dir structure (prep/, .work/, report)."""
+
+    def test_final_files_in_prep_dir(self, tmp_path):
+        """Final .md files go in build_dir/prep/."""
+        docs = tmp_path / "my-corpus"
+        docs.mkdir()
+        (docs / "doc.md").write_text("## Title\n\nContent here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        build = tmp_path / "output"
+        cfg = _cfg(orig_dir=str(docs), build_dir=str(build))
+
+        reports = preprocess_sources(str(manifest), str(docs), cfg)
+
+        assert (build / "prep" / "doc.md").exists()
+
+    def test_report_in_build_dir(self, tmp_path):
+        """Report goes in build_dir root."""
+        docs = tmp_path / "my-corpus"
+        docs.mkdir()
+        (docs / "doc.md").write_text("## Title\n\nContent here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        build = tmp_path / "output"
+        cfg = _cfg(orig_dir=str(docs), build_dir=str(build))
+
+        preprocess_sources(str(manifest), str(docs), cfg)
+
+        assert (build / "preprocess-report.json").exists()
+
+    def test_intermediates_in_work_dir(self, tmp_path):
+        """Intermediate phase files go in build_dir/.work/, not in prep."""
+        docs = tmp_path / "my-corpus"
+        docs.mkdir()
+        (docs / "doc.md").write_text("## Title\n\nContent here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "doc.md"}])
+
+        build = tmp_path / "output"
+        cfg = _cfg(orig_dir=str(docs), build_dir=str(build))
+
+        preprocess_sources(str(manifest), str(docs), cfg)
+
+        final_dir = build / "prep"
+        phase_files = list(final_dir.glob("*.phase*"))
+        assert len(phase_files) == 0, f"Phase files in final dir: {phase_files}"
+
+
+class TestProgressiveReport:
+    """E12.69: report written incrementally, not only at the end."""
+
+    def test_report_written_progressively(self, tmp_path):
+        """E12.69: report written after each source, not only at the end."""
+        import json
+        from unittest.mock import patch
+
+        for name in ["a.md", "b.md"]:
+            (tmp_path / name).write_text(f"## {name}\n\nContent for {name}.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [{"file": "a.md"}, {"file": "b.md"}])
+
+        report_path = tmp_path / "preprocess-report.json"
+        snapshots = []
+
+        original_write = report_path.__class__.write_text
+
+        def spy_write(self, *args, **kwargs):
+            original_write(self, *args, **kwargs)
+            if self == report_path:
+                data = json.loads(self.read_text())
+                snapshots.append(len(data.get("ok", [])))
+
+        with patch.object(report_path.__class__, "write_text", spy_write):
+            preprocess_sources(str(manifest), str(tmp_path), _cfg())
+
+        assert len(snapshots) >= 2, f"Report should be written at least twice, got {snapshots}"
+        assert snapshots[-1] == 2
+
+    def test_report_includes_partial_on_failure(self, tmp_path):
+        """Report includes completed sources even when some fail."""
+        (tmp_path / "good.md").write_text("## Good\n\nValid content here.\n")
+        manifest = tmp_path / "manifest.yaml"
+        _write_manifest(manifest, [
+            {"file": "good.md"},
+            {"file": "missing.md"},
+        ])
+
+        import json
+        preprocess_sources(str(manifest), str(tmp_path), _cfg())
+
+        report_path = tmp_path / "preprocess-report.json"
+        assert report_path.exists()
+        data = json.loads(report_path.read_text())
+        assert len(data["ok"]) == 1
+        assert len(data["missing"]) == 1
+
+
+class TestSttFix:
+    """E12.72: STT post-correction via LLM enrichment."""
+
+    def test_stt_fix_corrects_errors(self):
+        """stt_fix replaces STT errors in text with timestamp headings."""
+        from unittest.mock import patch
+        from lorme.preprocess.enrich import enrich_stt_fix
+
+        stt_text = (
+            "# Talk\n\n"
+            "## [00:00:00]\n\n"
+            "Today we discuss Asian development and Ejetic loops.\n\n"
+            "## [00:02:00]\n\n"
+            "The Asian framework handles tool execution.\n"
+        )
+
+        def mock_llm(config, prompt):
+            return prompt.split("Text: ")[-1].split("\n\nCorrected")[0].replace(
+                "Asian", "agent"
+            ).replace("Ejetic", "agentic")
+
+        with patch("lorme.preprocess.llm.call_llm", side_effect=mock_llm):
+            result = enrich_stt_fix(stt_text, "http://fake/v1/chat/completions", "model")
+
+        assert "agent development" in result
+        assert "agentic loops" in result
+        assert "Asian" not in result
+
+    def test_stt_fix_skips_non_stt_content(self):
+        """stt_fix returns text unchanged when no timestamp headings present."""
+        from lorme.preprocess.enrich import enrich_stt_fix
+
+        normal_text = (
+            "# Document\n\n"
+            "## Introduction\n\n"
+            "This is a normal document about Asian cuisine.\n"
+        )
+
+        result = enrich_stt_fix(normal_text, "http://fake/v1/chat/completions", "model")
+
+        assert result == normal_text
+        assert "Asian cuisine" in result

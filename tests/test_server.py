@@ -1,23 +1,23 @@
-"""Tests for lore_mcp.server. See docs/architecture.md for design context."""
+"""Tests for lorme.server. See docs/architecture.md for design context."""
 
 import os
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-from lore_mcp.server import (
+from lorme.server import (
     _get_embedder,
-    format_collections,
     format_search_results,
     format_sources,
     list_collections,
     list_indexed_sources,
     search_docs,
 )
-from lore_mcp.store import create_tables, insert_chunk, open_db
+from lorme.store import create_tables, insert_chunk, open_db
 
-import lore_mcp.server as server_module
+import lorme.server as server_module
 
 
 DIMS = 64
@@ -32,7 +32,7 @@ def _fake_embedding(text):
 
 
 def _make_mock_embedder():
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
 
     emb = Embedder(model_name="test-model", mode="builtin:cpu")
     mock_model = MagicMock()
@@ -115,97 +115,137 @@ class TestFormatSources:
         assert "0" in output
 
 
-class TestFormatCollections:
-    def test_formats_collections(self):
-        colls = [
-            {"name": "docs-libre", "level": "libre", "chunk_count": 10, "file_count": 3},
-            {"name": "ai-gris", "level": "gris", "chunk_count": 5, "file_count": 2},
-        ]
-        output = format_collections(colls)
-        assert "2 collection" in output
-        assert "docs-libre" in output
-        assert "[libre]" in output
-
-    def test_empty(self):
-        output = format_collections([])
-        assert "no collection" in output.lower() or "No collection" in output
-
-
 class TestSingleCollectionMode:
     def test_search_docs(self, single_db):
-        from lore_mcp.config import LoreConfig
-        server_module._embedder = _make_mock_embedder(); server_module._single_db = None
-        server_module._config = LoreConfig(db_path=single_db, db_dir="")
+        from lorme.config import LormeConfig
+        server_module._embedder = _make_mock_embedder(); server_module._store_cache.clear()
+        server_module._config = LormeConfig(db_dir=str(Path(single_db).parent), default_collection=Path(single_db).stem)
         try:
             output = search_docs("search", top_k=2)
             assert "result" in output.lower()
         finally:
-            server_module._embedder = None; server_module._single_db = None; server_module._config = None
+            server_module._embedder = None; server_module._store_cache.clear(); server_module._config = None
 
     def test_list_sources(self, single_db):
-        from lore_mcp.config import LoreConfig
-        server_module._embedder = _make_mock_embedder(); server_module._single_db = None
-        server_module._config = LoreConfig(db_path=single_db, db_dir="")
+        from lorme.config import LormeConfig
+        server_module._embedder = _make_mock_embedder(); server_module._store_cache.clear()
+        server_module._config = LormeConfig(db_dir=str(Path(single_db).parent), default_collection=Path(single_db).stem)
         try:
             output = list_indexed_sources()
             assert "3 chunks" in output
         finally:
-            server_module._embedder = None; server_module._single_db = None; server_module._config = None
+            server_module._embedder = None; server_module._store_cache.clear(); server_module._config = None
 
-    def test_list_collections_single_mode(self):
-        from lore_mcp.config import LoreConfig
-        server_module._config = LoreConfig(db_dir="")
+    def test_list_collections_no_data(self):
+        from lorme.config import LormeConfig
+        import tempfile
+        empty = tempfile.mkdtemp()
+        server_module._config = LormeConfig(db_dir=empty)
         output = list_collections()
-        assert "Single-collection" in output
+        assert "no collection" in output.lower() or "not found" in output.lower()
         server_module._config = None
 
 
-class TestMultiCollectionMode:
-    def test_search_across_all(self, multi_db):
-        from lore_mcp.config import LoreConfig
-        server_module._embedder = _make_mock_embedder(); server_module._single_db = None
-        server_module._config = LoreConfig(db_dir=multi_db)
+    def test_search_ignores_orphan_vectors(self, tmp_path):
+        """E1.05: orphan vectors (no matching chunk) must not crash or return NULL."""
+        from lorme.config import LormeConfig
+        from lorme.store import serialize_float32
+
+        db_path = str(tmp_path / "orphan.db")
+        db = open_db(db_path)
+        create_tables(db, "test-model", DIMS)
+        text = "Valid document content."
+        emb = _fake_embedding(text)
+        insert_chunk(db, "c0", "doc.md", 0, text, emb)
+        orphan_emb = _fake_embedding("orphan vector no chunk")
+        db.execute(
+            "INSERT INTO chunks_vec(rowid, embedding) VALUES (?, ?)",
+            (9999, serialize_float32(orphan_emb)),
+        )
+        db.commit()
+        db.close()
+
+        server_module._embedder = _make_mock_embedder()
+        server_module._store_cache.clear()
+        server_module._config = LormeConfig(db_dir=str(Path(db_path).parent), default_collection=Path(db_path).stem)
         try:
-            output = search_docs("search", top_k=3)
+            output = search_docs("document", top_k=5)
+            assert "result" in output.lower()
+            assert "None" not in output
+        finally:
+            server_module._embedder = None
+            server_module._store_cache.clear()
+            server_module._config = None
+
+
+class TestMultiCollectionMode:
+    def test_search_named_collection(self, multi_db):
+        from lorme.config import LormeConfig
+        server_module._embedder = _make_mock_embedder(); server_module._store_cache.clear()
+        server_module._config = LormeConfig(db_dir=multi_db)
+        try:
+            output = search_docs("Linux", top_k=2, collection="docs-libre")
             assert "result" in output.lower()
         finally:
-            server_module._embedder = None; server_module._single_db = None; server_module._config = None
-
-    def test_search_single_collection(self, multi_db):
-        from lore_mcp.config import LoreConfig
-        server_module._embedder = _make_mock_embedder(); server_module._single_db = None
-        server_module._config = LoreConfig(db_dir=multi_db)
-        try:
-            output = search_docs("search", top_k=2, collection="docs-libre")
-            assert "docs-libre" in output
-        finally:
-            server_module._embedder = None; server_module._single_db = None; server_module._config = None
+            server_module._embedder = None; server_module._store_cache.clear(); server_module._config = None
 
     def test_list_collections(self, multi_db):
-        from lore_mcp.config import LoreConfig
-        server_module._config = LoreConfig(db_dir=multi_db)
+        from lorme.config import LormeConfig
+        server_module._config = LormeConfig(db_dir=multi_db)
         output = list_collections()
-        assert "2 collection" in output
+        assert "2 collection" in output.lower()
         assert "docs-libre" in output
         assert "ai-gris" in output
         server_module._config = None
 
     def test_list_sources_across(self, multi_db):
-        from lore_mcp.config import LoreConfig
-        server_module._embedder = _make_mock_embedder(); server_module._single_db = None
-        server_module._config = LoreConfig(db_dir=multi_db)
+        from lorme.config import LormeConfig
+        server_module._embedder = _make_mock_embedder(); server_module._store_cache.clear()
+        server_module._config = LormeConfig(db_dir=multi_db)
         try:
-            output = list_indexed_sources()
-            assert "4 chunks" in output
+            output = list_indexed_sources(collection="docs-libre")
+            assert "2 chunks" in output
         finally:
-            server_module._embedder = None; server_module._single_db = None; server_module._config = None
+            server_module._embedder = None; server_module._store_cache.clear(); server_module._config = None
+
+
+class TestMissingCollection:
+    """E12.122: search/list on nonexistent collection returns message, not crash."""
+
+    def test_search_missing_collection(self):
+        import tempfile
+        from lorme.config import LormeConfig
+        empty = tempfile.mkdtemp()
+        server_module._embedder = _make_mock_embedder()
+        server_module._store_cache.clear()
+        server_module._config = LormeConfig(db_dir=empty, default_collection="nonexistent")
+        try:
+            output = search_docs("test query", collection="nonexistent")
+            assert "not found" in output.lower() or "not indexed" in output.lower()
+        finally:
+            server_module._embedder = None
+            server_module._store_cache.clear()
+            server_module._config = None
+
+    def test_list_sources_missing_collection(self):
+        import tempfile
+        from lorme.config import LormeConfig
+        empty = tempfile.mkdtemp()
+        server_module._store_cache.clear()
+        server_module._config = LormeConfig(db_dir=empty, default_collection="nonexistent")
+        try:
+            output = list_indexed_sources(collection="nonexistent")
+            assert "not found" in output.lower() or "not indexed" in output.lower()
+        finally:
+            server_module._store_cache.clear()
+            server_module._config = None
 
 
 class TestLazyLoading:
     def test_get_embedder_loads_from_config(self):
-        from lore_mcp.config import LoreConfig
-        server_module._embedder = None; server_module._single_db = None
-        server_module._config = LoreConfig(embedding_model="test-model", embedding_mode="builtin:cpu")
+        from lorme.config import LormeConfig
+        server_module._embedder = None; server_module._store_cache.clear()
+        server_module._config = LormeConfig(embedding_model="test-model", embedding_mode="builtin:cpu")
         emb = _get_embedder()
         assert emb.model_name == "test-model"
-        server_module._embedder = None; server_module._single_db = None; server_module._config = None
+        server_module._embedder = None; server_module._store_cache.clear(); server_module._config = None

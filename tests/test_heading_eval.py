@@ -48,7 +48,7 @@ optimization and comparison workflows.
 
 class TestGenerateQuestionsFromSources:
     def test_extracts_heading_section_pairs(self, docs_dir):
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(docs_dir)
         assert len(questions) >= 4
         headings = [q["question"] for q in questions]
@@ -56,26 +56,26 @@ class TestGenerateQuestionsFromSources:
         assert any("Vector storage" in h for h in headings)
 
     def test_ground_truth_is_section_content(self, docs_dir):
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(docs_dir)
         emb_q = [q for q in questions if "Embedding engine" in q["question"]][0]
         assert "GPU" in emb_q["ground_truth"]
         assert "automatic fallback" in emb_q["ground_truth"]
 
     def test_source_file_tracked(self, docs_dir):
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(docs_dir)
         sources = {q["source_file"] for q in questions}
         assert "architecture.md" in sources
         assert "configuration.md" in sources
 
     def test_num_questions_limit(self, docs_dir):
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(docs_dir, num_questions=2)
         assert len(questions) == 2
 
     def test_skips_top_level_heading(self, docs_dir):
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(docs_dir)
         headings = [q["question"] for q in questions]
         assert not any(h == "Architecture" for h in headings)
@@ -92,7 +92,7 @@ class TestGenerateQuestionsFromSources:
 This section has actual content that can be
 used for retrieval evaluation purposes.
 """)
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(str(tmp_path))
         headings = [q["question"] for q in questions]
         assert "Empty section" not in headings
@@ -120,9 +120,9 @@ sources:
   - path: included.md
     title: Included
 """)
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(
-            str(tmp_path), manifest_path=str(manifest),
+            str(tmp_path), recipe_path=str(manifest),
         )
         headings = [q["question"] for q in questions]
         assert any("Included heading" in h for h in headings)
@@ -137,7 +137,7 @@ sources:
 This section has content long enough to be
 captured as a valid ground truth for evaluation.
 """)
-        from lore_mcp.eval import generate_questions_from_sources
+        from lorme.eval import generate_questions_from_sources
         questions = generate_questions_from_sources(str(tmp_path))
         headings = [q["question"] for q in questions]
         assert any("Sub heading with hashes" in h for h in headings)
@@ -146,38 +146,62 @@ captured as a valid ground truth for evaluation.
 
 class TestNdcgAtK:
     def test_perfect_ranking(self):
-        from lore_mcp.eval import ndcg_at_k
+        from lorme.eval import ndcg_at_k
         relevances = [1, 1, 0, 0, 0]
         assert ndcg_at_k(relevances, k=5) == pytest.approx(1.0)
 
     def test_reversed_ranking(self):
-        from lore_mcp.eval import ndcg_at_k
+        from lorme.eval import ndcg_at_k
         relevances = [0, 0, 0, 1, 1]
         assert ndcg_at_k(relevances, k=5) < 0.7
 
     def test_no_relevant(self):
-        from lore_mcp.eval import ndcg_at_k
+        from lorme.eval import ndcg_at_k
         relevances = [0, 0, 0]
         assert ndcg_at_k(relevances, k=3) == 0.0
 
     def test_single_relevant_first(self):
-        from lore_mcp.eval import ndcg_at_k
+        from lorme.eval import ndcg_at_k
         relevances = [1, 0, 0]
         assert ndcg_at_k(relevances, k=3) == pytest.approx(1.0)
 
 
 class TestRecallAtK:
     def test_all_found(self):
-        from lore_mcp.eval import recall_at_k
+        from lorme.eval import recall_at_k
         relevances = [1, 1, 0]
         assert recall_at_k(relevances, total_relevant=2, k=3) == pytest.approx(1.0)
 
     def test_partial(self):
-        from lore_mcp.eval import recall_at_k
+        from lorme.eval import recall_at_k
         relevances = [1, 0, 0]
         assert recall_at_k(relevances, total_relevant=2, k=3) == pytest.approx(0.5)
 
     def test_none_found(self):
-        from lore_mcp.eval import recall_at_k
+        from lorme.eval import recall_at_k
         relevances = [0, 0, 0]
         assert recall_at_k(relevances, total_relevant=2, k=3) == pytest.approx(0.0)
+
+
+class TestQuestionBalancing:
+    """E12.110: questions balanced across sources."""
+
+    def test_round_robin_balances_sources(self, tmp_path):
+        """Large source should not dominate question pool."""
+        from lorme.eval import generate_questions_from_sources
+
+        big = tmp_path / "big.md"
+        big.write_text("# Big Doc\n\n" + "\n\n".join(
+            f"## Section {i}\n\nDetailed content for section {i} with enough text for a valid question.\n"
+            for i in range(50)
+        ))
+
+        small = tmp_path / "small.md"
+        small.write_text("# Small Doc\n\n## Only Section\n\nSmall but valid content for evaluation.\n")
+
+        questions = generate_questions_from_sources(str(tmp_path), num_questions=10)
+        sources = [q["source_file"] for q in questions]
+        from collections import Counter
+        counts = Counter(sources)
+        assert counts.get("small.md", 0) >= 1, f"Small source not represented: {counts}"
+        assert counts.get("big.md", 0) <= 9, f"Big source dominates: {counts}"

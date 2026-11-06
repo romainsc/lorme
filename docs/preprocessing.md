@@ -1,12 +1,12 @@
 # Preprocessing — Preparing sources for RAG
 
 This guide explains how to prepare markdown
-sources before indexing them with lore-mcp.
+sources before indexing them with lorme.
 Preprocessing is the single most impactful
 factor in retrieval quality.
 
 For build workflow, see [`tutorial.md`](tutorial.md).
-For source quality analysis, see `lore-mcp lint`.
+For source quality analysis, see `lorme lint`.
 For design rationale, see
 [`architecture.md`](architecture.md).
 
@@ -18,7 +18,7 @@ order of measured impact:
 | Factor | Impact | What you control |
 |--------|--------|------------------|
 | **Source preprocessing** | ~60% | Text quality, noise removal, structure |
-| **Chunking parameters** | ~20% | chunk_size, overlap (use `lore-mcp optimize`) |
+| **Chunking parameters** | ~20% | chunk_size, overlap (use `lorme optimize`) |
 | **Embedding model** | ~15% | Model choice (see ADR-005) |
 | **Search parameters** | ~5% | top_k, similarity threshold |
 
@@ -45,9 +45,9 @@ the quality of what comes out.
 ## 2. Headings as structural signal
 
 Markdown headings (`##`, `###`) are **structural
-markers**, not noise. lore-mcp uses them as
+markers**, not noise. lorme uses them as
 primary split boundaries for chunking
-(`ingest.py:MD_SEPARATORS`).
+(Docling HybridChunker split boundaries).
 
 ### Headings are preserved in chunks
 
@@ -92,7 +92,7 @@ unrelated sections.
 
 ### Strip `#` from search queries
 
-When querying lore-mcp, **do not include `#` in
+When querying lorme, **do not include `#` in
 your query**. Measured impact on cosine similarity:
 
 | Query | Cosine score |
@@ -103,7 +103,7 @@ your query**. Measured impact on cosine similarity:
 The `#` characters dilute the query vector.
 Headings are **preserved** in indexed chunks —
 they are structural signal for both chunking
-(`MD_SEPARATORS`) and retrieval context. Do not
+(HybridChunker boundaries) and retrieval context. Do not
 strip `#` from source content.
 
 This is handled automatically in `eval.py`
@@ -112,7 +112,7 @@ heading-based question generation
 
 ## 3. Image handling
 
-lore-mcp replaces markdown images with their
+lorme replaces markdown images with their
 alt text during preprocessing
 (`ingest.py:preprocess`):
 
@@ -163,7 +163,7 @@ contribute nothing to retrieval.
 ## 4. Noise detection
 
 Some content degrades retrieval quality by
-adding irrelevant matches. Use `lore-mcp lint`
+adding irrelevant matches. Use `lorme lint`
 to detect these patterns before indexing.
 
 ### Common noise patterns
@@ -222,7 +222,7 @@ not after.
 ### Running lint
 
 ```bash
-lore-mcp lint manifest.yaml --docs-dir /path/to/docs
+lorme lint manifest.yaml --docs-dir /path/to/docs
 ```
 
 Output is a per-file quality report with text
@@ -266,18 +266,18 @@ this checklist:
   degrades embedding quality — the model uses
   casing and punctuation as signals
 - [ ] **Front matter with metadata**: title,
-  author, license, date. lore-mcp extracts
-  front matter via `manifest.py` and stores it
+  author, license, date. lorme extracts
+  front matter via `recipe.py` and stores it
   in the `sources` table for bibliographic
   output
 
 ### Context window budget
 
 Chunks larger than ~2500 tokens show quality
-degradation (context cliff). lore-mcp defaults
+degradation (context cliff). lorme defaults
 to 1024 characters (~256 tokens) with 128
 character overlap, well within the safe range.
-Use `lore-mcp optimize` to find the best
+Use `lorme optimize` to find the best
 chunk_size/overlap for your corpus.
 
 > Source: FloTorch 2026, confirmed by E14.17
@@ -310,7 +310,7 @@ impact is dramatic: RAG accuracy varies from
 tools (E14.17): Docling (MIT, 97.9% accuracy)
 for PDF/DOCX, trafilatura (Apache 2.0, F1 0.966)
 for web content. See E6.06 for the multi-format
-ingestion study. Run `lore-mcp lint` to detect
+ingestion study. Run `lorme lint` to detect
 low text density after conversion.
 
 ### HTML-to-markdown residual tags
@@ -342,8 +342,8 @@ Indexing everything into one large collection
 degrades retrieval precision. Three targeted
 collections outperform one noisy collection.
 
-**Fix**: use lore-mcp's multi-collection
-support (`LORE_DB_DIR`). Group sources by theme
+**Fix**: use lorme's multi-collection
+support (`database.dir` in config.yaml). Group sources by theme
 and confidentiality level. See
 [ADR-004](adr/004-multi-collection.md) for
 the naming convention (`<theme>-<level>.db`).
@@ -351,7 +351,7 @@ the naming convention (`<theme>-<level>.db`).
 ## 7. Advanced upstream techniques
 
 These techniques are applied **before** passing
-sources to lore-mcp. They require no lore-mcp
+sources to lorme. They require no lorme
 code — they are upstream enrichments that the
 source provider performs on the markdown files.
 
@@ -381,7 +381,7 @@ vectors closer to how users actually query.
 
 How to apply: ask the LLM to generate questions
 from each section, append them to the source
-markdown. No lore-mcp code needed.
+markdown. No lorme code needed.
 
 ### Proposition indexing
 
@@ -419,13 +419,13 @@ user's query. That answer is embedded and used
 for vector search instead of the raw query.
 
 Measured impact: +10-20% on ambiguous queries.
-Implemented in the MCP client, not in lore-mcp.
+Implemented in the MCP client, not in lorme.
 
 ### Metadata enrichment
 
 Add structured metadata to chunks before
 embedding: heading path (already done by
-lore-mcp), section summaries (LLM),
+lorme), section summaries (LLM),
 keywords (TextRank), named entities (SpaCy
 NER), generated questions (LLM).
 
@@ -437,22 +437,25 @@ document hierarchy metadata (Contextual AI).
 > study. See the full study for implementation
 > details per product.
 
-## Scope — what lore-mcp handles
+## Scope — what lorme handles
 
-lore-mcp covers steps 4-6 of the RAG pipeline:
+lorme covers all 6 steps of the RAG pipeline
+via `lorme preprocess` (steps 1-3) and
+`lorme build` (steps 4-6):
 
 | Step | Description | Owner |
 |------|-------------|-------|
-| 1. Parse | Convert source format to text | You (upstream) |
-| 2. Clean | Remove noise, fix encoding | You (upstream) |
-| 3. Deduplicate | Remove duplicate content | You (upstream) |
-| 4. Split | Chunk text into segments | lore-mcp (`ingest.py`) |
-| 5. Enrich | Embed + metadata | lore-mcp (`embedder.py`, `manifest.py`) |
-| 6. Index | Store vectors | lore-mcp (`store.py`) |
+| 1. Parse | Convert source format to text | lorme (`preprocess/parse.py`) |
+| 2. Clean | Remove noise, fix encoding | lorme (`preprocess/clean.py`) |
+| 3. Deduplicate | Detect duplicate content | lorme (`preprocess/dedup.py`) |
+| 4. Split | Chunk text into segments | lorme (`ingest.py`) |
+| 5. Enrich | Embed + metadata | lorme (`embedder.py`, `recipe.py`) |
+| 6. Index | Store vectors | lorme (`store.py`) |
 
-This guide focuses on steps 1-3 — your
-responsibility as the source provider. The
-better your input, the better lore-mcp's output.
+This guide focuses on best practices for
+preparing sources — even though lorme handles
+all steps, the quality of your input sources
+still determines the quality of lorme's output.
 
 ---
 

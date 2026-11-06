@@ -1,6 +1,8 @@
-# lore-mcp
+# lorme
 
-**LORE — Local Offline Retrieval Engine for MCP**
+[![Tests](https://github.com/romainsc/lorme/actions/workflows/test.yml/badge.svg)](https://github.com/romainsc/lorme/actions/workflows/test.yml)
+
+**LORME — Local Offline Retrieval & MCP Engine**
 
 An MCP server for semantic search over your local
 documents. Preprocesses, indexes, and serves any
@@ -12,7 +14,8 @@ file on your workstation.
 
 - **Preprocesses** source documents in any format
   (PDF, HTML, DOCX, PPTX, XLSX, EPUB, images,
-  CSV, JSON, XML, markdown) into clean markdown
+  audio, video, CSV, JSON, XML, markdown) into
+  clean markdown
 - **Indexes** with vector embeddings and full-text
   search (hybrid FTS5 + vector with RRF fusion)
 - **Serves** three MCP tools (`search_docs`,
@@ -27,23 +30,31 @@ file on your workstation.
 
 ### 1. Install
 
+From PyPI:
+
 ```bash
-git clone https://github.com/romainsc/lore-mcp.git
-cd lore-mcp
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[parse]"
+pip install lorme
 ```
 
 Install extras by need:
-- `pip install -e .` — core (markdown only)
-- `pip install -e ".[html]"` — add HTML support
+- `pip install lorme` — core (markdown only)
+- `pip install "lorme[html]"` — add HTML support
   (trafilatura)
-- `pip install -e ".[pdf]"` — add PDF/DOCX/PPTX
+- `pip install "lorme[pdf]"` — add PDF/DOCX/PPTX
   support (Docling)
-- `pip install -e ".[parse]"` — all format support
-- `pip install -e ".[eval]"` — RAG evaluation
+- `pip install "lorme[video]"` — add video/audio
+  download from YouTube/platforms (yt-dlp)
+- `pip install "lorme[parse]"` — all format support
+- `pip install "lorme[eval]"` — RAG evaluation
   (RAGAS)
+
+From source:
+
+```bash
+git clone https://github.com/romainsc/lorme.git
+cd lorme
+pip install -e ".[parse]"
+```
 
 ### 2. Create a config file
 
@@ -90,14 +101,14 @@ is the source file in its native format. `path`
 
 ```bash
 # Preprocess: convert + clean sources
-lore-mcp preprocess manifest.yaml \
+lorme preprocess manifest.yaml \
   --config config.yaml \
   --docs-base-dir /path/to/corpus/ \
-  --orig-subdir orig \
-  --prep-subdir prep
+  --orig-dir orig \
+  --prep-dir prep
 
 # Build: index preprocessed sources
-lore-mcp build manifest-prep.yaml \
+lorme build manifest-prep.yaml \
   --config config.yaml \
   --docs-dir /path/to/corpus/prep/ \
   --output-dir /path/to/output/ \
@@ -107,7 +118,7 @@ lore-mcp build manifest-prep.yaml \
 Or combine both in one step:
 
 ```bash
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --config config.yaml \
   --docs-dir /path/to/corpus/orig/ \
   --output-dir /path/to/output/ \
@@ -119,7 +130,7 @@ lore-mcp build manifest.yaml \
 #### Option A: HTTP server (recommended)
 
 ```bash
-lore-mcp --config config.yaml --transport sse
+lorme --config config.yaml --transport sse
 ```
 
 ```json
@@ -138,7 +149,7 @@ lore-mcp --config config.yaml --transport sse
 {
   "mcpServers": {
     "lore": {
-      "command": "/path/to/.venv/bin/lore-mcp",
+      "command": "/path/to/.venv/bin/lorme",
       "args": ["--config", "/path/to/config.yaml"]
     }
   }
@@ -163,13 +174,14 @@ similarity.
 
 | Command | Purpose |
 |---------|---------|
-| `lore-mcp` | Start MCP server |
-| `lore-mcp preprocess` | Convert and clean sources |
-| `lore-mcp build` | Index sources into .db |
-| `lore-mcp lint` | Analyze source quality |
-| `lore-mcp eval` | Evaluate retrieval quality |
-| `lore-mcp optimize` | Auto-optimize parameters |
-| `lore-mcp enrich` | LLM enrichment (context, Q&A) |
+| `lorme` | Start MCP server |
+| `lorme preprocess` | Convert and clean sources |
+| `lorme build` | Index sources into .db |
+| `lorme lint` | Analyze source quality |
+| `lorme eval` | Evaluate retrieval quality |
+| `lorme optimize` | Auto-optimize parameters |
+| `lorme enrich` | LLM enrichment (context, Q&A) |
+| `lorme state` | Manage pipeline state (--list, --purge) |
 
 All commands accept `--config config.yaml`.
 
@@ -214,17 +226,31 @@ for the full design.
 - [x] Unified config.yaml (no env vars)
 - [x] MarkdownTextSplitter (structure-aware
   chunking)
-- [x] 379+ tests (TDD)
+- [x] Reranking (cross-encoder, granite reranker)
+- [x] Adjacent-chunk / parent-child retrieval
+- [x] End-to-end parameter optimization
+- [x] CI/CD with GitHub Actions
+- [x] Docker image (Containerfile)
+- [x] Audio ingestion (STT via API)
+- [x] Video ingestion (STT + frame extraction,
+  4 strategies: scene/interval/hybrid/OCR)
+- [x] Video download from YouTube/platforms
+  (yt-dlp, caption download → skip STT)
+- [x] Resumable pipeline with per-phase hash
+  (config change → auto re-run)
+- [x] Configurable enrichment prompts
+  (prompts.yaml, custom overrides)
+- [x] Smart frame captioning filter (OCR before
+  VLM)
+- [x] Graceful shutdown (Ctrl+C → cleanup)
+- [x] 554+ tests (TDD)
 
 ### Next
 
-- [ ] Documentation reorganization
-- [ ] Reranking (cross-encoder)
-- [ ] Adjacent-chunk / parent-child retrieval
-- [ ] End-to-end parameter optimization
-- [ ] CI/CD with GitHub Actions
-- [ ] pip install lore-mcp (PyPI)
-- [ ] Docker image
+- [ ] pip install lorme (PyPI)
+- [ ] STT post-correction (LLM fix of
+  transcription errors)
+- [ ] Detailed eval report (markdown)
 
 ## AI-assisted development
 

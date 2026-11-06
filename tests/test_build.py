@@ -1,4 +1,4 @@
-"""Tests for E11.01: lore-mcp build workflow."""
+"""Tests for E11.01: lorme build workflow."""
 
 import json
 import os
@@ -9,10 +9,22 @@ import numpy as np
 import pytest
 
 from conftest import DIMS, make_embedding
+from lorme.config import LormeConfig
+
+
+def _build_cfg(**overrides) -> LormeConfig:
+    """Build a LormeConfig for build tests."""
+    defaults = {
+        "force": False,
+        "output_level": "quiet",
+        "skip_optimize": True,
+    }
+    defaults.update(overrides)
+    return LormeConfig(**defaults)
 
 
 def _make_mock_embedder(model_name="test-model", dim=DIMS):
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name=model_name, mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = dim
@@ -89,7 +101,7 @@ sources:
 class TestPreflightValidation:
     def test_validate_local_model_cached(self):
         """Model in HF cache passes validation."""
-        from lore_mcp.build import validate_models
+        from lorme.build import validate_models
         emb = _make_mock_embedder()
         configs = [{"name": "test-model", "mode": "cpu"}]
         errors = validate_models(configs, embedders={"test-model": emb})
@@ -97,7 +109,7 @@ class TestPreflightValidation:
 
     def test_validate_api_unreachable(self):
         """Unreachable API endpoint fails validation."""
-        from lore_mcp.build import validate_models
+        from lorme.build import validate_models
         configs = [{"name": "remote-model", "mode": "api",
                      "api_url": "http://localhost:99999/v1/embeddings"}]
         errors = validate_models(configs)
@@ -106,7 +118,7 @@ class TestPreflightValidation:
 
     def test_validate_reports_all_failures(self):
         """All failures reported at once, not one by one."""
-        from lore_mcp.build import validate_models
+        from lorme.build import validate_models
         configs = [
             {"name": "bad1", "mode": "api", "api_url": "http://localhost:99998/v1/embeddings"},
             {"name": "bad2", "mode": "api", "api_url": "http://localhost:99997/v1/embeddings"},
@@ -118,15 +130,13 @@ class TestPreflightValidation:
 class TestBuildSkipOptimize:
     def test_produces_db_and_metadata(self, build_env):
         """build --skip-optimize produces .db + .json + .bib + .md."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
         result = run_build(
-            manifest_path=build_env["manifest"],
-            docs_dir=build_env["docs_dir"],
-            output_dir=build_env["output_dir"],
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], _build_cfg(),
             embedder=emb,
-            skip_optimize=True,
         )
 
         output = Path(build_env["output_dir"])
@@ -139,15 +149,13 @@ class TestBuildSkipOptimize:
 
     def test_build_report_written(self, build_env):
         """Build report JSON is written."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
         result = run_build(
-            manifest_path=build_env["manifest"],
-            docs_dir=build_env["docs_dir"],
-            output_dir=build_env["output_dir"],
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], _build_cfg(),
             embedder=emb,
-            skip_optimize=True,
         )
 
         report_path = Path(build_env["output_dir"]) / "build-report.json"
@@ -163,19 +171,20 @@ class TestBuildSkipOptimize:
 class TestBuildWithOptimize:
     def test_produces_optimized_db(self, build_env):
         """build with optimize selects best config and produces final .db."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
-        result = run_build(
-            manifest_path=build_env["manifest"],
-            docs_dir=build_env["docs_dir"],
-            output_dir=build_env["output_dir"],
-            embedder=emb,
+        cfg = _build_cfg(
             skip_optimize=False,
-            chunk_sizes=[512, 1024],
-            chunk_overlaps=[64],
-            top_ks=[3],
-            num_questions=2,
+            optimize_chunk_sizes=[512, 1024],
+            optimize_chunk_overlaps=[64],
+            optimize_top_ks=[3],
+            optimize_num_questions=2,
+        )
+        result = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
+            embedder=emb,
         )
 
         output = Path(build_env["output_dir"])
@@ -185,26 +194,26 @@ class TestBuildWithOptimize:
 
     def test_build_multi_model(self, build_env):
         """build with multiple models selects best model+config."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
         from unittest.mock import patch
 
         embedders = {
             "model-a": _make_mock_embedder("model-a"),
             "model-b": _make_mock_embedder("model-b"),
         }
-        # Prevent unload from destroying mocks in test
         for emb in embedders.values():
             emb.unload = lambda: None
-        result = run_build(
-            manifest_path=build_env["manifest"],
-            docs_dir=build_env["docs_dir"],
-            output_dir=build_env["output_dir"],
-            embedders=embedders,
+        cfg = _build_cfg(
             skip_optimize=False,
-            chunk_sizes=[1024],
-            chunk_overlaps=[64],
-            top_ks=[3],
-            num_questions=2,
+            optimize_chunk_sizes=[1024],
+            optimize_chunk_overlaps=[64],
+            optimize_top_ks=[3],
+            optimize_num_questions=2,
+        )
+        result = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
+            embedders=embedders,
         )
 
         assert "optimization" in result
@@ -217,47 +226,112 @@ class TestBuildWithOptimize:
 class TestResumability:
     def test_resume_skips_completed(self, build_env):
         """Second run skips already-completed optimization configs."""
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         emb = _make_mock_embedder()
-        kwargs = dict(
-            manifest_path=build_env["manifest"],
-            docs_dir=build_env["docs_dir"],
-            output_dir=build_env["output_dir"],
-            embedder=emb,
+        cfg = _build_cfg(
             skip_optimize=False,
-            chunk_sizes=[512, 1024],
-            chunk_overlaps=[64],
-            top_ks=[3],
-            num_questions=2,
-            work_dir=str(build_env["tmp_path"] / "work"),
+            optimize_chunk_sizes=[512, 1024],
+            optimize_chunk_overlaps=[64],
+            optimize_top_ks=[3],
+            optimize_num_questions=2,
         )
+        cfg.build_dir = str(build_env["tmp_path"] / "work")
+        cfg.keep_intermediates = True
 
-        result1 = run_build(**kwargs)
-        result2 = run_build(**kwargs)
+        result1 = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
+            embedder=emb,
+        )
+        result2 = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
+            embedder=emb,
+        )
 
         assert result1["collection"] == result2["collection"]
         assert result2.get("resumed", False) is True
 
-    def test_force_ignores_cache(self, build_env):
-        """--force reruns everything."""
-        from lore_mcp.build import run_build
+    def test_empty_db_reindexed_without_force(self, build_env):
+        """E12.78: existing empty .db must be re-indexed, not skipped."""
+        from lorme.build import run_build
+        from lorme.store import open_db
 
         emb = _make_mock_embedder()
-        kwargs = dict(
-            manifest_path=build_env["manifest"],
-            docs_dir=build_env["docs_dir"],
-            output_dir=build_env["output_dir"],
+        output = Path(build_env["output_dir"])
+        empty_db = output / "test-libre.db"
+        db = open_db(str(empty_db))
+        db.close()
+        assert empty_db.exists()
+
+        cfg = _build_cfg(skip_optimize=True)
+        result = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
             embedder=emb,
-            skip_optimize=False,
-            chunk_sizes=[1024],
-            chunk_overlaps=[64],
-            top_ks=[3],
-            num_questions=2,
-            work_dir=str(build_env["tmp_path"] / "work"),
         )
 
-        run_build(**kwargs)
-        result2 = run_build(**kwargs, force=True)
+        assert result["file_count"] >= 2
+        assert result["chunk_count"] > 0
+
+    def test_mismatched_db_reindexed_without_force(self, build_env):
+        """E12.78: existing .db with wrong chunk config must be re-indexed."""
+        from lorme.build import run_build
+        from lorme.store import open_db
+
+        emb = _make_mock_embedder()
+        output = Path(build_env["output_dir"])
+
+        cfg1 = _build_cfg(skip_optimize=True)
+        run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg1,
+            embedder=emb,
+        )
+
+        db = open_db(str(output / "test-libre.db"))
+        db.execute("UPDATE meta SET value = '256' WHERE key = 'chunk_size'")
+        db.commit()
+        db.close()
+
+        cfg2 = _build_cfg(skip_optimize=True)
+        result = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg2,
+            embedder=emb,
+        )
+
+        db = open_db(str(output / "test-libre.db"))
+        meta = dict(db.execute("SELECT key, value FROM meta").fetchall())
+        db.close()
+        assert meta["chunk_size"] == str(cfg2.chunk_size)
+        assert result["chunk_count"] > 0
+
+    def test_force_ignores_cache(self, build_env):
+        """--force reruns everything."""
+        from lorme.build import run_build
+
+        emb = _make_mock_embedder()
+        cfg = _build_cfg(
+            skip_optimize=False,
+            optimize_chunk_sizes=[1024],
+            optimize_chunk_overlaps=[64],
+            optimize_top_ks=[3],
+            optimize_num_questions=2,
+        )
+        cfg.build_dir = str(build_env["tmp_path"] / "work")
+
+        run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
+            embedder=emb,
+        )
+        cfg.force = True
+        result2 = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
+            embedder=emb,
+        )
 
         assert result2.get("resumed", False) is False

@@ -1,157 +1,161 @@
 # Configuration
 
-All lore-mcp configuration is via environment
-variables. No configuration file is required.
+All lorme configuration is via `config.yaml`.
+No environment variables — everything in the
+config file.
 
 For architecture context, see
 [`architecture.md`](architecture.md).
+For container usage, see
+[`docker.md`](docker.md).
 
-## Environment variables
+## Config file
 
-### `LORE_DB_PATH`
+Pass `--config config.yaml` to any command.
 
-Path to the SQLite database file
-(single-collection mode).
+### Unified model registry
 
-- **Type:** file path (string)
-- **Default:** `./lore.db`
-- **Used by:** MCP server (`server.py`),
-  ingestion (`ingest.py`)
+All models (embedding, VLM, STT, LLM) are in
+the `llm:` section with start/stop lifecycle.
+Specialized sections reference them by name.
 
-The file is created automatically on first
-ingestion. Mutually exclusive with `LORE_DB_DIR`.
+```yaml
+llm:
+  - name: nomic-embed
+    model: nomic-ai/nomic-embed-text-v2-moe
+    api_url: http://host:8082/v1/embeddings
+    start: podman run -d --name tei-nomic ...
+    stop: podman stop tei-nomic
+    start_timeout: 120
 
-### `LORE_DB_DIR`
+  - name: granite-vision
+    model: ibm-granite/granite-3.2-4b-vision
+    api_url: http://host:8092/v1/chat/completions
+    start: ./scripts/start-granite-vision.sh
+    stop: podman stop granite-vision-server
+    timeout: 600
 
-Path to a directory of `.db` files
-(multi-collection mode).
+  - name: canary-stt
+    model: nvidia/canary-1b-v2
+    api_url: http://host:8093/v1/audio/transcriptions
+    start: ./scripts/start-stt-server.sh --cpu
+    stop: podman stop stt-server
+    timeout: 600
 
-- **Type:** directory path (string)
-- **Default:** *(none)*
-- **Used by:** MCP server (`server.py`),
-  collections (`collections.py`)
+  - name: granite-8b
+    model: granite-3-2-8b-instruct
+    api_url: https://api.example.com/v1/chat/completions
+    api_key: sk-...
+```
 
-When set, the server operates in multi-collection
-mode: `search_docs` can search across all
-collections or within a specific one,
-`list_collections` lists available collections.
-Files follow the naming convention
-`<theme>-<level>.db` (see
-`docs/architecture.md`, Collections layer).
+**API URL convention**: `api_url` is the full
+endpoint URL. The code uses it as-is — no path
+appending. Health check derived from base
+(`http://host:port/health`).
 
-Takes precedence over `LORE_DB_PATH`.
+**Lifecycle**: `start` and `stop` commands are
+optional. Services are auto-started before use
+and auto-stopped after. `start_timeout` is the
+health check timeout (default 300s). `timeout`
+is the per-request inference timeout (default
+180s).
 
-### `LORE_MODEL`
+**Start/stop commands must be self-contained.**
+lorme executes them as-is via `shell=True`.
+Each command must handle its own prerequisites:
+create directories, remove stale containers,
+check if already running. lorme does not
+validate, parse, or pre-process the command.
+Example for podman with log files:
+```bash
+mkdir -p /path/to/logs;
+podman rm -f my-service 2>/dev/null;
+podman run -d --name my-service \
+  --log-opt path=/path/to/logs/my-service.log \
+  ...
+```
 
-Name of the sentence-transformers embedding
-model.
+### Specialized sections
 
-- **Type:** HuggingFace model identifier (string)
-- **Default:** `nomic-ai/nomic-embed-text-v2-moe`
-- **Used by:** embedder (`embedder.py`)
+```yaml
+embedding:
+  model: nomic-embed     # → llm registry lookup
+  mode: api              # builtin, builtin:gpu, builtin:cpu, api
 
-The model is downloaded from HuggingFace Hub on
-first use and cached locally
-(`~/.cache/huggingface/`). Changing the model
-after indexing invalidates the existing database
-— the server will refuse to query with a
-mismatched model (see `store.py:validate_model()`).
+parse:
+  ocr_engine: tesseract
+  ocr_lang: [fra, eng]
+  caption_primary: granite-vision
+  caption_additional: [molmo-7b]
+  caption_selection: judge
+  caption_judge: granite-8b
+  stt_model: canary-stt
+  video_frame_strategy: scene  # scene, interval, hybrid, ocr
+  video_frame_interval: 30
+  video_scene_threshold: 0.3
+  video_ocr_change_threshold: 0.3
 
-### `LORE_EMBED_MODE`
+enrich:
+  techniques: [stt_fix, context, qa, meta]
+  models: [granite-8b]
 
-Embedding backend selection.
+  # Custom prompts (override distributed defaults)
+  prompts_file: /path/to/custom-prompts.yaml
 
-- **Type:** one of `builtin`, `builtin:gpu`, `builtin:cpu`, `api`
-- **Default:** `builtin`
-- **Used by:** embedder (`embedder.py`)
+  # Inline prompt override (highest priority)
+  prompts:
+    fr:
+      context: |
+        Mon prompt personnalisé...
+        Section : {heading}
+        Contenu : {body}
 
-| Mode | Behavior |
-|------|----------|
-| `builtin` | In-process via sentence-transformers, auto GPU/CPU based on VRAM assessment. |
-| `builtin:gpu` | Force CUDA GPU. Raises error if unavailable or VRAM insufficient. |
-| `builtin:cpu` | Force CPU. Slower but always works if RAM sufficient (~4 GB). |
-| `api` | External HTTP endpoint (TEI, vLLM). Requires `LORE_API_URL`. |
+judge:
+  models: [granite-8b]
 
-In `builtin` mode, the embedder evaluates GPU
-capabilities (VRAM, compute capability) before
-deciding. See `embedder.py:assess_gpu()` for the
-decision logic.
+reranking:
+  model: granite-reranker
+```
 
-### `LORE_API_URL`
+### Enrichment prompts (E12.74)
 
-URL of a remote OpenAI-compatible embedding
-endpoint.
+Prompt templates for enrichment techniques are
+resolved in cascade:
 
-- **Type:** URL (string)
-- **Default:** *(none)*
-- **Required when:** `LORE_EMBED_MODE=api`
-- **Used by:** embedder (`embedder.py`)
+1. **Inline config** (`enrich.prompts.<lang>.<technique>`)
+   — highest priority, local overrides
+2. **Custom file** (`enrich.prompts_file`)
+   — shared prompts file
+3. **Distributed defaults** (`src/lorme/prompts.yaml`)
+   — shipped with the package (FR + EN)
+4. **Fallback** — minimal EN prompt (last resort)
 
-Must implement the `/v1/embeddings` API (POST).
-Compatible services: vLLM, Llama Stack, any
-OpenAI-compatible embedding server.
+Available techniques: `stt_fix`, `context`, `qa`,
+`meta`. Each technique has FR and EN templates
+with `{heading}` and `{body}` placeholders.
 
-Example: `http://localhost:8000/v1/embeddings`
+### State management
 
-### `LORE_API_MODEL`
+Pipeline state is stored in
+`~/.local/state/lorme/<hash>/`. Manage with:
 
-Model name to pass to the remote API.
+```bash
+# List all pipeline states
+lorme state --list
 
-- **Type:** string
-- **Default:** same as `LORE_MODEL`
-- **Used by:** embedder (`embedder.py`)
+# Purge a specific state by hash prefix
+lorme state --purge abc123
 
-Some API servers use different model identifiers
-than HuggingFace (e.g. `BAAI/bge-m3-embedding`
-instead of `BAAI/bge-m3`).
+# Purge states older than 7 days
+lorme state --purge --older-than 7
 
-### `LORE_API_VERIFY`
-
-SSL certificate verification for API calls.
-
-- **Type:** `true` or `false`
-- **Default:** `true`
-- **Used by:** embedder (`embedder.py`)
-
-Set to `false` to disable SSL verification when
-the API endpoint uses a self-signed certificate
-(e.g. OpenShift internal CA).
-
-### `LORE_API_CA_BUNDLE`
-
-Path to a custom CA certificate bundle for API
-calls.
-
-- **Type:** file path (string)
-- **Default:** *(none — uses system CA store)*
-- **Used by:** embedder (`embedder.py`)
-
-Takes precedence over `LORE_API_VERIFY`. Use
-this to trust a specific CA without disabling
-verification entirely.
-
-### `LORE_CHUNK_SIZE`
-
-Maximum chunk size in characters for ingestion.
-
-- **Type:** integer
-- **Default:** `1024`
-- **Used by:** ingest (`ingest.py:get_chunk_config()`)
-
-Changed from 2048 to 1024 based on AutoRAG E1.08
-benchmarks (+13% answer_correctness with bge-m3).
-
-### `LORE_CHUNK_OVERLAP`
-
-Overlap between consecutive chunks in characters.
-
-- **Type:** integer
-- **Default:** `128`
-- **Used by:** ingest (`ingest.py:get_chunk_config()`)
+# Purge all states
+lorme state --purge --all
+```
 
 ## MCP transport
 
-lore-mcp supports two MCP transport modes
+lorme supports two MCP transport modes
 (see `server.py:main()`):
 
 ### HTTP/SSE (recommended)
@@ -160,11 +164,7 @@ Start the server manually, clients connect via
 URL. No PATH or virtualenv issues.
 
 ```bash
-# Single-collection:
-LORE_DB_PATH=/path/to/lore.db lore-mcp --transport sse
-
-# Multi-collection:
-LORE_DB_DIR=/path/to/collections/ lore-mcp --transport sse
+lorme serve --config config.yaml --transport sse
 ```
 
 Client configuration:
@@ -188,29 +188,16 @@ binary in the virtualenv.
 {
   "mcpServers": {
     "lore": {
-      "command": "/path/to/.venv/bin/lore-mcp",
-      "args": [],
-      "env": {
-        "LORE_DB_PATH": "/path/to/lore.db"
-      }
+      "command": "/path/to/.venv/bin/lorme",
+      "args": ["serve", "--config", "/path/to/config.yaml"]
     }
   }
 }
 ```
 
-### With a remote embedding API
-
-Add `LORE_EMBED_MODE` and `LORE_API_URL` to the
-environment, regardless of transport mode:
-
-```json
-{
-  "env": {
-    "LORE_EMBED_MODE": "api",
-    "LORE_API_URL": "http://localhost:8000/v1/embeddings"
-  }
-}
-```
+All configuration (database path, embedding model,
+API URLs) is in `config.yaml` — no environment
+variables needed.
 
 ## Concurrency
 
@@ -236,15 +223,15 @@ accept mutually exclusive output flags
 | `--quiet` | `quiet` | No console output. |
 | `--progress` | `progress` | Single overwriting line: global % + ETA, phase n/total, sub-progress %, model name. |
 | `--verbose` | `verbose` | Default + truncated questions table, per-iteration milestones with per-metric scores. |
-| `--debug` | `debug` | Verbose + HTTP request content (URL, model, batch, full input texts), response details. Only `lore_mcp` loggers at DEBUG; third-party (httpx, sentence_transformers) stay at WARNING. |
+| `--debug` | `debug` | Verbose + HTTP request content (URL, model, batch, full input texts), response details. Only `lorme` loggers at DEBUG; third-party (httpx, sentence_transformers) stay at WARNING. |
 
 Example:
 
 ```bash
-lore-mcp build manifest.yaml \
-  --docs-dir /path/to/sources/ \
-  --output-dir /path/to/output/ \
-  --config build-config.yaml \
+lorme build recipe.yaml \
+  --orig-dir /path/to/sources/ \
+  --build-dir /path/to/output/ \
+  --config config.yaml \
   --verbose
 ```
 
@@ -267,18 +254,18 @@ CLI `--num-questions` takes precedence over the
 ### Indexing documents
 
 Ingestion is currently done programmatically
-via `lore_mcp.ingest.ingest_directory()`.
-A `lore-mcp index` subcommand is planned.
+via `lorme.ingest.ingest_directory()`.
+A `lorme index` subcommand is planned.
 
 ### Chunking parameters
 
-Configurable via environment variables or
-`ingest_directory()` parameters.
+Configurable via `config.yaml` under the
+`chunking:` section.
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `LORE_CHUNK_SIZE` | `1024` | Maximum chunk size in characters |
-| `LORE_CHUNK_OVERLAP` | `128` | Overlap between consecutive chunks |
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `chunking.size` | `1024` | Maximum chunk size in characters |
+| `chunking.overlap` | `128` | Overlap between consecutive chunks |
 
 The default chunk_size was changed from 2048 to
 1024 based on AutoRAG E1.08 benchmarks
@@ -291,16 +278,13 @@ of each `.db` file for traceability. In multi-
 collection mode, `list_collections()` displays
 the chunk_size/overlap per collection.
 
-See `ingest.py:get_chunk_config()` for the
-env var reading logic.
-
 ## Collection manifest
 
 The manifest is the central entry point for the
-lore-mcp workflow. Sources are identified by their
+lorme workflow. Sources are identified by their
 metadata (title, url, license, author), not by
 file paths. `orig` and `path` are operational
-details, generated if absent. lore-mcp never
+details, generated if absent. lorme never
 modifies the manifest.
 
 ```yaml
@@ -332,9 +316,24 @@ sources:
 | `author` | Front matter | Extracted |
 | `license` | Front matter | Extracted |
 | `date` | Front matter | Extracted |
+| `lang` | *(none)* | User-declared (ISO 639-3) |
 
 Neither `orig` nor `url` → error. Manifest-
 declared values override extracted values.
+
+### Language (`lang`)
+
+The `lang` field declares the language of the
+source (ISO 639-3 code: `fra`, `eng`, `deu`,
+`spa`, `ara`, etc.). Used for:
+
+1. **OCR engine configuration** — Tesseract uses
+   the language for better text recognition
+2. **Enrichment language** — LLM produces Q&A
+   and context in the document's language
+
+If absent, falls back to config `parse.ocr_lang`
+for OCR and `langdetect` for enrichment.
 
 Biblio field names: Dublin Core (ISO 15836).
 License values: SPDX identifiers.
@@ -357,36 +356,96 @@ sources:
 If absent, uses defaults from `config.yaml`
 `chunking:` section.
 
+### OCR engine (`config.yaml`)
+
+```yaml
+parse:
+  ocr_engine: tesseract    # or empty for default (RapidOCR)
+  ocr_lang: [fra, eng]     # fallback if no lang in manifest
+```
+
+**Tesseract** (recommended, Level 1-2 libre):
+Apache 2.0, documented training data, native
+French support. System prerequisite:
+
+```bash
+# Fedora
+sudo dnf install tesseract tesseract-devel \
+  tesseract-langpack-fra tesseract-langpack-eng \
+  leptonica-devel
+```
+
+**Do NOT install `tesseract-osd`** — causes
+text inversion on multi-column documents
+(Docling #1657, Tesseract #1926).
+
+**RapidOCR** (default fallback): Level 3,
+Chinese models, `I'homme` artifacts on French.
+
+Language cascade for OCR:
+1. Manifest `lang` per source
+2. Config `parse.ocr_lang` fallback
+3. Tesseract default (`eng`)
+
+### Format overrides (advanced)
+
+The default extension→backend mapping is built
+into `FormatRegistry` (see `format_registry.py`).
+Override or extend it via `parse.formats`:
+
+```yaml
+parse:
+  formats:
+    .proto: markitdown   # treat .proto as text
+    .txt: markdown       # treat .txt as markdown
+    .rst: markdown       # reStructuredText
+    .lua: ""             # disable .lua support
+```
+
+The backend must be one of: `markdown`, `html`,
+`docling`, `markitdown`, `code`, `audio`,
+`video`. An empty string removes the default
+mapping for that extension. Unknown backends
+produce an error at config load.
+
+For code files, structural narration (function
+and class headings) requires a tree-sitter
+grammar. Install `tree-sitter-<language>` to
+add structural parsing. Python always uses
+stdlib `ast` — no extra dependency needed.
+
 ### Path resolution
 
 All paths in the manifest are **relative**.
 Resolution depends on the CLI options:
 
 ```
-<docs-base-dir>/
-├── <orig-subdir>/         ← orig files read from here
-│   ├── intro.pdf
-│   ├── sub/               ← subdirectories allowed
-│   │   └── deep.html
-│   └── notes.md
-├── <prep-subdir>/         ← preprocessed files written here
+<orig-dir>/                ← source files read from here
+├── intro.pdf
+├── sub/                   ← subdirectories allowed
+│   └── deep.html
+└── notes.md
+
+<build-dir>/               ← all output written here
+├── prep/                  ← preprocessed markdown
 │   ├── intro.md
 │   ├── sub/
 │   │   └── deep.md
 │   └── notes.md
-├── urls.txt               ← optional, auto-detected
-└── manifest.yaml
+├── .work/                 ← intermediates + checkpoint
+├── recipe.yaml
+└── urls.txt               ← optional, auto-detected
 ```
 
-| Manifest field | Resolved to | Example |
-|---------------|-------------|---------|
-| `orig: intro.pdf` | `<docs-base-dir>/<orig-subdir>/intro.pdf` | `/corpus/orig/intro.pdf` |
-| `orig: sub/deep.html` | `<docs-base-dir>/<orig-subdir>/sub/deep.html` | `/corpus/orig/sub/deep.html` |
-| `path: intro.md` | `<docs-base-dir>/<prep-subdir>/intro.md` | `/corpus/prep/intro.md` |
-| `path: sub/deep.md` | `<docs-base-dir>/<prep-subdir>/sub/deep.md` | `/corpus/prep/sub/deep.md` |
+| Recipe field | Resolved to | Example |
+|-------------|-------------|---------|
+| `file: intro.pdf` | `<orig-dir>/intro.pdf` | `/corpus/orig/intro.pdf` |
+| `file: sub/deep.html` | `<orig-dir>/sub/deep.html` | `/corpus/orig/sub/deep.html` |
+| `path: intro.md` | `<build-dir>/prep/intro.md` | `/corpus/build/prep/intro.md` |
+| `path: sub/deep.md` | `<build-dir>/prep/sub/deep.md` | `/corpus/build/prep/sub/deep.md` |
 
-Subdirectories in `orig` are preserved in `path`.
-If `orig: sub/deep.pdf`, the generated `path` is
+Subdirectories in `file` are preserved in `path`.
+If `file: sub/deep.pdf`, the generated `path` is
 `sub/deep.md`.
 
 ### Collection fields
@@ -396,14 +455,14 @@ If `orig: sub/deep.pdf`, the generated `path` is
   (`nda`, `libre`, `redist`, `gray`)
   (nda/libre/restreint/gris)
 
-### Enriched manifest
+### Enriched recipe
 
-`lore-mcp preprocess` produces a `-prep` suffixed
+`lorme preprocess` produces a `-prep` suffixed
 copy with all resolved fields (path, title, etc.).
-The enriched manifest is used by `lint` and
+The enriched recipe is used by `lint` and
 `build`.
 
-See `manifest.py:resolve_source_fields()` and
+See `recipe.py:resolve_source_fields()` and
 `preprocess/__init__.py:preprocess_sources()`.
 
 ## Output metadata files
@@ -420,45 +479,34 @@ See `metadata.py` and
 
 ## RAG evaluation
 
-### `LORE_LLM_URL`
+### Judge LLM (for eval/optimize)
 
-URL of a chat-capable LLM endpoint for RAGAS
-evaluation metrics.
+The judge LLM is configured via the `llm:`
+registry in `config.yaml` and referenced by name
+from the `judge:` section.
 
-- **Type:** URL (string)
-- **Default:** *(none — required for `lore-mcp eval`)*
-- **Used by:** eval (`eval.py`)
+```yaml
+llm:
+  - name: judge
+    model: granite-8b-instruct
+    api_url: https://llm.internal/v1/chat/completions
+    verify_ssl: false
+
+judge:
+  models: [judge]
+```
 
 Must implement the OpenAI-compatible chat API.
 Compatible services: vLLM, Llama Stack, Ollama.
 
-### `LORE_LLM_MODEL`
-
-Model name for the judge LLM.
-
-- **Type:** string
-- **Default:** `granite-8b-instruct`
-- **Used by:** eval (`eval.py`)
-
-RAGAS metrics require both `LORE_LLM_URL` and
-`LORE_LLM_MODEL`. Without RAGAS installed
-(`pip install lore-mcp[eval]`), basic text-overlap
-scoring is used (no LLM needed).
-
-In build config YAML, the judge section supports
-`verify_ssl` for self-signed endpoints:
-
-```yaml
-judge:
-  model: granite-8b-instruct
-  api_url: https://llm.internal/v1
-  verify_ssl: false
-```
+RAGAS metrics require a judge LLM configured.
+Without RAGAS installed (`pip install lorme[eval]`),
+basic text-overlap scoring is used (no LLM needed).
 
 - **`verify_ssl`**: boolean, default `true`. Set
   to `false` for self-signed certificates.
 
-When RAGAS metrics are requested, lore-mcp probes
+When RAGAS metrics are requested, lorme probes
 the judge endpoint at startup
 (`eval.py:_probe_judge()`). If unreachable, a
 `ConnectionError` is raised immediately (fail
@@ -476,7 +524,7 @@ The default model (BAAI/bge-m3) produces:
 - **Max 8192 tokens** per input
 
 Any sentence-transformers-compatible model can
-be used via `LORE_MODEL`, but changing the model
+be configured via `config.yaml`, but changing the model
 invalidates the existing index. The vec0 virtual
 table dimension is set at creation time and
 cannot be changed.

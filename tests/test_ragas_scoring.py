@@ -6,11 +6,11 @@ import numpy as np
 import pytest
 
 from conftest import DIMS, make_embedding
-from lore_mcp.store import create_tables, insert_chunk, open_db
+from lorme.store import create_tables, insert_chunk, open_db
 
 
 def _make_mock_embedder():
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name="test-model", mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = DIMS
@@ -43,7 +43,7 @@ def eval_db(tmp_path):
 class TestRagasEmbeddingsWrapper:
     def test_embed_query_delegates(self):
         """Wrapper delegates embed_query to Embedder.embed."""
-        from lore_mcp.eval import _RagasEmbeddingsWrapper
+        from lorme.eval import _RagasEmbeddingsWrapper
         embedder = _make_mock_embedder()
         wrapper = _RagasEmbeddingsWrapper(embedder)
         result = wrapper.embed_query("test text")
@@ -52,7 +52,7 @@ class TestRagasEmbeddingsWrapper:
 
     def test_embed_documents_delegates(self):
         """Wrapper delegates embed_documents to Embedder.embed_batch."""
-        from lore_mcp.eval import _RagasEmbeddingsWrapper
+        from lorme.eval import _RagasEmbeddingsWrapper
         embedder = _make_mock_embedder()
         wrapper = _RagasEmbeddingsWrapper(embedder)
         results = wrapper.embed_documents(["text one", "text two"])
@@ -63,7 +63,7 @@ class TestRagasEmbeddingsWrapper:
 class TestRagasScoringWired:
     def test_ragas_metrics_returned_when_requested(self, eval_db):
         """When RAGAS metrics requested + judge configured → scores include them."""
-        from lore_mcp.eval import evaluate_retrieval, _apply_ragas_stub
+        from lorme.eval import evaluate_retrieval, _apply_ragas_stub
         _apply_ragas_stub()
 
         embedder = _make_mock_embedder()
@@ -71,7 +71,7 @@ class TestRagasScoringWired:
             {"question": "What is Python?", "ground_truth": "a programming language"},
         ]
 
-        with patch("lore_mcp.eval._score_with_ragas") as mock_ragas:
+        with patch("lorme.eval._score_with_ragas") as mock_ragas:
             mock_ragas.return_value = {
                 "faithfulness": 0.85,
                 "context_recall": 0.90,
@@ -89,7 +89,7 @@ class TestRagasScoringWired:
 
     def test_embedder_passed_to_score_with_ragas(self, eval_db):
         """evaluate_retrieval passes the embedder to _score_with_ragas."""
-        from lore_mcp.eval import evaluate_retrieval, _apply_ragas_stub
+        from lorme.eval import evaluate_retrieval, _apply_ragas_stub
         _apply_ragas_stub()
 
         embedder = _make_mock_embedder()
@@ -97,7 +97,7 @@ class TestRagasScoringWired:
             {"question": "What is Python?", "ground_truth": "a programming language"},
         ]
 
-        with patch("lore_mcp.eval._score_with_ragas") as mock_ragas:
+        with patch("lorme.eval._score_with_ragas") as mock_ragas:
             mock_ragas.return_value = {"faithfulness": 0.85}
             evaluate_retrieval(
                 eval_db, embedder, questions, top_k=2,
@@ -112,7 +112,7 @@ class TestRagasScoringWired:
 
     def test_non_ragas_metrics_still_work_without_judge(self, eval_db):
         """Non-RAGAS metrics work without judge, as before."""
-        from lore_mcp.eval import evaluate_retrieval
+        from lorme.eval import evaluate_retrieval
 
         embedder = _make_mock_embedder()
         questions = [
@@ -130,7 +130,7 @@ class TestRagasScoringWired:
 
     def test_mixed_metrics(self, eval_db):
         """Both RAGAS and non-RAGAS metrics in same request."""
-        from lore_mcp.eval import evaluate_retrieval, _apply_ragas_stub
+        from lorme.eval import evaluate_retrieval, _apply_ragas_stub
         _apply_ragas_stub()
 
         embedder = _make_mock_embedder()
@@ -138,7 +138,7 @@ class TestRagasScoringWired:
             {"question": "What is Python?", "ground_truth": "a programming language"},
         ]
 
-        with patch("lore_mcp.eval._score_with_ragas") as mock_ragas:
+        with patch("lorme.eval._score_with_ragas") as mock_ragas:
             mock_ragas.return_value = {"faithfulness": 0.85}
             results = evaluate_retrieval(
                 eval_db, embedder, questions, top_k=2,

@@ -1,11 +1,11 @@
-# CLAUDE.md — lore-mcp
+# CLAUDE.md — lorme
 
 ## 1. Project overview
 
 ### What
 
-**lore-mcp** (LORE — Local Offline Retrieval
-Engine) is an MCP (Model Context Protocol)
+**lorme** (LORME — Local Offline Retrieval
+& MCP Engine) is an MCP (Model Context Protocol)
 server for semantic search over a corpus of
 technical documents. Runs locally on the
 workstation with no mandatory network dependency.
@@ -39,22 +39,12 @@ Priority order (automatic fallback):
 3. **Local CPU**: sentence-transformers in CPU
    mode. Slower (~200ms) but self-contained.
 
-### Environment variables
+### Configuration
 
-| Variable | Role | Default |
-|----------|------|---------|
-| `LORE_DB_PATH` | SQLite database file path | `./lore.db` |
-| `LORE_MODEL` | Embedding model name | `nomic-ai/nomic-embed-text-v2-moe` |
-| `LORE_EMBED_MODE` | Embedding mode: `builtin`, `builtin:gpu`, `builtin:cpu`, `api` | `builtin` |
-| `LORE_API_URL` | Remote `/v1/embeddings` endpoint URL | *(none — required if mode is `api`)* |
-| `LORE_API_MODEL` | Model name for the remote API | same as `LORE_MODEL` |
-| `LORE_DB_DIR` | Directory of `.db` files (multi-collection) | *(none)* |
-| `LORE_API_VERIFY` | SSL verification for API (`true`/`false`) | `true` |
-| `LORE_API_CA_BUNDLE` | Custom CA certificate path | *(system CA)* |
-| `LORE_CHUNK_SIZE` | Chunk size in characters | `1024` |
-| `LORE_CHUNK_OVERLAP` | Chunk overlap in characters | `128` |
-| `LORE_LLM_URL` | Chat LLM endpoint for eval | *(required for eval)* |
-| `LORE_LLM_MODEL` | Judge model name | `granite-8b-instruct` |
+All configuration is via `config.yaml` — no
+environment variable fallback (removed in E12.60).
+See `docs/configuration.md` for the full
+reference.
 
 ### Vector storage
 
@@ -65,49 +55,104 @@ distributable.
 Table schema:
 ```sql
 CREATE VIRTUAL TABLE chunks_vec USING vec0(
-  embedding float[768]
+  embedding float[768] distance_metric=cosine
 );
 
 CREATE TABLE chunks (
   id TEXT PRIMARY KEY,
+  source_id TEXT NOT NULL,
   source_file TEXT NOT NULL,
   chunk_index INTEGER NOT NULL,
   content TEXT NOT NULL,
-  metadata TEXT DEFAULT '{}'
+  metadata TEXT DEFAULT '{}',
+  parent_id INTEGER DEFAULT NULL
 );
+
+CREATE TABLE parent_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id TEXT NOT NULL,
+  source_file TEXT NOT NULL,
+  content TEXT NOT NULL
+);
+
+CREATE VIRTUAL TABLE chunks_fts
+  USING fts5(content, source_file,
+  content=chunks, content_rowid=rowid);
 
 CREATE TABLE meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
--- Stores: model_name, model_dim, created_at
--- The server refuses to query an index whose
--- stored model does not match the current
--- LORE_MODEL value.
+-- Stores: model_name, model_dim, created_at,
+-- chunk_size, chunk_overlap
+
+CREATE TABLE sources (
+  source_id TEXT PRIMARY KEY,
+  source_file TEXT NOT NULL,
+  title TEXT,
+  author TEXT,
+  url TEXT,
+  date TEXT,
+  license TEXT,
+  level TEXT,
+  lang TEXT,
+  extra TEXT DEFAULT '{}'
+);
+-- source_id: cascade resolution
+-- doi:10.1234/... | isbn:978-... |
+-- url:https://... | file:path/to.md
+
+CREATE TABLE source_hashes (
+  source_id TEXT PRIMARY KEY,
+  content_hash TEXT NOT NULL,
+  indexed_at TEXT NOT NULL
+);
 ```
 
 ### Ingestion
 
-CLI tool to index a directory of Markdown/text
-files:
-1. Recursive directory traversal
-2. Preprocessing: strip NUL characters, strip
-   base64 image data (captioning is out of
-   scope for v1)
-3. Recursive chunking (configurable size and
-   overlap, defaults: 2048/128)
+CLI tool to index sources (any supported format):
+1. Multi-format parsing (Docling, trafilatura,
+   markitdown, STT)
+2. Preprocessing: clean, enrich, validate
+3. Chunking via Docling HybridChunker
+   (configurable size/overlap, defaults: 1024/128)
 4. Embedding (GPU → API → CPU)
 5. Insert into SQLite with model metadata
 
-### MCP tools exposed
+### MCP tools exposed (22)
 
-- `search_docs(query, top_k=5)`: semantic search,
-  returns chunks with score and source.
-  `top_k` is a parameter with default 5.
-- `list_indexed_sources()`: list indexed files
-  with chunk counts
-- `list_collections()`: list available `.db`
-  collections (multi-collection mode)
+**Search & browse:**
+- `search_docs(query, top_k, collection, filter)`
+- `list_indexed_sources(collection, detail, format)`
+- `list_collections()`
+
+**Index management:**
+- `add_source(file, collection, ...)`
+- `add_sources(sources_json, collection, ...)`
+- `add_recipe(recipe, build_dir, ...)`
+- `remove_source(source, collection)`
+- `add_directory(directory, collection, ...)`
+
+**Preprocess (no indexing):**
+- `preprocess_source(file, collection, ...)`
+- `preprocess_sources_tool(sources_json, ...)`
+- `preprocess_directory(directory, ...)`
+
+**Quality & analysis:**
+- `lint_source(path)`
+- `start_eval(build_dir)`
+- `start_optimize(recipe, build_dir)`
+
+**Operations:**
+- `get_config()`: active configuration (YAML)
+- `get_version(deps)`: version and dependencies
+- `get_service_status()`: inference services state
+- `get_task_status(task_id)`: background task info
+- `cancel_task(task_id)`
+- `list_tasks()`
+- `list_pipeline_state()`
+- `purge_pipeline_state(state_id)`
 
 ## 3. AI-assisted development
 
@@ -163,7 +208,7 @@ Technologies must be selected based on:
 | MCP SDK | MCPServer (mcp v2) | MIT | Official Anthropic SDK |
 | Embedding | sentence-transformers | Apache 2.0 | De facto standard, native GPU, HuggingFace |
 | Vector store | sqlite-vec | MIT | Single file, portable, SQL standard |
-| Chunking | langchain-text-splitters | MIT | RecursiveCharacterTextSplitter, popular |
+| Chunking | docling-core HybridChunker | MIT | Heading-aware, table-safe, Docling-native |
 | Default model | nomic-embed-text-v2-moe | Apache 2.0 | Level 2 libre, multilingual, 768d, MoE. See ADR-005 |
 
 All dependencies must have a free/libre license
@@ -179,8 +224,8 @@ adding any dependency.
 
 ### Embedding model
 
-- Configurable via `LORE_MODEL` environment
-  variable
+- Configurable via `config.yaml` (`embedding:`
+  section)
 - Default: nomic-ai/nomic-embed-text-v2-moe
   (768d, multilingual, Apache 2.0, Level 2 libre).
   See ADR-005
@@ -195,7 +240,7 @@ adding any dependency.
 
 **AGPL-3.0-or-later** — copyleft with network
 clause (section 13), patent protection. If
-someone forks lore-mcp and deploys it as a
+someone forks lorme and deploys it as a
 service, they must provide the source. Migrated
 from GPL-3.0 per openshift sync decision
 (2026-08-30). See `docs/adr/001-license-gpl-v3.md`
@@ -211,7 +256,7 @@ process communication, no code linking).
 ### GitHub publication
 
 - **Public** repository on GitHub
-- Name: **lore-mcp**
+- Name: **lorme**
   (see `docs/adr/002-project-name.md`)
 - All code, comments, documentation in **English**
 
@@ -281,12 +326,12 @@ switch, or user request):
 ### Cross-workspace sync
 
 The `sync/` directory handles synchronization
-between lore-mcp and linked workspaces.
+between lorme and linked workspaces.
 
 - `sync/links.md`: table of linked projects
   with paths to their sync files and branches
 - `sync/<project>.md`: outgoing sync file
-  (maintained by lore-mcp, read by the linked
+  (maintained by lorme, read by the linked
   project)
 - Incoming sync files live in the linked
   project's workspace (read-only from here)
@@ -307,7 +352,7 @@ of `main` — check per workspace.
 At every **pause**, read incoming sync files
 from linked projects (see `sync/links.md`) and
 apply any new decisions. Update outgoing sync
-files with lore-mcp's current state.
+files with lorme's current state.
 
 Each repository maintains only its own outgoing
 files. Incoming files are never copied — they
@@ -352,7 +397,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 ### E0. Project initialization
 
 - `Revue` E0.01 [E] License study: evaluate MIT, Apache 2.0, GPL v3 against FSF/APRIL/OSI positions
-- `Revue` E0.02 [E] Project name study: explore naming candidates, select lore-mcp (LORE)
+- `Revue` E0.02 [E] Project name study: explore naming candidates, select lore-mcp (LORE). Renamed to lorme in E0.10
 - `Revue` E0.03 [P] Initialize repository: git, directory structure (4 spaces), .gitignore, GPL v3 LICENSE
 - `Revue` E0.04 [D] Write ADR-001 (license choice) and ADR-002 (project name)
 - `Revue` E0.05 [P] Write CLAUDE.md with all project decisions
@@ -360,6 +405,7 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Revue` E0.07 [P] README skeleton with quickstart placeholder and roadmap
 - `Revue` E0.08 [P] pyproject.toml skeleton with dependencies and entry points
 - `Revue` E0.09 [D] CONTRIBUTING.md with git workflow, AI guidelines, and license terms
+- `Implémenté` E0.10 [E] Project rename: lore-mcp taken on PyPI (v1.0.17, blocker). 8 GitHub homonyms. Selected: lorme (LORE+MCP fusion). Renamed 183 files, 735 tests pass. ADR-006. See grooming-E0.10.md
 
 ### E1. Core (MVP v0.1.0)
 
@@ -367,12 +413,28 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Revue` E1.02 [P] Embedding engine with GPU/API/CPU automatic fallback
 - `Revue` E1.03 [P] MCP server exposing search_docs and list_indexed_sources tools
 - `Revue` E1.04 [P] CLI ingestion tool (directory traversal, preprocessing, chunking, indexing)
+- `Implémenté` E1.05 [P] Store abstraction: MVP1 LEFT JOIN → INNER JOIN. MVP2 ChunkStore class (689 tests). MVP3 Evaluator class (691 tests). MVP4 Parser class (691 tests). All SQL/DB ops behind ChunkStore, eval behind Evaluator, parsing behind Parser. See grooming-E1.05-mvp2.md
 
 ### E2. Quality
 
 - `Revue` E2.01 [P] Unit tests for store, embedder, and ingest modules (TDD — written before E1)
 - `Revue` E2.02 [P] Integration tests for MCP server end-to-end
-- `À faire` E2.03 [P] CI/CD with GitHub Actions
+- `Implémenté` E2.04 [P] Checkpoint test coverage: test all checkpoint combinations — force mode, resume from each phase, hash mismatch invalidation, cascade invalidation, STT cache reuse, partial completion. Each test with and without --force. Currently checkpoint interactions are only indirectly tested via integration
+- `Implémenté` E2.03 [P] CI/CD with GitHub Actions: pytest on push/PR, Python 3.13, pip cache, tesseract-ocr-fra, badge in README
+- `Implémenté` E2.18 [P] Modular CI: 5 parallel jobs (unit, preprocess, build, server, eval). 49 test files covered. CI green. See grooming-E2.18.md
+- `Implémenté` E2.05 [P] Dead code cleanup: 16 functions, 14 imports, 1 orphan module (tables.py) removed. CI green. See grooming-E2.05.md
+- `Implémenté` E2.06 [P] Full pipeline validation via add_recipe: 21/21 sources, all features, collection full-recipe. Biblio indexes (.json/.bib/.md). 7/7 DoD. See grooming-E2.06-10.md, report-full-recipe.md
+- `En cours` E2.07 [P] Full pipeline validation via add_sources: 18/21 sources, 2378 chunks, 4752s. 3 vidéos YouTube "File not found" (pas dans orig_dir). Cohérent avec E2.06. Collection: reval-add-sources. See report-tests-batch.md
+- `En cours` E2.08 [P] Full pipeline validation via add_source (unary): 16/21 sources OK, pexels FAIL (VLM start timeout), PPTX interrompu (crash GNOME), 3 vidéos non lancées. Collection: reval-add-source-unary. See report-tests-batch.md
+- `À faire` E2.09 [P] Full pipeline validation via download: 18 URL sources, no orig_dir, --allow-download, collection full-download
+- `À faire` E2.10 [P] Full pipeline validation mixed: 3 local + 18 downloaded, orig_dir with only local files, collection full-mixed
+- `Implémenté` E2.11 [P] Code narration unitaire (Python): 3x add_source (server.py, store.py, embedder.py). 367 chunks, search scores >0.89. Enrichment applied by default (E12.118). See report-code-py.md. Validates E3.42 It1
+- `Implémenté` E2.12 [P] Cancel task validation: cancel_task stops running add_source in ~34s (cooperative). State clean. See report-cancel-task.md. Validates E12.111
+- `Implémenté` E2.13 [P] MCP stability validation: search_docs (0.91) + list_indexed_sources (21/21) + list_collections (17) + get_service_status on existing full-recipe collection. Serveur stable après builds. See report-tests-batch.md
+- `Implémenté` E2.14 [P] Project scan narration: add_directory src/lorme → 27/28 .py indexed (856 chunks, 0 errors). search score 0.9177. Validates E3.42 + E12.115 + E12.123. See trace-E2.14-final.md
+- `Implémenté` E2.15 [P] Code narration sans enrichissement (baseline): add_source store.py enrich="none" → 52 chunks (vs 100 with enrich = -48%). Contenu narration AST pure. enrich="none" fonctionne. See trace-E2.14-2026-10-06.md
+- `Implémenté` E2.16 [P] Code narration scan + enrichissement: add_directory(src/lorme, enrich="context,qa,meta") → 27 fichiers, 1316 chunks, 0 erreurs. Scores: pipeline 0.88, MCP tools 0.87. 716s. Collection: reval-code-enriched. See report-tests-batch.md
+- E2.17 — removed (covered by E2.14 project scan: pyproject.toml, Containerfile, YAML, JSON already in scan scope)
 
 ### E3. Documentation
 
@@ -382,13 +444,16 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Implémenté` E3.04 [D] Documentation reorganization: separate tutorial from configuration reference, update README to reflect current state
 - `À faire` E3.05 [D] Tutorial GPU prerequisites: TEI tag by GPU arch (sm_89→1.9.3, sm_120→120-1.9.3), nvidia-container-toolkit for Podman, CDI setup, CUDA 13.x compatibility warning
 - `Implémenté` E3.06 [D] Preprocessing guide: best practices for preparing markdown sources for RAG indexing. Cover image stripping (alt text preserved), heading structure (structural signal for chunking, strip # from queries), noise detection (numeric sequences, trivial content), text density, heading/content coherence. Reference measured impact: preprocessing ~60% of RAG quality vs model ~15%.
+- `Implémenté` E3.39 [D] Documentation sync with code: 15 incohérence categories fixed across 6 doc files. CI green. See grooming-E3.39.md
+- `Implémenté` E3.40 [P] MCP tool: get_config — active configuration in YAML, secrets masked. CI green. See grooming-E3.40.md
+- `Implémenté` E3.41 [P] Fix get_config: all parse fields now exposed. CI green. See grooming-E3.41.md
 
 ### E4. Packaging
 
 - `Revue` E4.01 [P] MCP client configuration example (examples/mcp-config.example.json)
-- `À faire` E4.02 [P] pip installable package (publish to PyPI)
-- `À faire` E4.03 [P] Docker image for standalone use
-- E4.04 — removed (covered by `lore-mcp build --skip-optimize` since E11.01)
+- `Implémenté` E4.02 [P] pip installable package: wheel builds, installs, CLI works. Published on PyPI as `lorme` v0.1.1 (2026-11-06). `pip install lorme`
+- `Implémenté` E4.03 [P] Container image (Podman/Docker): Containerfile multi-stage, all commands, volume mounts, docs/docker.md, mcp-config example updated. See grooming-E4.03.md
+- E4.04 — removed (covered by `lorme build --skip-optimize` since E11.01)
 - E4.05 — moved to openshift workspace (data repository, not tooling)
 - E4.06 — moved to openshift workspace (data repository, not tooling)
 
@@ -398,14 +463,14 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Implémenté` E5.02 [P] Metadata filtering in queries (by source file, by date)
 - `Implémenté` E5.03 [E] Hybrid search study: BM25 (FTS5) + vector (sqlite-vec) with RRF fusion — ref: sqlite-rag-mcp. Priority: high (+13pts recall@10, E14.17)
 - `Implémenté` E5.04 [P] Hybrid search implementation
-- `À faire` E5.05 [E] int8/binary quantification study: sqlite-vec scalar quantization, size vs recall trade-offs
+- `Implémenté` E5.05 [E] int8/binary quantification study: float32 sufficient for <50K chunks, int8 ~99.5% recall (4x compact), bit ~95% (32x). Nomic v2 supports Matryoshka 768→256. Implementation deferred. See study-E5.05-quantization.md
 - `Implémenté` E5.06 [E] Reranking study: cross-encoder reranking after vector retrieval (+5-15pts nDCG@10 per E14.17). Evaluate cross-encoder models (bge-reranker, ms-marco), integration point, latency budget
 - `Implémenté` E5.07 [P] Reranking implementation
 - `Implémenté` E5.08 [P] Adjacent-chunk retrieval: return surrounding chunks merged at retrieval time (window_size configurable). No ingestion change. Depends on E5.11 study
 - `Implémenté` E5.11 [E] Context window retrieval study: evaluate adjacent-chunk (dynamic window at retrieval, E5.08) vs parent-child (double indexation, E6.08). Benchmarks, cohabitation or exclusion, LlamaIndex SentenceWindow vs AutoMerging patterns. Determine: merge results before LLM (industry standard). Informs E10.29 optimize dimension
 - E5.10 — removed (no concrete need — E14.17 identifies the problem as retrieval redundancy, not indexation duplication. Solutions: E5.01 per-source cap, E5.12 MMR at retrieval)
 - `Implémenté` E5.12 [P] MMR at retrieval: Maximal Marginal Relevance to diversify search results. Penalize similarity between already-selected chunks. −30-50% redundant tokens per E14.17. Configurable via config.yaml
-- `À faire` E5.13 [E] Pre-filtering study: sqlite-vec does not support native pre-filtering. Evaluate workarounds — filter chunks table first then KNN on filtered rowids, or use FTS5 as pre-filter. Consensus: pre-filtering > post-filtering (Pinecone, Qdrant, Weaviate) Maximal Marginal Relevance to diversify search results. Penalize similarity between already-selected chunks. −30-50% redundant tokens per E14.17. Configurable via config.yaml
+- `Implémenté` E5.13 [P] Pre-filtering: metadata pre-filter via rowid IN before KNN. Replaces post-filter anti-pattern. source_file, level, license, title, author, date_from/to all pre-filtered via SQL JOIN on chunks+sources tables. _apply_filters removed. See grooming-E5.13.md
 - `Implémenté` E5.09 [E] Heading markers in RAG pipeline study: evaluate impact of `#` in indexed chunks vs queries. Current clean_text strips `#` from headings before chunking — this breaks MD_SEPARATORS (`\n## `, `\n### `). E14.17 found no external source for strip benefit. Determine: keep `#` in chunks (structural signal for chunking), strip from queries only (search_docs), or strip after chunking. Revert clean_text strip if confirmed harmful
 
 ### E9. Multi-collection and license classification (prérequis MVP1 openshift)
@@ -418,31 +483,32 @@ Item types: `[E]` study/grooming, `[P]` PoC
 
 ### E6. Ingestion enhancements
 
-- `À faire` E6.01 [P] Incremental re-indexing (add/update files without full rebuild)
+- `Implémenté` E6.01 [P] Declarative DB sync: manifest is source of truth. On build, purge DB entries absent from manifest, skip unchanged (hash match), re-ingest changed (hash mismatch), add new. Full rebuild = special case (empty DB or --force). See grooming-E6.01.md
 - `Implémenté` E6.02 [P] Migrate to MarkdownTextSplitter: replace RecursiveCharacterTextSplitter with MarkdownTextSplitter (same langchain-text-splitters package). Tables, headings, code blocks protected natively. Remove custom sentinel code (tables.py). No study needed — standard solution
 - `Implémenté` E6.04 [P] Configurable chunk_size/overlap via env vars — default changed from 2048 to 1024 per AutoRAG E1.08 benchmark. Chunk params stored in meta table for traceability.
-- `À faire` E6.03 [P] Image captioning during ingestion (replace base64 stripping with AI-generated captions)
+- E6.03 — absorbed by E12.15 (detection) + E12.16 (VLM captioning) + E12.26 (sequential pipeline phase 2)
 - `Implémenté` E6.05 [P] Per-collection metadata: sources table in DB, manifest YAML input, biblio in search results, .json/.bib/.md output, front matter extraction.
 - `Implémenté` E6.06 [E] Multi-format ingestion study: evaluate markitdown, pymupdf4llm, trafilatura for PDF/HTML/DOCX/EPUB → text conversion. Assess integration as preprocessing step before chunking. E14.17 recommends: Docling (MIT, 97.9%), trafilatura (Apache 2.0, F1 0.966)
-- `À faire` E6.07 [P] Lint improvements: add heading hierarchy validation (## before ###, no skipped levels), binary/base64 content detection, numeric sequence detection. Enhance existing `lint.py` analysis
+- `Implémenté` E6.07 [P] Lint improvements: heading_depth, heading_ratio, heading_issues (level skips), structure_score (0.0-1.0), base64_count. Verdict integrates structure_score. See grooming-E6.07.md
+- `Implémenté` E12.51 [P] Clean repeated non-alpha characters: collapse non-alphanumeric 4+ to 3 (preserves ellipsis, headings, table pipes). Collapse spaces 2+ to 1. Remove whitespace-only lines. Fixes false POOR quality gate on DOCX/XLSX
 - `Implémenté` E6.08 [P] Parent-child chunking: double indexation (parent + child chunks), parent_id link, retrieve parent for context (+15-25% answer precision per E14.17). Depends on E5.11 study
 - E6.09 — absorbed by E12.02 (preprocessing hardening)
 - `Implémenté` E6.10 [E] Per-source chunking params study: vary chunk_size/overlap per source or collection in build-config YAML. Content-dependent chunking (E14.17 Cohere pattern)
 
 ### E7. Interoperability
 
-- `À faire` E7.01 [E] Multi-backend abstraction study: Backend API (search, list, export, import_chunks), SQLite ↔ pgvector migration
-- `À faire` E7.02 [P] Multi-model support (switch embedding models, maintain separate indexes)
-- `À faire` E7.03 [P] pgvector backend (LORE_BACKEND=pgvector, LORE_PG_HOST/PORT/USER/DBNAME/PASSWORD)
+- E7.01 — deferred (no second backend = premature abstraction. Revisit when pgvector is needed — the second backend will guide what to abstract)
+- E7.02 — absorbed by E9 (multi-collection: one .db per model)
+- E7.03 — deferred (pgvector is an openshift infra need, not lorme standalone. Depends on E7.01)
 
 ### E10. RAG evaluation (openshift demand 2026-08-31)
 
 - `Implémenté` E10.01 [E] RAG evaluation design. RAGAS seul suffit, SDG Hub hors scope. Extractive fallback sans dépendance. LORE_LLM_URL/MODEL pour RAGAS.
-- `Implémenté` E10.02 [P] `lore-mcp eval` — evaluate retrieval quality.
-- `Implémenté` E10.03 [P] `lore-mcp optimize` — auto-optimize chunking params.
-- `Implémenté` E10.04 [P] `lore-mcp optimize --manifest` — optimize with manifest to preserve bibliographic metadata.
-- `À faire` E10.05 [E] AutoRAG multi-model study: design cross-model optimization — vary embedding models (nomic-embed-v2-moe, granite-embedding-r2, etc. — libre-compliant only, no bge-m3 level 4) alongside chunk params to find the winning combination (model + chunk_size + overlap + top_k)
-- `À faire` E10.08 [P] Auto-configure embedding model from .db meta: read model_name/dim from third-party .db and load the correct model automatically
+- `Implémenté` E10.02 [P] `lorme eval` — evaluate retrieval quality.
+- `Implémenté` E10.03 [P] `lorme optimize` — auto-optimize chunking params.
+- `Implémenté` E10.04 [P] `lorme optimize --manifest` — optimize with manifest to preserve bibliographic metadata.
+- E10.05 — absorbed by E10.09 (multi-model optimize already implemented)
+- `Implémenté` E10.08 [P] Auto-configure embedding model from .db meta: if config has no embedding.model, read model_name from DB meta at first load. Error if neither configured nor in DB
 - `Implémenté` E10.10 [P] Rename mode `auto` → `builtin` with `:gpu`/`:cpu` suffix.
 - `Implémenté` E10.11 [P] `Embedder.unload()` — free GPU/CPU memory between models.
 - `Implémenté` E10.12 [D] TEI docs + default model → Nomic v2 MoE (Level 2) + ADR-005.
@@ -456,34 +522,36 @@ Item types: `[E]` study/grooming, `[P]` PoC
 - `Implémenté` E10.20 [P] Observability: ProgressReporter with ★ best column, sections, timing, Markdown summary.
 - `Implémenté` E10.21 [P] Config unification: `embedding:` key only, `--models` removed, error on old keys.
 - E10.22 — removed (no value, shelved since creation)
-- `Implémenté` E10.24 [P] Output management: clean default output (no lib noise), --verbose for detailed lore-mcp output, --debug for internal logs. Silence all third-party loggers (httpx, numexpr, sentence-transformers, huggingface_hub). Wire ProgressReporter with --verbose.
-- `À faire` E10.25 [P] Per-model verify_ssl in embedding config: honor `verify_ssl: false` per embedding model in build-config.yaml (currently only supported for judge LLM).
+- `Implémenté` E10.24 [P] Output management: clean default output (no lib noise), --verbose for detailed lorme output, --debug for internal logs. Silence all third-party loggers (httpx, numexpr, sentence-transformers, huggingface_hub). Wire ProgressReporter with --verbose.
+- `Implémenté` E10.25 [P] Per-model verify_ssl in embedding config: honor `verify_ssl: false` per embedding model in build-config.yaml (currently only supported for judge LLM).
 - `Implémenté` E10.26 [P] Extractive question quality: filter garbage sentences (min alpha ratio, min word count, skip markdown headers, skip base64/numeric-only lines) in `_generate_extractive`.
 - `Implémenté` E10.27 [P] Heading-based evaluation: generate QA pairs from document headings (heading → query, section content → ground truth) before chunking. Replace chunk-extracted questions. NDCG@k + Recall@k metrics (ir_measures or manual). Eliminates chunking bias.
 - `Implémenté` E10.30 [P] Unified config file: replace all LORE_* env vars with a single `config.yaml`. Manifest = sources (portable, shareable). Config = pipeline settings (models, keys, params — local, not committed). No env var fallback. Rename build-config.yaml → config.yaml. All commands read config: serve, build, preprocess, eval, enrich
 - `À faire` E10.31 [E] Default models study: decide default embedding model, reranking model, and LLM model when config does not specify them. Criteria: libre license, multilingual, quality benchmarks. Depends on E5.07 (reranking impl) — decide defaults after features exist
 - `Implémenté` E10.32 [P] Config refactoring: LLM registry pattern. `llm:` top-level = list of available models (name, model, api_url, api_key). Each section (enrich, judge, parse) references models by name. List of models per section = dimensions for optimize. Replaces current flat `llm:` section. Depends on E10.30
-- `À faire` E10.33 [E] Per-source chunking defaults study: identify patterns for auto-selecting chunk_size/overlap based on file content, format, size, density. Inform E6.10 per-source params
-- `Implémenté` E10.29 [E] End-to-end optimize: extend `lore-mcp optimize` to vary all pipeline parameters — preprocessing (dedup threshold, enrich techniques, table protection) + chunking (chunk_size, overlap) + search (top_k, reranking). Single optimization run evaluates the full pipeline against retrieval quality (NDCG, recall). Currently optimize only varies chunking params
+- E10.33 — shelved (E6.10 already allows manual per-source params in manifest. Auto-detection adds complexity for marginal gain — chunking impact ~5% vs preprocessing ~60%. Revisit if benchmarks show otherwise)
+- `Implémenté` E10.29 [E] End-to-end optimize: extend `lorme optimize` to vary all pipeline parameters — preprocessing (dedup threshold, enrich techniques, table protection) + chunking (chunk_size, overlap) + search (top_k, reranking). Single optimization run evaluates the full pipeline against retrieval quality (NDCG, recall). Currently optimize only varies chunking params
 - `À faire` E10.28 [D] Detailed eval report: markdown file with full questions, ground truths, per-model chapters, per-config sections with exhaustive Q&A and scores, scoring methodology appendix.
 - `Implémenté` E10.23 [P] Fix RAGAS import crash: stub langchain_community.chat_models.vertexai before import.
 - `Implémenté` E10.09 [P] AutoRAG multi-model implementation. `--models` CLI, embedding metrics (score_spread, source_diversity), MRR, model config YAML/CLI.
+- `Implémenté` E10.35 [P] Fix eval crash on empty FTS5 query: lorme eval crashes when auto-generated questions produce empty strings after cleaning (headings-only or base64-only content). FTS5 rejects empty MATCH query. Guard: skip empty queries in eval, warn in report
 - `Implémenté` E10.06 [P] Fix optimize .db naming collision.
 - `Implémenté` E10.07 [P] Fix optimize glob+st_mtime fragility.
+- `Implémenté` E10.34 [E] Corpus-type impact on RAG pipeline: study whether fundamentally different corpus types (source code, technical documentation, philosophy books, heterogeneous/general corpus) require different RAG pipelines or if a single pipeline with configuration handles all. Evaluate per corpus type: chunking strategy (AST-aware vs heading-based vs paragraph), embedding model (code-specialized vs generalist vs multilingual), preprocessing needs (code comments vs prose vs structured text), retrieval quality (same queries, different corpus structures). Benchmark on 3-4 corpus types with lorme current pipeline. Determine: universal pipeline with config knobs vs specialized pipelines per corpus type
 
 ### E11. Build workflow
 
-- `Implémenté` E11.01 [P] `lore-mcp build` — single command: manifest + models → optimized .db + metadata + report. Pre-flight validation, resumability.
+- `Implémenté` E11.01 [P] `lorme build` — single command: manifest + models → optimized .db + metadata + report. Pre-flight validation, resumability.
 
 ### E12. Preprocessing tool (E14.17 recommendations)
 
-CLI `lore-mcp preprocess` implementing RAG
+CLI `lorme preprocess` implementing RAG
 pipeline steps 1-3 (parse, clean, deduplicate).
 Self-service tooling for Platform consumers.
 Input: raw sources (PDF, HTML, DOCX, markdown).
 Output: clean markdown + enriched manifest
-(`-prep` suffix), ready for `lore-mcp build`.
-Module: `src/lore_mcp/preprocess/` (separable).
+(`-prep` suffix), ready for `lorme build`.
+Module: `src/lorme/preprocess/` (separable).
 CLI: `--docs-base-dir`, `--orig-subdir`,
 `--prep-subdir`, `--manifest-out`.
 Manifest is never modified — enriched copy only.
@@ -494,32 +562,199 @@ Manifest is never modified — enriched copy only.
 - `Implémenté` E12.04 [P] Deduplication: exact hash SHA-256 + near-duplicate MinHash+LSH (datasketch, academic defaults: k=5, 128 perms, threshold=0.8). Report-only — warns on duplicates, does not remove. Measured rates: ~24% enterprise docs (E14.17)
 - `Implémenté` E12.05 [P] PII detection: warn on patterns (emails, IPs, API keys, internal domains) before indexing. Report-only mode (no auto-removal). Vectors are not anonymization
 - `Implémenté` E12.06 [P] Table protection: detect markdown tables, ensure they are not split across chunk boundaries. Extract large tables as structured metadata. 4-pillar approach (E14.17)
-- `Implémenté` E12.07 [P] Quality gate: integrate `lore-mcp lint` as pre-flight validation. Block indexing of `poor` files unless `--force`. Warn on low text density, noise sections, heading hierarchy issues
+- `Implémenté` E12.07 [P] Quality gate: integrate `lorme lint` as pre-flight validation. Block indexing of `poor` files unless `--force`. Warn on low text density, noise sections, heading hierarchy issues
 - `Implémenté` E12.08 [E] Transversal LLM capability: study + wiring of shared LLM client for preprocessing. Evaluate techniques — contextual retrieval (−35% failures alone, −49% with hybrid BM25), Q&A mode, proposition indexing (+22.5%), metadata enrichment (+14.8pts). Define "complex document" (image-heavy, bad OCR, complex layout) and detection criteria (lint score on parser output, text density threshold). Subsumes E6.03 (image captioning). Cost/benefit, LORE_LLM_URL integration, opt-in config. Foundation for E12.03 LLM fallback and E12.09 enrich
 - `Implémenté` E12.09 [P] LLM enrichment implementation: optional `--enrich` flag calling LLM to add context paragraphs (contextual retrieval) and/or generated questions (Q&A mode) per section. Depends on E12.08 study
-- `En cours` E12.10 [P] Build integration: wire `lore-mcp preprocess` as optional first stage of `lore-mcp build`. Config key `preprocess:` in build-config YAML. Pass-through if sources already clean. CLI `--preprocess` done, config YAML pending
+- `Implémenté` E12.10 [P] Build integration: pipeline steps resolve params from LormeConfig autonomously. preprocess_sources(), _run_optimization() accept config param. run_build passes config to each step. Explicit params override config. CLI `--preprocess` + config YAML both work
 
 ### Bugs
 
 - E12.11 — removed (double clean is idempotent, clean needed in both preprocess and ingest for all use cases)
-- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lore-mcp build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
+- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lorme build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
 - E12.12 — removed (custom sentinels unnecessary — E6.02 migrates to MarkdownTextSplitter which handles tables natively)
+- `Implémenté` E12.101 [P] Download to build_dir, not orig_dir. CI green. See grooming-E12.101.md
+- `Implémenté` E12.102 [P] Recipe orig_dir used as fallback. CI green. See grooming-E12.102.md
+- `Implémenté` E12.103 [P] add_recipe collection override wired through build+ingest. CI green. See grooming-E12.103.md
+- `Implémenté` E12.104 [P] YouTube video ID used instead of URL path basename. CI green. See grooming-E12.104.md
+- `Implémenté` E12.105 [P] skip_optimize uses config.chunk_size, not optimize defaults. CI green. See grooming-E12.105.md
+- `Implémenté` E12.107 [P] URL-only sources not found: extension fallback + full-path detect_format + YouTube video ID without forced .mp4 + suffix guard removed for dotted basenames. CI green. See grooming-E12.107.md
+- `Implémenté` E12.108 [P] 2 sources missing from report: sources without cleaned data now reported as error in phase 4. Verified: 21/21 in report (15 ok + 4 error + 2 poor). See grooming-E12.108.md
+- `Implémenté` E12.109 [P] Poor sources indexed by default, skip_poor option. CI green. See grooming-E12.109.md
+- `Implémenté` E12.110 [P] Evaluation balanced across sources: round-robin sampling. CI green. See grooming-E12.110.md
+- `Implémenté` E12.111 [P] cancel_task stops running tasks: cooperative cancellation via cancel_event + check_cancelled() + stdout isolation. CI green. See grooming-E12.111.md
+- `Implémenté` E12.112 [P] TEI restart: start commands must be self-contained. Rule documented in configuration.md. CI green. See grooming-E12.112.md
+- `Implémenté` E12.113 [P] MCP server stdout isolation: stdout/stderr redirected in TaskManager threads. CI green. See grooming-E12.113.md
+- `Implémenté` E12.106 [P] add_recipe progress: report_progress() wired into run_build. CI green. See grooming-E12.106.md
+- `Implémenté` E12.115 [P] add_directory MCP tool: directory scanning with FormatRegistry filtering. Config isolation (E12.121) + robust handoff (E12.123). Validated by E2.14 (27/28 sources, 856 chunks). See grooming-E12.115-118.md
+- `Implémenté` E12.116 [P] FormatRegistry + narration for .yml/.yaml/.toml/Containerfile/.cfg/.ini. CI green. See grooming-E12.115-118.md
+- `Implémenté` E12.117 [P] CLI build auto-scan: preprocess=True forced when recipe auto-generated. CI green. See grooming-E12.115-118.md
+- `Implémenté` E12.118 [P] enrich="none" disables enrichment. CI green. See grooming-E12.115-118.md
+- E12.119 — absorbed by E12.115 (add_directory handles .gitignore respect, include_hidden, exclude_pattern)
+- `Implémenté` E12.121 [P] Task config isolation: copy.copy(cfg) per task + recipe autoporteur (orig_dir in recipe YAML). Collection lock in TaskManager. See grooming-E12.121.md
+- `Implémenté` E12.122 [P] Guard _get_db against empty .db: _get_db raises FileNotFoundError if .db absent. search_docs/list_indexed_sources return "Collection not found". CI green. See grooming-E12.122.md
+- `Implémenté` E12.123 [P] Robust preprocess→ingest handoff: add_sources uses prep recipe (path: .md) for ingest. add_source reads exact path from prep recipe (no stem glob). Enriched recipe includes orig_dir. CI green. See grooming-E12.123.md
 
 ### E12.08 implementation items
 
-- `À faire` E12.13 [P] Proposition indexing: LLM decomposes sections into atomic propositions. Hors MVP — ROI faible pour documentation technique (benchmark 2026: recursive+hybrid bat propositions). Réservé aux corpus haute valeur (juridique, médical)
+- E12.13 — shelved (ROI faible pour doc technique structurée: recursive+hybrid+reranking performe aussi bien. Gain +22.5% éprouvé uniquement sur corpus non-structurés denses — Chen et al. 2023 Dense X Retrieval, datasets HotpotQA/NQ. Coût: 1 LLM call/section. Réservé aux corpus haute valeur non-structurés — juridique, médical. Approche si besoin: LLM décompose sections en propositions atomiques, indexées comme chunks enfants via parent_id)
 - `Implémenté` E12.14 [P] Metadata enrichment: LLM generates section summaries and keywords. Add `--enrich meta` mode. +9.2-14.8pts RAG per E14.17
-- `À faire` E12.25 [P] Inference service lifecycle: config commands to start/stop model servers before/after use. Example: `start: "ollama run molmo2"`, `stop: "ollama stop molmo2"`. Free GPU between models. Configured per model in llm registry
-- `À faire` E12.26 [P] Sequential model processing: organize ALL pipelines (preprocess, build, optimize) to process model-by-model. Load model → process all items needing it → unload → next model. Extends existing Embedder.unload() pattern to VLM, LLM, reranker. Avoid loading multiple models simultaneously on limited VRAM
-- `À faire` E12.24 [P] Docling VLM for scanned documents: use granite-docling-258M (MIT) via API instead of RapidOCR for scanned pages. Resolves multi-column mixing and OCR artifacts. Configured via parse.models in config.yaml. Depends on E12.15 (detection)
-- `À faire` E12.23 [P] OCR artifact correction: post-OCR cleanup of multi-column mixing, fragmented headings, garbled text. Evaluate LLM-based correction vs heuristic reordering. Depends on E12.16 (image captioning may subsume simple OCR cases)
+- `Implémenté` E12.25 [P] Inference service lifecycle: config commands to start/stop model servers before/after use. Example: `start: "ollama run molmo2"`, `stop: "ollama stop molmo2"`. Free GPU between models. Configured per model in llm registry
+- `Implémenté` E12.26 [P] Sequential model processing: organize ALL pipelines (preprocess, build, optimize) to process model-by-model. Load model → process all items needing it → unload → next model. Extends existing Embedder.unload() pattern to VLM, LLM, reranker. Avoid loading multiple models simultaneously on limited VRAM
+- E12.24 — removed (scanned documents handled by Tesseract OCR via E12.43. granite-docling-258M VLM path failed (hallucinations FR). PaddleOCR blocked by Python 3.14. The underlying need is met — see audit-prep-full-tesseract-2026-09-22.md)
+- `Implémenté` E12.35 [P] Judge prompt robustness + --keep-intermediates
+- `Implémenté` E12.36 [P] Enrichment in source language: language detection via langdetect + prompt templates per language (FR, EN, fallback)
+- `Implémenté` E12.37 [P] Whole-document enrichment: when no headings found, treat entire document as one section (## Document) for enrichment
+- `Implémenté` E12.38 [P] OCR correction: reverted LLM approach (truncation issue), restored regex _fix_ocr_artifacts in clean_text
+- `Implémenté` E12.39 [P] Preserve content: reverted LLM prompt approach, enrichment adds alongside without rewriting
+- E12.40 — removed (title "w" is author metadata, not a bug. Manifest title field is the override mechanism. Principle: never override user declarations)
+- `Implémenté` E12.41 [P] Caption prompt quality: investigate why multi-model prompt (OCR+classify+caption) degrades Molmo quality vs simple caption prompt. Pexels photo identified as "slide" in multi-model vs correct "photo" in single-model: detect repetition loops in VLM output (discard), keep phase2 files for diagnosis, improve judge prompt (anti-repetition, prefer completeness, prefer source language). See docs/studies/grooming-E12.35.md
+- `Implémenté` E12.34 [P] CUDA check in subprocess: torch.cuda.is_available() allocates 3 MiB VRAM that cannot be freed. Run CUDA diagnostic check in a short-lived subprocess to avoid polluting main process VRAM before IS start
+- `Implémenté` E12.43 [P] Tesseract OCR + langue par source: Tesseract (Level 1-2) replaces RapidOCR (Level 3). lang field in manifest per source. Config fallback ocr_engine/ocr_lang. tesserocr binding. Do NOT install tesseract-osd. See docs/studies/grooming-E12.43.md
+- `Implémenté` E12.44 [P] Configurable timeout per model in LLM registry: add `timeout` field to llm registry entries. Used by PictureDescriptionApiOptions and caption_with_docling. Default 180s. Molmo CPU needs 600s for PPTX images
+- `Implémenté` E12.45 [P] Standalone photo/infographic fallback: when Docling produces empty output on a standalone image (0 pictures, 0 texts in JSON), fall back to direct VLM captioning via API. Pexels photo produces 0 bytes currently. See audit-prep-full-tesseract-2026-09-22.md
+- E12.46 — removed (no change needed: Summary/Keywords labels are LLM formatting instructions, not RAG signals. Content is already in source language via E12.36. Labels are noise for embedding — a few EN tokens in FR text have no measurable impact on retrieval. See grooming-E12.46.md)
+- `Implémenté` E12.47 [P] Minimal function signatures: preprocess_sources 3 params, run_build 5 params. All pipeline params resolved from LormeConfig. Tests migrated to LormeConfig fixtures. See grooming-E12.47.md
+- `Implémenté` E12.48 [P] Audio ingestion: transcribe_audio() calls STT API (OpenAI-compatible /v1/audio/transcriptions). Markdown with timestamp headings. Config: parse.stt_model references LLM registry. See study-E12.48-audio-ingestion.md
+- `Implémenté` E12.49 [P] Video ingestion: parse_video() extracts audio (ffmpeg) + scene change frames → single .md with transcription + base64 inline frames at temporal position. See grooming-E12.49.md
+- `Implémenté` E12.52 [P] Video frame captioning. Correction needed: log says "video frames" for document inline images (PPTX, DOCX) — should distinguish "inline images" from "video frames"
+- `Implémenté` E12.53 [P] Frame extraction: fixed interval strategy (1 frame per N seconds, configurable). Alternative to scene change for stable cameras
+- `Implémenté` E12.54 [P] Frame extraction: hybrid strategy (scene change + fixed interval, merge deduplicated). Best coverage for mixed content
+- `Implémenté` E12.55 [P] Frame extraction: OCR-guided strategy. Extract frame every 30s, fast OCR, keep only frames where text content changes. Best for slide presentations with desynchronized camera. Config: `parse.video_frame_strategy: ocr`
+- `Implémenté` E12.73 [P] Video download via yt-dlp: use yt_dlp Python lib (Unlicense). Auto-detect platform URLs (try extract_info, fallback to HTTP fetch). File naming: video ID (e.g. VCqIfIXmFMM.mp4), full title in manifest-prep. Download captions if available → skip STT. Validation videos: youtube.com/watch?v=VCqIfIXmFMM (EN, slides visible) and youtube.com/watch?v=K0X9QDRkIdg (EN, no slides): download videos from URL (YouTube, LinkedIn, etc.) with yt-dlp (Unlicense). If subtitles/captions available (auto or manual), download them and skip STT entirely. If captions downloaded, option to download audio-only (no video) or video-only (for frames). Extract metadata (title, description, duration, upload date) into manifest. Manifest entry: `url: https://...` triggers download. yt-dlp already handles authentication, rate limiting, format selection. Integration: in phase 1 parse, before STT — check for .srt/.vtt alongside video or download captions first
+- `Implémenté` E12.74 [P] Configurable enrich prompts: prompts in separate distributable prompts.yaml (src/lorme/prompts.yaml). Config.yaml references custom file (enrich.prompts_file) or overrides inline (enrich.prompts.<lang>.<technique>). Cascade: inline → custom file → distributed default → fallback EN. No hardcoded prompts in code except minimal fallback: move enrichment prompt templates from hardcoded dict to config.yaml. Allow users to add/override prompts per language and per technique. Current: FR+EN hardcoded in enrich.py. Enables: custom languages, domain-specific prompts, prompt tuning without code changes
+- `Implémenté` E12.72 [P] STT post-correction: study approaches to fix recurring STT errors in transcriptions. Regex/dictionary (fast, fragile) vs LLM contextual correction (robust, 1 LLM call/section). Measured: Canary-1B-v2 produces "Asian" for "agent", "Ejetic" for "agentic" on technical talks. LLM approach integrates as enrich technique `stt_correction`. Evaluate: error rate before/after, false positive risk, cost/benefit
+- `Implémenté` E12.71 [P] Smart frame captioning filter: skip VLM captioning on frames with no readable text content. OCR each frame before captioning — if OCR text < threshold (e.g. <20 chars or alpha ratio <0.3), skip captioning. Avoids spending ~70s/frame on "a man at a podium" descriptions. For scene strategy: reduces 44 frames to ~5-10 meaningful ones. Combine with transcript context: if frame OCR matches nearby transcript, skip (redundant). Measured waste: 51 min GPU on 44 frames, ~30 were pure noise
+- E12.75 — removed (code RAG handled by Codebase-Memory MCP server, MIT, 158 languages, knowledge graph. lorme stays focused on documents. The two MCP servers are complementary. See study-E10.34-corpus-type-rag.md)
+- `Implémenté` E12.76 [P] Test state isolation: purge tests must not touch real state dir. monkeypatch _state_dir in test_mcp_tools.py. Root cause of pipeline crash (test_purge_all deleted active state dir via concurrent fork). See grooming-E12.76-E12.77.md
+- `Implémenté` E12.77 [P] Resilient state dir writes: mkdir(parents=True) before write_text in caption_inline_frames (parse.py) and capture_service_logs (service.py). Prevents crash when state dir externally deleted during long-running captioning
+- `Implémenté` E12.78 [P] Build cache validation: verify .db content (sources > 0, matching model/chunk config) before skipping indexation. Previously any existing .db — even empty — was treated as cached
+- `Implémenté` E12.79 [P] Upstream contribution to Docling: PR #4392 merged (2026-10-19). Fix PIL warning on palette P+tRNS images in picture_description_base_model.py and _utils.py. 3 approvals (chrikrah ×2, dolfim-ibm). Local workaround (E12.80 MVP1) removable when Docling dependency updated
+- `Implémenté` E12.80 [P] Improve Docling usage in lorme: MVP1 local RGBA workaround in caption_with_docling, MVP2 per-image captioning progress logging, MVP3 phase 1 docling_json validation. See grooming-E12.79-E12.80.md
+- `Implémenté` E12.81 [P] YouTube URL detection: route video platform URLs through yt-dlp before HTTP fetch. Fix name collision (use video ID). Fix E12.73 integration — yt-dlp must run BEFORE parse, not only in STT phase. See grooming-E12.80-all.md
+- `Implémenté` E12.82 [P] Capture ConversionResult: check Docling .status (PARTIAL_SUCCESS/FAILURE), surface .errors in preprocess report. Currently .document extracted and result discarded. See grooming-E12.80-all.md
+- `Implémenté` E12.83 [P] Preprocess corrections: transverse item for fixes identified during pipeline validation (report completeness, error surfacing, quality gate edge cases)
+- `Implémenté` E12.84 [P] PDF heading hierarchy: enable heading_hierarchy_options in _create_docling_converter. Currently all PDF headings flatten to level 1. Direct RAG chunking quality impact. See grooming-E12.80-all.md
+- `Implémenté` E12.85 [E] HybridChunker study: HybridChunker better for Docling sources (0 table splits, 100% heading context) but only covers Docling formats. Keep MdSplit default. See study-E12.85
+- `Implémenté` E12.88 [E] Export options study: compact_tables=True recommended (-9% PDF, -76% XLSX, no loss). Applied. See study-E12.88
+- `Implémenté` E12.98 [E] Docling Markdown bridge study: all markdown (trafilatura, markitdown, STT) loaded via Docling Markdown backend → HybridChunker. Result: GO — <0.3% loss, 2× fewer chunks, 100% heading context, enrichment preserved. See study-E12.98
+- `Implémenté` E12.99 [P] Replace MarkdownTextSplitter with Docling bridge + HybridChunker in ingest.py. All formats: markdown → Docling Markdown backend → DoclingDocument → HybridChunker. No parser changes. See grooming-E12.99
+- E12.120 — shelved (6/10 Docling options already covered by lorme with superior implementations — VLM captioning, code narration AST, OCR, LLM registry. Remaining 4 have no demonstrated need. Upstream contribution preferred over adoption — PR #4392 open, smart captioning filter is next candidate. Maximize work not done)
+- `Implémenté` E12.127 [P] Params passthrough: generic `params` dict in LLM registry, forwarded to API (form data for STT, JSON body for LLM/VLM). 6 call sites. 696 tests. See grooming-E12.127.md
+- `Implémenté` E12.125 [P] Speaker diarization: pyannote.audio (MIT, Level 2) optional post-processing. Phase 1.5 after STT. Alignment + format_diarized_markdown. enrich:speaker_id LLM technique (with/without speakers hint). Config: parse.diarization_model. 712 tests. See grooming-E12.125.md
+- `Implémenté` E12.126 [P] Cleanup intermediates: MCP+build delete prep/+.work/ after success. preprocess keeps prep/ (deliverable). --keep-intermediates preserves all. See grooming-E12.126.md
+- `Implémenté` E3.43 [P] Preprocess-only MCP tools: preprocess_source, preprocess_sources_tool, preprocess_directory. Full pipeline without indexation. 22 MCP tools. See grooming-E3.43.md
+- `Implémenté` E12.128 [P] preprocess_source service lifecycle: _cleanup_services() added to preprocess_sources_tool. preprocess_sources() already calls start_service() internally. See trace-diarize-v2-2026-10-06.md
+- `Implémenté` E12.129 [P] STT placeholder detection: pipeline detects "requires STT service" placeholder after phase 1, reports as error status (not silent success). See trace-diarize-v2-2026-10-06.md
+- E12.130 — removed (non-issue: E12.132 keep_intermediates covers the diagnostic need)
+- `Implémenté` E12.131 [P] speakers param on preprocess_source and add_source MCP tools. Also works via recipe YAML (source-level `speakers` field read by enrich_speaker_id at line 1179)
+- `Implémenté` E12.132 [P] keep_intermediates MCP param on all write tools: add_source, add_sources, add_directory, add_recipe, preprocess_source, preprocess_sources_tool, preprocess_directory
+- `Implémenté` E12.133 [P] MCP schema truncation by client: false positive (stale client cache). Workaround applied: removed "Advanced:" docstring sections that may have caused parsing issues. All params now visible (add_source 13, preprocess_source 6)
+- `Implémenté` E12.134 [P] STT subtitle detection + proportional timeout: detect .vtt/.srt alongside pre-downloaded videos (skip STT). Video timeout = max(config, duration*2) like audio. See grooming-E12.134.md
+- `Implémenté` E12.135 [P] Remove _cleanup_services from MCP task paths: 3 hard-stop calls removed from server.py. Lazy stop via ModelRegistry + atexit + signal handler sufficient. See grooming-E12.135.md
+- `Implémenté` E12.136 [P] Diarization failure surfacing: diarize_audio returns (turns, error) tuple. Callers log errors + add warnings to source data. See report-tests-batch.md
+- `Implémenté` E12.137 [P] diarization_device config: gpu|cpu|auto for pyannote (pipeline.to(cuda)). diarize library CPU-only. Warning for risky configs. See grooming-E12.137-138.md
+- `Implémenté` E12.138 [P] Per-speaker STT for code-switching (consensus pipeline): diarize → extract per speaker (ffmpeg concat) → STT per speaker (auto-detect lang) → reconstruct timeline. stt_correction prompt enriched for multilingual. See grooming-E12.137-138.md
+- `Implémenté` E12.139 [E] MOSS-Transcribe-Diarize evaluation: GO. FR transcription correct (3 speakers, timestamps), CPU RTF ~1x, GPU needs >8GB VRAM. Hallucination on <2s audio. See report-E12.139-moss-eval.md
+- `Implémenté` E12.141 [P] Skip global STT when diarization configured: skip_global_stt skips phase 1.6 for audio/video when diarize_entry set. Phase 1.5 per-speaker STT executes with data["text"]=None. E12.129 placeholder silently cleared. See grooming-E12.141.md
+- `Implémenté` E12.142 [P] Diarization per-speaker STT was dead code: root cause = phase 1.6 sets data["text"] before phase 1.5, making `not data.get("text")` always False. Fixed by skip_global_stt (E12.141). See grooming-E12.141.md
+- `Implémenté` E12.144 [P] MCP task thread diarization fix: restore real stdout/stderr during pyannote diarization call. TaskManager redirects to StringIO (E12.113), which breaks torch DataLoader workers in pyannote. Fix: save+restore sys.stdout/stderr around diarize_audio call. See report-tests-batch.md
+- `Implémenté` E12.145 [P] Debug mode for MCP serve: --debug flag added to main parser (alongside --transport, --config). Wired to configure_logging via output_level_from_args. See report-tests-batch.md
+- `Implémenté` E12.147 [P] Diarization result lost in MCP task thread: real stdout/stderr restoration extended to entire phase 1.5 block (diarize + extract + STT + reconstruct), not just diarize_audio(). logger.info added after each step. See report-tests-batch.md
+- `Implémenté` E12.150 [P] Diarization output quality: reconstruct_timeline proportional character distribution (no duplication), per-speaker STT lang hint. Root cause: single STT segment [0,10] matched by every turn. Fix: char cursor per speaker, proportional split. CI green. See grooming-E12.150.md
+- `Implémenté` E12.152 [P] Diarization quality: (1) _merge_consecutive_turns before distribution (342→~100). (2) Per-speaker STT auto-detect lang (removed source_lang override). (3) Speaker mapping — depends on P1+P2 quality. 32 tests, CI green. Trace: tests/validation/trace-diarize-v22.md
+- `À faire` E12.153 [P] Diarization quality v23: 3 issues remaining vs human reference (../ecole/Sources/transcript-reunion-6-oct-2026.md). (1) **Merge insufficient** — 342→155 turns (target ~100). _merge_consecutive_turns merges adjacent same-speaker but pyannote alternates rapidly in multi-party conversation. Explore: merge turns with gap <1s for same speaker, or merge all turns until speaker change. (2) **Language still EN** — per-speaker STT auto-detect choisit EN pour les 3 speakers FR (Sonia/Sarah/Romain). Canary default EN. Fix: parse `speakers` hint to extract lang per speaker ("Sonia (speaks French)" → lang=fr), pass explicitly to transcribe_audio. (3) **Speaker attribution wrong** — Christine↔Sonia swapped. Cause: speaker_id enrichment maps pyannote SPEAKER_XX to names using EN-translated content → wrong mapping. Fix depends on P2 (correct lang → correct content → correct mapping). Validation: v23 collection test-diarize-v23, compare with reference line by line. See trace-diarize-v22.md
+- `Implémenté` E12.151 [P] Diarization v21 regressions: (1) clean segment text + word boundary split. (2) transcribe_audio(title=None) default, no heading for per-speaker STT. (3) speaker naming depends on text quality. 31 diarize tests, CI green. See grooming-E12.150.md
+- `Implémenté` E12.149 [P] Service start command fails silently: check exit code after 2s, raise RuntimeError with stderr. CI green. See grooming-E12.149.md
+- `Implémenté` E12.148 [P] extract_speaker_audio ffmpeg filter label mismatch: skipped segments (<0.05s) create non-contiguous labels (s0,s2,s4) but concat expects contiguous (s0,s1,s2). Fix: separate counter instead of enumerate index. 724 tests, CI green. See grooming-E12.148.md
+- `Implémenté` E12.146 [P] Error details in preprocess report: warnings from diarization/pipeline included in preprocess-report.json (ok + error entries). VRAM check in auto diarization_device (<4GB → CPU with warning). See report-tests-batch.md
+- `Implémenté` E12.143 [P] Fallback STT when diarization produces no turns: with skip_global_stt, if diarize_audio returns no turns (short audio, 1 speaker, or error), source had no text. Fix: fallback STT block after diarization phase — direct STT on sources that still have text=None. See report-tests-batch.md
+- E12.140 — removed (MOSS-TD refused: Level 4, training data undocumented, Qwen+Whisper triple opacity. Sync 2026-10-09)
+- `Implémenté` E12.154 [P] Diarized STT via response_format=diarized_json: transcribe_audio formats speaker-headed markdown when API response segments contain speaker field. Config via params passthrough (E12.127), no hardcoded logic. Pipeline: VAD CRDNN + ECAPA-TDNN + clustering in STT server, all Level 2 Apache 2.0. CI green. See study-E12.153-diarization-reconstruction.md
+- `À faire` E12.124 [E] Upstream contribution study: evaluate 4 contribution candidates to Docling ecosystem. (1) Smart captioning filter → docling (PictureDescriptionApiOptions, OCR-skip empty frames, E12.71). (2) Code chunking: 3 extra languages (Bash/Go/Rust) + dynamic tree-sitter detection → docling-core code_chunking (already has 5 languages). (3) Metadata extraction from Markdown front matter → docling MarkdownDocumentBackend (issue #197 open 18 months, PR #4596 opens the door). (4) E12.100 parent-child chunking comparison with docling-core hierarchical_chunker. LLM enrichment (context/Q&A/meta) confirmed out of Docling scope (RAG downstream). Code narration AST vs do_code_enrichment: different problems (file-level AST vs VLM on PDF code images). Depends on E12.79 merge (establish contributor relationship first). Check AI policy per project
+- `À faire` E12.100 [E] Evaluate HybridChunker hierarchical mode as replacement for custom parent-child chunking (E6.08). Current: double indexation parent+child in ingest.py, parent_chunks table, parent_id link. HybridChunker may provide equivalent context via heading path metadata without double indexation. Depends on E12.99
+- `Implémenté` E12.86 [P] VLM captioning concurrency: configurable PictureDescriptionApiOptions.concurrency, default 1. Ready for GPU servers
+- `Implémenté` E12.89 [P] Concurrent LLM calls: LLMConfig dataclass in llm.py, call_llm(config, prompt), call_llm_batch(config, prompts) with Semaphore(concurrency). Enrichment migrated to LLMConfig. _enrich_sections() factorizes 4 functions. Ctrl+C < 0.5s. See grooming-E12.80-all.md
+- `Implémenté` E12.90 [P] Harmonize directory arguments: replace docs-base-dir/prep-dir/output-dir with --orig-dir (read-only) + --build-dir (everything: .db, manifest-prep, reports, prep/, .work/). Checkpoint in build-dir/.work/ instead of ~/.local/state/. --keep-intermediates keeps .work/. See grooming-E12.80-all.md: configurable PictureDescriptionApiOptions.concurrency, default 1. Ready for GPU servers. See grooming-E12.80-all.md
+- `Implémenté` E12.87 [P] Batch document conversion: use convert_all() in phase 1 subprocess instead of per-document convert() loop. See grooming-E12.80-all.md
+- `Implémenté` E3.11 [P] MCP service observability: expose service status via MCP tool (get_service_status). Returns: service name, state (starting/ready/error/stopped), uptime, last error. Allows LLM to diagnose "TEI is warming up" instead of receiving opaque errors. Enables: wait-and-retry patterns, user status reporting, proactive health monitoring
+- `Implémenté` E3.12 [P] MCP serve concurrent queries: validate that multiple concurrent search_docs calls work correctly. Currently untested — parallel forks calling search_docs fail (TEI contention, embedder init race). Ensure _init_lock serializes correctly in anyio context, _embedder is shared across concurrent tool calls, no restart loop under concurrent load. Test: 3 concurrent search_docs from separate forks
+- `Implémenté` E3.10 [P] MCP serve mode: start embedding service at server launch, not lazily per-query. Currently _get_embedder calls start_service on every retry when _embedder is None, causing a kill-restart loop (podman rm -f + run on each failed attempt). Fix: start service once in main() before mcp.run(). Separate service lifecycle from embedder creation. Blocker for E10.36 benchmark and production MCP serve
+- `Implémenté` E3.09a [P] TaskManager framework: thread-based task manager with ModelRegistry, get_task_status/cancel_task/list_tasks MCP tools, progress via status file in .work/. Foundation for all long-running MCP operations. See grooming-E3.09.md
+- `Implémenté` E3.09b [P] start_build MCP tool: wraps run_build in thread, params recipe+build_dir+force
+- `Implémenté` E3.09c [P] start_preprocess MCP tool: wraps preprocess_sources in thread
+- `Implémenté` E3.09d [P] add_source (async upsert) + remove_source (sync) MCP tools
+- `Implémenté` E3.09e [P] start_eval + start_optimize MCP tools
+- `Implémenté` E3.09f [P] start_enrich MCP tool
+- `Implémenté` E3.13 [P] Resource-aware task scheduling: ModelRegistry with per-resource-type slots (LOCAL_GPU, LOCAL_CPU, REMOTE). Lazy stop — models stay loaded until slot needed. Usage counting for concurrent access to same model. Replaces global semaphore from E3.09a
+- `Implémenté` E3.14 [P] Incremental ingest path: ingest_source() in ingest.py reads chunk params from existing .db meta, validates model, no create_tables. add_source uses ingest_source for existing .db, falls back to run_build for new .db. Merges E3.15. Introduced by E3.09d
+- E3.15 — merged into E3.14 (same root cause: no incremental ingest path)
+- `Implémenté` E3.16 [P] MCP serve db connection lifecycle: separate connections for write ops, invalidate _single_db after. Introduced by E3.09d
+- `Implémenté` E3.19 [P] Default directories: data_dir (XDG), default_collection, _get_db(collection) cache, lorme init bootstrap. _single_db/_is_multi_collection removed. CI green
+- `Implémenté` E3.18 [P] Unified add pipeline: add_source (preprocess+ingest, all formats), add_sources (JSON batch), add_recipe (YAML). start_build/start_preprocess/start_enrich removed. 14 MCP tools. CI green
+- `Implémenté` E3.20 [P] add_source markdown: validate add_source with .md files via MCP LLM. Config defaults, override, preprocess=false. Use existing test fixtures
+- `Implémenté` E3.21 [P] add_source HTML: validate with .html files via MCP LLM. trafilatura parsing. Use existing test fixtures
+- `Implémenté` E3.22 [P] add_source PDF/DOCX/PPTX: validate with binary formats via MCP LLM. Docling parsing. Use existing test fixtures
+- `Implémenté` E3.23 [P] add_source video/audio: validate with video/audio via MCP LLM. STT + frame extraction. Use existing test fixtures
+- `Implémenté` E3.24 [P] add_source image: validate with image files via MCP LLM. VLM captioning. Use existing test fixtures
+- `Implémenté` E3.25 [P] add_source CSV/JSON: validate with data formats via MCP LLM. markitdown parsing. Use existing test fixtures
+- `Implémenté` E3.26 [E] Options naming and tiered help: review all config/CLI/MCP option names for consistency. Separate common options (user-facing) from advanced options (power user). CLI: --help (common) vs --help-all (advanced). MCP tool descriptions: essential params first, advanced with defaults. Bootstrap config.yaml: common section vs advanced section
+- `Implémenté` E3.27 [P] Collection wildcard selection: collection="*" searches all .db in database.dir. Glob patterns for subset: collection="ai-*" searches ai-libre.db + ai-gris.db. Applies to search_docs, list_indexed_sources, remove_source
+- `Implémenté` E3.28 [P] add_source by URL: download (HTTP/yt-dlp), format detection by Content-Type or content sniffing, file naming (video ID, slug from title), network error handling (404, timeout, rate limiting). Transversal to all format items (E3.20-25)
+- `Implémenté` E3.29 [P] Source identification: source_id as PK in all tables. Cascade resolution: param → DOI → ISBN → URL → file. Migration auto (file: prefix). search/remove/list support source_id. 689 tests. See grooming-E12.123.md
+- `Implémenté` E3.30 [P] Format detection by content: puremagic (MIT, pure Python) for content-based detection, extension fallback for text formats. ZIP disambiguation (DOCX/PPTX/EPUB) native. CI green
+- `Implémenté` E3.32 [P] Test database fixtures: produce small .db collections for tests (markdown-only, mixed formats, multi-collection). Rebuilt from scratch — no migration of existing .db. Used by E3.17 validation and unit tests
+- `Implémenté` E3.33 [P] Version command: hatch-vcs, lorme version [--deps], get_version(deps) MCP tool. CI green
+- `Implémenté` E3.34 [P] orig_dir in recipe: add orig_dir field to recipe YAML (base directory for source files). Also as parameter on add_source, add_sources, add_recipe MCP tools. Recipe is self-contained — no external --orig-dir needed
+- `Implémenté` E3.35 [P] Heuristic text format detection: puremagic returns text/plain for HTML with leading whitespace. Add fallback heuristic: strip whitespace, check for <!DOCTYPE or <html. Improve detect_format for text files that puremagic can't distinguish
+- `Implémenté` E3.36 [P] Task progress reporting: get_task_status returns only "running" + elapsed. Add phase info (parsing 3/5, captioning 2/8, enriching 7/12, embedding). LLM can report progress to user
+- `Implémenté` E3.38 [P] Fix embedder service restart after preprocess: add_source preprocess may stop TEI (lazy stop for VLM). Subsequent ingest needs TEI but _get_embedder fails to restart. Service health check before start, or preserve TEI during preprocess
+- `Implémenté` E3.37 [P] Bibliographic index via MCP: expose source metadata (title, author, license, date, url) via list_indexed_sources --detail or a new get_source_metadata(source) tool. Currently only source_file + chunk_count visible
+- `Implémenté` E3.31 [P] Structured data to knowledge: MVP1 schema extraction + headings (narrate.py). CI green. See grooming-E3.31.md
+- `Implémenté` E3.42 [P] Code narration for RAG: AST-based structural narration. It1: Python ast ✓. It2: tree-sitter dynamic detection (8 languages) ✓. It3 deferred (marginal RAG value). Validated by E2.14 (856 chunks, score 0.9177). See grooming-E3.42.md
+- `Implémenté` E12.114 [P] Format registry: FormatRegistry class, 6 API methods, dynamic tree-sitter detection, config overrides, explicit/implicit handling. 3 iterations complete. Validated by E2.14. See grooming-E12.114.md
+- `Implémenté` E3.17 [P] Validation exhaustive: validate_mcp_sdk.py tests all 17 MCP tools. Cycle add_source → search → remove verified. Pre-flight embedder check (TEI must be running). See grooming-E3.17.md
+- `Implémenté` E12.91 [P] Add lang to sources table in .db. Migration for existing .db
+- `Implémenté` E12.92 [P] Rename orig → file in manifest. Direct replacement, no backward compat
+- `Implémenté` E12.94 [P] Remove capture_service_logs (user configures podman --log-driver). Configurable batch_size from LLM registry
+- `Implémenté` E12.95 [P] Validation CLI end-to-end: all IS scripts in scripts/ (autoporteurs), config-validation.yaml, all 9 metrics (embedding+retrieval+RAGAS). See grooming-E12.91-93.md
+- `Implémenté` E12.96 [P] Validation MCP via SDK: programmatic test of all MCP tools without LLM
+- `Implémenté` E12.97 [P] Validation MCP via LLM: playbook natural language before/after indexing, incremental ops, from-scratch. Depends on E3.09a-d, E12.96
+- `Implémenté` E12.93 [P] Rename manifest → recipe (code, CLI, docs, tests). Recipe = sources + defaults + options cascade. config.yaml = instance defaults only
+- `Implémenté` E10.36 [E] Multi-MCP benchmark: measure retrieval quality with lorme + Codebase-Memory combined vs each alone vs neither. Complex queries spanning docs + code. 4 scenarios: both MCP, lorme only, Codebase-Memory only, no tools. 10 mixed questions. Metrics: answer completeness, source coverage, file/line accuracy. Requires built .db (after validation pipeline)
+- `Implémenté` E3.08 [E] Codebase-Memory synergy study: benchmark E10.36 confirms natural synergy (2.9/3.0 combined vs 2.4 CM-only vs 1.4 lore-only). No integration code needed — LLM routes naturally. Axes 1,3,4 dropped (premature coupling). See /tmp/e10-36-results.md: evaluate deeper integration between lorme (documents) and Codebase-Memory (code). Evaluate: unified search proxy (single MCP tool queries both), cross-referencing (doc mentions function → link to code), docstring indexing (code comments as lorme sources), shared context (lorme enrichment uses code graph for better context), joint eval (measure combined recall vs separate). Determine: which integrations add value vs premature coupling. Both are MCP servers — integration should respect MCP boundaries (no code linking)
+- `Implémenté` E3.07 [D] Multi-MCP setup guide: document how to use lorme (documents) + Codebase-Memory (code) together. MCP client config example with both servers. Use cases: "what does the doc say about X" (lorme) + "where is X implemented" (Codebase-Memory). Installation, config, example queries
+- `Implémenté` E12.56 [P] Unified model registry
+- `Implémenté` E12.57 [P] Standardize API URL convention
+- `Implémenté` E12.58 [P] Unified --allow-download flag: gate both model downloads (HuggingFace builtin) and source URL fetches (manifest url-only entries) behind explicit authorization. Default: no download without flag
+- `Implémenté` E12.59 [P] Graceful shutdown on SIGINT/SIGTERM
+- `Implémenté` E12.65 [P] Threaded blocking calls for immediate signal handling
+- `Implémenté` E12.66 [P] Selective state purge
+- `Implémenté` E12.61 [P] Preserve source directory tree in preprocess output: two files with the same name in different subdirectories must not collide. prep/ mirrors the orig/ tree structure. Path in manifest-prep reflects the relative path
+- `Implémenté` E12.62 [P] Directory-as-collection: preprocess a directory tree recursively without manifest (or with partial manifest). Manifest optional — if absent, scan directory; if partial, enrich with scanned files. Goal: index lorme's own docs as a .db, then any framework/library docs to validate RAG relevance. Supports: full manifest, partial manifest (overrides per file), directory-only (auto-manifest), subdirectory selection
+- `Implémenté` E12.63 [P] Resumable pipeline
+- `Implémenté` E12.64 [P] Sub-source checkpoint for captioning: resume at the Nth image within a source, not from scratch. Detect already-captioned images in intermediate file. Critical for PPTX with 49+ images (2h captioning lost on interrupt). Correction needed: per-image checkpoint implemented for caption_with_docling (phase 2) but NOT for caption_inline_frames (phase 1.7). Phase 1.7 restarts from frame 1 on resume
+- `Implémenté` E12.67 [P] Per-phase hash for intermediate reuse: all 3 phases wired. Phase 1 (ocr/video params), phase 2 (caption models), phase 3 (enrich techniques + LLM). Config change triggers automatic re-run. 691 tests
+- `Implémenté` E12.70 [P] Separate STT cache from frame extraction: parse_video currently couples transcription and frame extraction in one call. Changing frame strategy requires re-transcribing (~40min per video). Separate: cache STT result independently (transcript + language), re-extract frames without re-transcribing. Enables frame strategy changes without STT cost
+- `Implémenté` E12.69 [P] Progressive report writing: write preprocess-report.json incrementally after each source completes, not only at the end. On interrupt (Ctrl+C), the report reflects all completed work. Currently no report is produced if the pipeline is interrupted
+- `Implémenté` E12.68 [P] Deferred embedding service start: in `build --preprocess`, defer embedding service start until after preprocessing completes. Currently the embedding container starts at build entry and idles during the entire preprocess phase (STT, VLM captioning, enrichment), wasting GPU VRAM and container resources. Move `_load_embedders_from_config_or_args` call to after `preprocess_sources` returns
+- `Implémenté` E12.60 [P] Purge all legacy: remove all LORE_* env var references, os.environ.get fallbacks, "Legacy" comments, backward compat shims in code, docs, and error messages. No env var fallback — config.yaml only. Pre-release, no users to break: catch signal, stop all running IS (stop_service), free VRAM, cleanup temp files, exit cleanly. Currently Ctrl+C leaves IS containers running and VRAM allocated
+- `Implémenté` E12.50 [P] Format detection via mimetypes: _BACKEND_MAP for explicit backends, mimetypes.guess_type() for audio/video. Covers all formats automatically. See grooming-E12.50.md
+- `Implémenté` E12.42 [P] Multi-model via Docling natif: parse once → save_as_json → pour chaque modèle: load + PictureDescriptionApiModel → export. Zéro code VLM custom. Vérifié: images survivent à la sérialisation JSON. See docs/studies/grooming-E12.42.md
+- `Implémenté` E12.33 [P] Test infrastructure for subprocess phase 1: test _phase1_worker directly (5 tests: parse, missing, multiple, report structure, orig_dir). See grooming-E12.33.md
+- `Implémenté` E12.32 [P] VLM diagnostic traces: VRAM before each VLM call, payload size, image dimensions, response body on error. Visible with --debug only. Requested by IS provider for 507 diagnosis
+- `Implémenté` E12.31 [P] Subprocess isolation for phase 1 parse: run Docling parse in a subprocess (fork) so that the CUDA context (~128 MiB) is released when it exits. Phase 2 starts with fully clean VRAM (22 MiB vs 150 MiB). Resolves granite-vision 507 on high-res images at the edge of VRAM capacity
+- `Implémenté` E12.30 [P] Full Docling integration: use Docling natively for granite-docling (VlmPipeline in phase 1, not standalone API in phase 2), picture description via PictureDescriptionApiOptions for granite-vision, classification allow/deny. granite-docling is a page converter (DocTags→structured markdown), not a captioner — must be called through Docling only (IBM recommendation)
+- `Implémenté` E12.23 [P] OCR artifact correction: Part A — regex fixes (I'→l') in clean.py. Part B — bbox column reorder on Docling object before export_to_markdown() (images only). Plus PPTX generic alt text fix. See docs/studies/grooming-E12.23.md
 - `Implémenté` E12.15 [P] Document type detection: classify input as text-native PDF, scanned document, photo, infographic, or data. Route to appropriate parser (Docling text, Docling VLM, VLM captioning). Prerequisite for E12.16 and E12.24
 - `Implémenté` E12.16 [P] Image captioning via VLM: LLM vision generates descriptions for photos and infographics. Requires general-purpose VLM (Claude vision, LLaVA, Qwen-VL). Also enriches alt text of images in markdown documents. Depends on E12.15 (detection). Related to E6.03
 - E12.17 — moved to E10.29 (end-to-end optimize)
-- `Implémenté` E12.18 [P] CLI separation: `lore-mcp enrich` as standalone command (currently only `--enrich` option on preprocess). Same modules, separate entry point. `lore-mcp preprocess --enrich` remains as shortcut
-- `Implémenté` E12.19 [P] Analyze integration: dedup + PII reports as implicit analysis during preprocess (not separate action). `lore-mcp lint` already exists as standalone. Wire dedup+PII into lint if not already
-- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lore-mcp build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
-- `Implémenté` E12.21 [P] URL list input: accept a simple text file of URLs as input (one URL per line) instead of a full manifest. lore-mcp fetches, generates manifest entries, preprocesses. Simplest possible input format
+- `Implémenté` E12.18 [P] CLI separation: `lorme enrich` as standalone command (currently only `--enrich` option on preprocess). Same modules, separate entry point. `lorme preprocess --enrich` remains as shortcut
+- `Implémenté` E12.19 [P] Analyze integration: dedup + PII reports as implicit analysis during preprocess (not separate action). `lorme lint` already exists as standalone. Wire dedup+PII into lint if not already
+- `Implémenté` E12.20 [E] Auto-manifest and full-auto mode: `lorme build --docs-dir /files/ --output-dir /db/` without manifest. Scan directory for supported formats, generate manifest with extracted metadata (title, author, license from front matter or document content), preprocess, index. Manifest is optional — if absent, generated; if provided, used and enriched. All existing modes (manual manifest, external preprocess, build-only) remain valid
+- `Implémenté` E12.21 [P] URL list input: accept a simple text file of URLs as input (one URL per line) instead of a full manifest. lorme fetches, generates manifest entries, preprocesses. Simplest possible input format
+- `Implémenté` E12.27 [P] Progressive output and VLM resilience: phase-suffixed files on disk (phase1-parse.md, phase2-caption.md, phase3-enrich.md → final .md), phase announcement in stdout+report, VLM per-image try/except + skip <10KB + content-hash dedup + circuit breaker + progressive write per image. See docs/studies/grooming-E12.27.md
+- E12.28 — absorbed by E12.42 (Docling native multi-model) + E12.35 (judge) + E12.41 (caption quality). All described functionality implemented
+- E12.29 — absorbed into E12.28
 - `Implémenté` E12.22 [P] Untreated files report: preprocess must produce a clear report of all files NOT processed (missing, errors, URL fetch failed, format not supported, quality gate failed). Machine-readable output for pipeline integration
 
 ### E8. Example corpus — moved to openshift workspace
@@ -557,20 +792,19 @@ Llama Stack, Milvus).
 
 ### Team Topologies
 
-lore-mcp is a **Platform component** in the
+lorme is a **Platform component** in the
 openshift workspace Team Topologies.
 
 Interactions:
-- **AI Serving** consumes lore-mcp as
+- **AI Serving** consumes lorme as
   X-as-a-Service (corpus indexing, MCP config)
 - **Veille** (Enabling) feeds the corpus with
   sources (Facilitating)
 - **Deep Research** and **Cogliq** consume via
   MCP tools (X-as-a-Service)
 
-Interface contract: MCP tools (`search_docs`,
-`list_indexed_sources`), environment variables
-(`LORE_*`), transport (stdio or SSE).
+Interface contract: MCP tools (18 tools, see §2),
+`config.yaml`, transport (stdio or SSE).
 
 Cross-workspace sync: `sync/` directory. See §6.
 
@@ -585,7 +819,7 @@ pgvector and hardcoded URLs).
 ## 10. Project structure
 
 ```
-lore-mcp/
+lorme/
 ├── CLAUDE.md              # Claude instructions
 ├── CONTRIBUTING.md        # Showcase: contribution rules
 ├── LICENSE                # AGPL v3
@@ -609,18 +843,26 @@ lore-mcp/
 │       └── reference/     #   Lab prototypes
 │
 ├── src/                   # Code
-│   └── lore_mcp/
+│   └── lorme/
 │       ├── __init__.py
-│       ├── server.py      # MCP server
+│       ├── server.py      # MCP server (18 tools)
+│       ├── config.py      # LormeConfig (config.yaml)
+│       ├── format_registry.py # Format detection registry
 │       ├── embedder.py    # GPU/API/CPU embedding
 │       ├── store.py       # SQLite + sqlite-vec
-│       ├── collections.py # Multi-collection mgmt
-│       ├── manifest.py    # Manifest + front matter
+│       ├── collections.py # Collection path utils
+│       ├── recipe.py      # Recipe + front matter
 │       ├── metadata.py    # Output .json/.bib/.md
 │       ├── eval.py        # RAG evaluation + optimize
 │       ├── build.py       # Build workflow
-│       ├── build_config.py # Unified build config
-│       └── ingest.py      # Chunking + indexing
+│       ├── build_config.py # Build config (legacy)
+│       ├── ingest.py      # Chunking + indexing
+│       ├── checkpoint.py  # Resumable pipeline state
+│       ├── progress.py    # Output management
+│       ├── task_manager.py # Background task mgmt
+│       ├── lint.py        # Source quality linting
+│       ├── prompts.yaml   # Enrichment prompts
+│       └── bootstrap.yaml # Config template (init)
 │
 ├── tests/                 # Code (tests)
 │
@@ -664,6 +906,49 @@ Promotion to **Verified** only if traceable to:
 - Verifiable community source (GitHub issue,
   Stack Overflow accepted answer)
 
+### Research — 3 dry iterations rule
+
+When investigating a technical question (design
+decision, technology choice, best practice),
+research must follow the **3 dry iterations**
+stopping criterion:
+1. Search for the topic, follow every new concept
+   that emerges
+2. For each new concept, search again — dig deeper
+3. Continue until **3 consecutive search
+   iterations bring no new concepts or elements**
+4. Only then conclude
+
+This prevents shallow research (1 search =
+1 opinion) and confirmation bias (stopping at
+the first result that matches expectations).
+Each iteration must use **different search terms**
+to maximize coverage. Contradictions between
+sources are investigated, not dismissed — they
+often reveal that the answer is situational,
+not universal.
+
+### Code navigation and Codebase-Memory
+
+For structural code questions (who calls X,
+dependencies of Y, architecture overview,
+function groups, class audit), use
+**Codebase-Memory MCP tools first**
+(`search_graph`, `trace_path`,
+`get_architecture`, `query_graph`). Fall back
+to `grep`/`Read` only if the graph does not
+cover the need. Codebase-Memory is an
+accelerator, not the sole source of truth —
+confirm graph-derived conclusions with source
+snippets before editing code.
+
+**Index maintenance**: reindex after each
+item/MVP that modifies the codebase structure
+(new classes, renamed modules, moved functions).
+Use `index_repository` or `detect_changes` to
+keep the graph current. A stale graph produces
+stale answers — reindexing is not optional.
+
 ### Language
 
 - Conversation with the user: **French**
@@ -680,18 +965,60 @@ Promotion to **Verified** only if traceable to:
   changes. Follow the pre-commit checklist in
   `docs/ai-guidelines.md` §5.
 - **Marking**: every commit with AI-assisted
-  content must include both `Assisted-by` and
-  `Co-Authored-By` trailers (see CONTRIBUTING.md)
+  content must include both trailers:
+  `Assisted-by: Claude` and
+  `Co-Authored-By: Claude <noreply@anthropic.com>`.
+  Model name only, no version or context suffix
+  (see CONTRIBUTING.md)
 - **Bugs**: bugs follow the same lifecycle as
   other items — backlog entry, grooming, TDD,
   branch, merge. No ad hoc fixes outside the
   backlog.
+- **Never override user declarations**: lorme
+  does not correct or override values declared
+  by the user (manifest fields, config). If a
+  document title is "w" in its metadata and the
+  user does not override it in the manifest,
+  lorme uses "w". The manifest is the
+  mechanism for the user to declare corrections.
 - **Input files are never modified**: all
   commands (preprocess, enrich, build, lint)
   write to output directories, never modify
   files provided as input. The manifest is
-  never modified — lore-mcp produces an
+  never modified — lorme produces an
   enriched copy (`-prep` suffix).
+- **Background commands**: always provide the
+  output file path immediately after launching
+  any background or long-running command, so
+  the user can follow with `tail -f <path>`.
+  No exceptions.
+- **No implementation without grooming**: every
+  backlog item must be groomed and validated by
+  the user before implementation starts. No
+  exceptions, even for "small" fixes. If a fix
+  is identified during implementation of another
+  item, create a new backlog item and groom it.
+  This includes code changes during debugging —
+  do not modify production code to "try something"
+  without a groomed item. Diagnostic traces and
+  temporary instrumentation follow the same rule.
+- **Design documents before refactoring**: before
+  any refactoring that changes pipeline behavior,
+  write the design document first, have it
+  validated, then verify the implementation
+  matches. Do not make incremental fixes that
+  diverge from the validated design. If the
+  design is wrong, update it and get it
+  validated — do not patch around it.
+  Reference: `docs/studies/design-captioning-
+  pipeline.md` for captioning pipeline.
+- **CI green before Implémenté**: always verify
+  GitHub CI is green before marking an item as
+  `Implémenté`. Local tests passing is not
+  sufficient — CI may reveal platform-specific
+  issues (Python version, encoding, missing
+  deps). After pushing, check `gh run list` and
+  wait for CI result.
 - **Pause protocol**: at every pause, ensure all
   changes are committed and all branches pushed.
   Update README and docs if the project state
@@ -803,9 +1130,64 @@ block by block (high level → atomic).
   not in `Revue`, continue on the branch and
   update status
 
+### Test validation discipline
+
+- **Trace conservation**: every MCP validation
+  test must produce a persistent trace in
+  `tests/validation/` — task ID, exact command,
+  get_task_status result, preprocess report,
+  phase1 report, prep/ listing, recipe YAML
+  content. Traces are the primary evidence for
+  bug reports. Never discard intermediate output
+  before writing the trace.
+- **Reports and diagnostics referenced**: all
+  validation reports, diagnostic documents, and
+  trace files must be referenced in the test
+  item description in §8 (backlog) so the
+  implementation session can find them. A report
+  without a backlog reference is invisible.
+- **Grooming before implementation**: grooming
+  validation is mandatory before any
+  implementation starts. This rule applies to
+  ALL items without exception — including bug
+  fixes, "small" changes, and test items. Do
+  not interpret silence or feedback as validation.
+  The user must say "go" or equivalent.
+
+### Workspace boundaries (Team Topologies)
+
+lorme is a **stream-aligned team** — it owns
+the product end-to-end (code, tests, packaging,
+docs, user-facing features). All other teams
+(Veille, IA Serving, Deep Research, Cogliq) are
+in the **openshift workspace**.
+
+When the user requests work that belongs to
+another team, **warn immediately** and propose
+to transfer the context via `sync/openshift.md`.
+Do not start the work in lorme.
+
+Work belonging to **other teams** (openshift):
+- **Veille** (Enabling): model evaluation,
+  technology watch, state-of-the-art surveys,
+  benchmarks comparing models/approaches
+- **IA Serving** (Platform): inference service
+  containers, GPU infrastructure, serving
+  frameworks
+- **Deep Research**: strategic studies,
+  architecture decisions spanning workspaces
+
+Work belonging to **lorme** (stream-aligned):
+- Feature implementation using evaluated models
+- Bug fixes in the pipeline
+- Tests, documentation, packaging
+- Integration studies specific to lorme code
+  (e.g., how to wire an already-evaluated model)
+- Grooming documents for lorme items
+
 ### Platform posture
 
-lore-mcp is a Platform component. Design
+lorme is a Platform component. Design
 decisions should prioritize:
 - Self-service for consumers (API, tools, docs)
 - Developer experience (clear errors, sensible

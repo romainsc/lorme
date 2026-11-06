@@ -13,11 +13,11 @@ patent protection, and MCP ecosystem
 compatibility. That analysis remains valid — AGPL
 v3 is a strict superset of GPL v3.
 
-Since ADR-001, lore-mcp added SSE/HTTP transport
+Since ADR-001, lorme added SSE/HTTP transport
 (`--transport sse`), making it deployable as a
 network service. This creates a scenario the GPL
 does not cover: a third party could fork
-lore-mcp, modify it, deploy it as a hosted
+lorme, modify it, deploy it as a hosted
 service, and serve users without releasing the
 modified source code. The GPL's copyleft triggers
 only on distribution of the software, not on
@@ -60,7 +60,7 @@ synchronization with the openshift project
 
 Rationale:
 1. **Network clause closes the SaaS loophole:**
-   lore-mcp is now deployable as an HTTP service.
+   lorme is now deployable as an HTTP service.
    Without the network clause, a hosted fork
    could serve users without releasing
    modifications.

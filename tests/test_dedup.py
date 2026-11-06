@@ -1,8 +1,8 @@
-"""Tests for lore_mcp.preprocess.dedup. See docs/studies/grooming-E12.01.md."""
+"""Tests for lorme.preprocess.dedup. See docs/studies/grooming-E12.01.md."""
 
 import pytest
 
-from lore_mcp.preprocess.dedup import find_exact_duplicates, find_near_duplicates, DedupReport
+from lorme.preprocess.dedup import find_exact_duplicates, find_near_duplicates, DedupReport
 
 
 class TestFindExactDuplicates:
@@ -36,7 +36,7 @@ class TestFindExactDuplicates:
         report = find_exact_duplicates(files)
         assert report.unique_count == 2
         assert len(report.duplicates) == 1
-        assert len(report.to_skip) == 1
+        assert sum(len(g["files"]) - 1 for g in report.duplicates) == 1
 
     def test_multiple_duplicate_groups(self):
         files = {
@@ -49,7 +49,7 @@ class TestFindExactDuplicates:
         report = find_exact_duplicates(files)
         assert len(report.duplicates) == 2
         assert report.unique_count == 3
-        assert len(report.to_skip) == 2
+        assert sum(len(g["files"]) - 1 for g in report.duplicates) == 2
 
     def test_empty_input(self):
         report = find_exact_duplicates({})
@@ -73,7 +73,7 @@ class TestFindExactDuplicates:
         report = find_exact_duplicates(files)
         assert len(report.duplicates) == 1
         assert len(report.duplicates[0]["files"]) == 3
-        assert len(report.to_skip) == 2
+        assert sum(len(g["files"]) - 1 for g in report.duplicates) == 2
 
 
 try:
@@ -105,7 +105,7 @@ class TestFindNearDuplicates:
         assert report.duplicates == []
 
     def test_uses_academic_defaults(self):
-        from lore_mcp.preprocess.dedup import SHINGLE_K, NUM_PERM, DEFAULT_NEAR_THRESHOLD
+        from lorme.preprocess.dedup import SHINGLE_K, NUM_PERM, DEFAULT_NEAR_THRESHOLD
         assert SHINGLE_K == 5
         assert NUM_PERM == 128
         assert DEFAULT_NEAR_THRESHOLD == 0.8

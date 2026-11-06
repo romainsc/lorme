@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+src/lore_mcp/_version.py
 .coverage
 *.pyc
 *.pyo
@@ -21,10 +22,13 @@ env/
 
 # Project-specific: index files contain corpus data
 *.db
+# Exception: test fixtures (libre content only)
+!tests/fixtures/*.db
 
 # Credentials and local config
 .env
 .env.*
+config.yaml
 
 # Model cache
 .cache/
@@ -36,3 +40,4 @@ Thumbs.db
 
 # Generated docs
 docs/output/
+.mcp.json

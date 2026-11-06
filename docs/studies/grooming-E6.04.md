@@ -10,7 +10,7 @@ Openshift consumer demand (2026-08-31): AutoRAG
 E1.08 benchmark validated 1024/128 as optimal
 for bge-m3 on a technical corpus (+13%
 answer_correctness vs 2048/128). The defaults
-in lore-mcp were hardcoded at 2048/128 and not
+in lorme were hardcoded at 2048/128 and not
 configurable without modifying the code.
 
 ## Definition of Done
@@ -32,7 +32,7 @@ Atomic change — no sub-MVPs.
 
 ## Dependencies
 
-- E4.04 (CLI `lore-mcp index`) will add
+- E4.04 (CLI `lorme index`) will add
   `--chunk-size`/`--chunk-overlap` args later
 - No impact on existing `.db` files (new chunks
   use new defaults, old chunks unchanged)

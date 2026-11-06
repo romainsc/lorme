@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from conftest import DIMS, make_embedding
-from lore_mcp.store import create_tables, insert_chunk, open_db
+from lorme.store import create_tables, insert_chunk, open_db
 
 
 # --- MVP1: sources table + manifest ---
@@ -17,7 +17,7 @@ from lore_mcp.store import create_tables, insert_chunk, open_db
 
 class TestSourcesTable:
     def test_create_sources_table(self):
-        from lore_mcp.store import create_tables
+        from lorme.store import create_tables
         db = open_db(":memory:")
         create_tables(db, "test", DIMS)
         tables = {r[0] for r in db.execute(
@@ -27,7 +27,7 @@ class TestSourcesTable:
         db.close()
 
     def test_insert_source(self):
-        from lore_mcp.store import upsert_source
+        from lorme.store import upsert_source
         db = open_db(":memory:")
         create_tables(db, "test", DIMS)
         upsert_source(db, "intro.md", title="Intro", author="RC",
@@ -37,17 +37,17 @@ class TestSourcesTable:
         db.close()
 
     def test_get_source(self):
-        from lore_mcp.store import upsert_source, get_source
+        from lorme.store import upsert_source, get_source
         db = open_db(":memory:")
         create_tables(db, "test", DIMS)
         upsert_source(db, "intro.md", title="Intro", author="RC")
-        src = get_source(db, "intro.md")
+        src = get_source(db, "file:intro.md")
         assert src["title"] == "Intro"
         assert src["author"] == "RC"
         db.close()
 
     def test_get_all_sources(self):
-        from lore_mcp.store import upsert_source, get_all_sources
+        from lorme.store import upsert_source, get_all_sources
         db = open_db(":memory:")
         create_tables(db, "test", DIMS)
         upsert_source(db, "a.md", title="A")
@@ -58,7 +58,7 @@ class TestSourcesTable:
 
     def test_backward_compat_without_sources(self):
         """Chunks without sources entry still work."""
-        from lore_mcp.store import search
+        from lorme.store import search
         db = open_db(":memory:")
         create_tables(db, "test", DIMS)
         insert_chunk(db, "c1", "old.md", 0, "content", make_embedding(0.1))
@@ -68,8 +68,8 @@ class TestSourcesTable:
 
 
 class TestManifest:
-    def test_parse_manifest(self, tmp_path):
-        from lore_mcp.manifest import parse_manifest
+    def test_parse_recipe(self, tmp_path):
+        from lorme.recipe import parse_recipe
         manifest = tmp_path / "manifest.yaml"
         manifest.write_text("""
 collection: docs-libre
@@ -82,28 +82,28 @@ sources:
   - path: config.md
     title: Configuration
 """)
-        result = parse_manifest(str(manifest))
+        result = parse_recipe(str(manifest))
         assert result["collection"] == "docs-libre"
         assert result["level"] == "libre"
         assert len(result["sources"]) == 2
         assert result["sources"][0]["title"] == "Introduction"
 
-    def test_parse_manifest_minimal(self, tmp_path):
-        from lore_mcp.manifest import parse_manifest
+    def test_parse_recipe_minimal(self, tmp_path):
+        from lorme.recipe import parse_recipe
         manifest = tmp_path / "manifest.yaml"
         manifest.write_text("""
 collection: test
 sources:
   - path: doc.md
 """)
-        result = parse_manifest(str(manifest))
+        result = parse_recipe(str(manifest))
         assert result["collection"] == "test"
         assert result["sources"][0]["path"] == "doc.md"
 
     def test_ingest_with_manifest(self, tmp_path):
-        from lore_mcp.manifest import parse_manifest
-        from lore_mcp.ingest import ingest_with_manifest
-        from lore_mcp.store import get_all_sources
+        from lorme.recipe import parse_recipe
+        from lorme.ingest import ingest_with_manifest
+        from lorme.store import get_all_sources
 
         (tmp_path / "intro.md").write_text("Introduction content. " * 30)
         (tmp_path / "config.md").write_text("Configuration guide. " * 30)
@@ -138,7 +138,7 @@ sources:
 
 class TestSearchWithMetadata:
     def test_search_includes_source_metadata(self):
-        from lore_mcp.store import upsert_source, search
+        from lorme.store import upsert_source, search
         db = open_db(":memory:")
         create_tables(db, "test", DIMS)
         upsert_source(db, "intro.md", title="Introduction", author="RC",
@@ -151,7 +151,7 @@ class TestSearchWithMetadata:
 
     def test_search_without_source_metadata(self):
         """Backward compat: no source entry, fields are None."""
-        from lore_mcp.store import search
+        from lorme.store import search
         db = open_db(":memory:")
         create_tables(db, "test", DIMS)
         insert_chunk(db, "c1", "old.md", 0, "content", make_embedding(0.1))
@@ -160,7 +160,7 @@ class TestSearchWithMetadata:
         db.close()
 
     def test_format_includes_metadata(self):
-        from lore_mcp.server import format_search_results
+        from lorme.server import format_search_results
         results = [{"content": "text", "source_file": "f.md", "score": 0.9,
                      "title": "My Doc", "author": "RC", "license": "MIT"}]
         output = format_search_results(results, "cpu")
@@ -173,7 +173,7 @@ class TestSearchWithMetadata:
 
 class TestOutputFiles:
     def _populated_db(self, tmp_path):
-        from lore_mcp.store import upsert_source
+        from lorme.store import upsert_source
         db_path = tmp_path / "test-libre.db"
         db = open_db(str(db_path))
         create_tables(db, "test-model", DIMS, chunk_size=1024, chunk_overlap=128)
@@ -186,7 +186,7 @@ class TestOutputFiles:
         return str(db_path)
 
     def test_generate_json(self, tmp_path):
-        from lore_mcp.metadata import generate_collection_json
+        from lorme.metadata import generate_collection_json
         db_path = self._populated_db(tmp_path)
         json_path = generate_collection_json(db_path)
         assert Path(json_path).exists()
@@ -198,7 +198,7 @@ class TestOutputFiles:
         assert "sha256" in data
 
     def test_generate_bib(self, tmp_path):
-        from lore_mcp.metadata import generate_collection_bib
+        from lorme.metadata import generate_collection_bib
         db_path = self._populated_db(tmp_path)
         bib_path = generate_collection_bib(db_path)
         assert Path(bib_path).exists()
@@ -208,7 +208,7 @@ class TestOutputFiles:
         assert "RC" in content
 
     def test_generate_md(self, tmp_path):
-        from lore_mcp.metadata import generate_collection_md
+        from lorme.metadata import generate_collection_md
         db_path = self._populated_db(tmp_path)
         md_path = generate_collection_md(db_path)
         assert Path(md_path).exists()
@@ -222,7 +222,7 @@ class TestOutputFiles:
 
 class TestFrontMatterExtraction:
     def test_extract_yaml_front_matter(self):
-        from lore_mcp.manifest import extract_source_metadata
+        from lorme.recipe import extract_source_metadata
         text = """---
 title: My Document
 author: John Doe
@@ -237,21 +237,21 @@ license: MIT
         assert meta["license"] == "MIT"
 
     def test_extract_title_from_heading(self):
-        from lore_mcp.manifest import extract_source_metadata
+        from lorme.recipe import extract_source_metadata
         text = "# My Great Title\n\nSome content here."
         meta = extract_source_metadata(text, "doc.md")
         assert meta["title"] == "My Great Title"
 
     def test_fallback_to_filename(self):
-        from lore_mcp.manifest import extract_source_metadata
+        from lorme.recipe import extract_source_metadata
         text = "Just plain text without any structure."
         meta = extract_source_metadata(text, "my-doc.md")
         assert meta["title"] == "my-doc"
 
     def test_ingest_without_manifest_extracts_metadata(self, tmp_path):
         """When no manifest, extract metadata from front matter."""
-        from lore_mcp.ingest import ingest_directory
-        from lore_mcp.store import get_all_sources
+        from lorme.ingest import ingest_directory
+        from lorme.store import get_all_sources
 
         (tmp_path / "doc.md").write_text("""---
 title: Test Document
@@ -273,7 +273,7 @@ Content for indexing. """ + "More content. " * 30)
 # --- Helpers ---
 
 def _make_mock_embedder():
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name="test-model", mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = DIMS

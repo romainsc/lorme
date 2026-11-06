@@ -1,7 +1,7 @@
 # Architecture
 
 This document describes the internal architecture
-of lore-mcp: why each design decision was made,
+of lorme: why each design decision was made,
 how the components interact, and how the code
 implements the design. For configuration
 reference, see [`configuration.md`](configuration.md).
@@ -57,7 +57,7 @@ from the code.
 
 ## Store layer
 
-**Module:** `src/lore_mcp/store.py`
+**Module:** `src/lorme/store.py`
 
 ### Why sqlite-vec?
 
@@ -98,7 +98,7 @@ A regular `chunks` table stores all metadata.
 The two are linked by SQLite's implicit `rowid`.
 
 This is the standard sqlite-vec pattern, not
-a lore-mcp invention. The alternative — using
+a lorme invention. The alternative — using
 vec0 auxiliary columns (`+content text`) — was
 rejected because auxiliary columns cannot be
 used in WHERE clauses and have a 16-column limit.
@@ -172,10 +172,10 @@ actually created.
 `distance_metric=cosine` is set at table
 creation. Two reasons:
 
-1. **bge-m3 produces normalized vectors** — for
-   normalized vectors, cosine similarity and dot
-   product are equivalent, but cosine distance is
-   the standard convention in the embedding
+1. **Embedding models produce normalized vectors**
+   — for normalized vectors, cosine similarity and
+   dot product are equivalent, but cosine distance
+   is the standard convention in the embedding
    community.
 2. **Compatibility with the pgvector prototype**
    — the lab prototype used `vector_cosine_ops`
@@ -186,6 +186,13 @@ creation. Two reasons:
 sqlite-vec cosine distance returns values in
 `[0, 2]` (0 = identical, 2 = opposite). The
 store converts to similarity: `score = 1 - distance`.
+
+When hybrid search is active (the default), scores
+are RRF (Reciprocal Rank Fusion) values instead:
+`score = sum(1 / (k + rank_i))` across vector and
+FTS5 result lists (k=60). These scores are not
+directly comparable to cosine similarity — they
+reflect rank fusion, not distance.
 
 ### Hybrid search (vector + FTS5 + RRF)
 
@@ -254,12 +261,12 @@ This is the recommended sqlite-vec approach.
 
 ### Thread safety
 
-In single-collection mode, the server caches one
-database connection (`server.py:_get_single_db()`).
+The server caches database connections per
+collection in `_db_cache` (`server.py:_get_db()`).
 SQLite supports concurrent reads from the same
-connection. A `threading.Lock` prevents the race
-condition where two concurrent requests would
-both create a connection.
+connection. A `threading.Lock` (`_init_lock`)
+prevents the race condition where two concurrent
+requests would both create a connection.
 
 In multi-collection mode, connections are opened
 and closed per-request with `try/finally` to
@@ -267,7 +274,7 @@ prevent resource leaks.
 
 ## Embedding layer
 
-**Module:** `src/lore_mcp/embedder.py`
+**Module:** `src/lorme/embedder.py`
 
 ### Why sentence-transformers?
 
@@ -283,14 +290,19 @@ Transformers API directly — would require manual
 pooling, normalization, and device management.
 sentence-transformers handles all of this.
 
-### Why bge-m3?
+### Default model: nomic-embed-text-v2-moe
 
-BAAI/bge-m3 was selected based on AutoRAG
-benchmarks on a Red Hat technical corpus (see
-`docs/studies/reference/research-notes.md`):
-+13% answer_correctness vs nomic-embed-text-v1.5.
-It's also MIT-licensed, multilingual (FR, EN, ZH),
-and recommended by Red Hat for AutoRAG.
+The default embedding model is
+`nomic-ai/nomic-embed-text-v2-moe` (768d,
+Apache 2.0, Level 2 libre, multilingual, MoE).
+See ADR-005 for the selection rationale.
+
+The original lab prototype used BAAI/bge-m3,
+which scored +13% vs nomic-embed-text-v1.5 in
+AutoRAG benchmarks. The migration to nomic-v2
+was driven by license compliance (Level 2 libre)
+and MoE efficiency. The model is configurable
+via `config.yaml` (see `docs/configuration.md`).
 
 ### Fallback chain
 
@@ -345,17 +357,17 @@ to do.
 
 1. Read available RAM from `/proc/meminfo`
    (fallback: `psutil`)
-2. bge-m3 needs ~4 GB minimum (2.1 GB weights
-   + ~2× overhead during loading)
+2. The default model needs ~4 GB minimum
+   (~2 GB weights + ~2× overhead during loading)
 3. FP16 has no benefit on CPU (x86 upcasts to
    FP32 for computation anyway)
 
 The thresholds (`FP32_VRAM_GB=2.8`,
 `FP16_VRAM_GB=1.5`, `CPU_RAM_MIN_GB=4.0`) are
 module constants. They were derived from the
-actual bge-m3 model size (2.1 GB FP32 on disk,
-measured from the cached model files) plus ~30%
-overhead for inference buffers.
+actual model size (~2 GB FP32 on disk, measured
+from the cached model files) plus ~30% overhead
+for inference buffers.
 
 ### Lazy loading
 
@@ -383,15 +395,16 @@ model.
 ### SSL and self-signed certificates
 
 For API mode with self-signed certificates
-(e.g. OpenShift internal CA), two env vars
+(e.g. OpenShift internal CA), two config keys
 control SSL behavior:
 
-- `LORE_API_VERIFY=false` — disable SSL
+- `embedding.api_verify: false` — disable SSL
   verification entirely
-- `LORE_API_CA_BUNDLE=/path/to/ca.pem` — use
-  a custom CA bundle
+- `embedding.api_ca_bundle: /path/to/ca.pem` —
+  use a custom CA bundle
 
-See `embedder.py:_get_api_verify()` and
+Per-model `verify_ssl` is also available in the
+LLM registry. See
 [`configuration.md`](configuration.md).
 
 ### Output format
@@ -402,13 +415,13 @@ to `list[float]` via `.tolist()` for compatibility
 with `sqlite_vec.serialize_float32()`.
 
 `normalize_embeddings=True` is always passed to
-`encode()` — bge-m3 requires L2-normalized
-vectors for cosine similarity search. Without
-normalization, cosine distance is not meaningful.
+`encode()` — cosine similarity search requires
+L2-normalized vectors. Without normalization,
+cosine distance is not meaningful.
 
 ## MCP server
 
-**Module:** `src/lore_mcp/server.py`
+**Module:** `src/lorme/server.py`
 
 ### Why MCPServer (MCP SDK v2)?
 
@@ -416,7 +429,7 @@ MCPServer (formerly FastMCP in v1) is the official
 Anthropic Python SDK for MCP servers. It handles
 protocol negotiation, tool registration, and
 transport (stdio, SSE, streamable-http). Using it
-means lore-mcp is compatible with any MCP client
+means lorme is compatible with any MCP client
 without custom protocol code.
 
 The migration from FastMCP (v1) to MCPServer (v2)
@@ -429,9 +442,24 @@ renamed the class. The project now pins
 
 | Tool | Signature | Description |
 |------|-----------|-------------|
-| `search_docs` | `(query: str, top_k: int = 5, collection: str = "") -> str` | Hybrid search: vector KNN + FTS5 with RRF fusion |
-| `list_indexed_sources` | `(collection: str = "") -> str` | List indexed files with counts |
-| `list_collections` | `() -> str` | List available collections (multi-collection mode) |
+| `search_docs` | `(query, top_k=5, collection="", filter="")` | Hybrid search: vector KNN + FTS5 with RRF fusion |
+| `list_indexed_sources` | `(collection="", detail=False, format="")` | List indexed files with counts and optional metadata |
+| `list_collections` | `()` | List available collections |
+| `get_config` | `()` | Return active configuration in YAML format |
+| `get_service_status` | `()` | Return inference service and embedder status |
+| `get_version` | `(deps=False)` | Return version and optional dependency info |
+| `lint_source` | `(path)` | Quality-check a source file |
+| `add_source` | `(file, collection="", ...)` | Preprocess and index a single source |
+| `add_sources` | `(sources_json, collection="", ...)` | Batch add sources from JSON |
+| `add_recipe` | `(recipe, build_dir="", ...)` | Add all sources from a recipe YAML |
+| `remove_source` | `(source, collection="")` | Remove a source from the index |
+| `start_eval` | `(build_dir="")` | Start RAG evaluation (background) |
+| `start_optimize` | `(recipe, build_dir="")` | Start optimization (background) |
+| `get_task_status` | `(task_id)` | Check background task progress |
+| `cancel_task` | `(task_id)` | Cancel a running background task |
+| `list_tasks` | `()` | List all background tasks |
+| `list_pipeline_state` | `()` | List preprocessing pipeline states |
+| `purge_pipeline_state` | `(state_hash="", older_than=0, all=False)` | Purge pipeline state |
 
 All tools return **formatted text strings**, not
 structured data. This is intentional — MCP tool
@@ -441,25 +469,17 @@ designed for LLM context windows: concise headers,
 one result per section, source file and score
 visible.
 
-### Two operating modes
+### Collection management
 
-The server supports two modes determined by
-environment variables:
+The server stores collections under a data
+directory configured via `database.dir` in
+`config.yaml` (default: `~/.local/share/lorme`).
+Each collection is a `.db` file. Connections are
+cached per collection in `_db_cache`.
 
-1. **Single-collection** (`LORE_DB_PATH`): one
-   `.db` file, the original behavior. The
-   database connection is cached across queries
-   (`_get_single_db()`) to avoid opening a new
-   connection per request.
-
-2. **Multi-collection** (`LORE_DB_DIR`): a
-   directory of `.db` files. Each query can
-   target a specific collection or search across
-   all. Connections are opened and closed per
-   request to avoid holding locks on all files.
-
-`LORE_DB_DIR` takes precedence. If neither is
-set, the default is `./lore.db`.
+The `collection` parameter on tools supports
+glob patterns (`"*"`, `"ai-*"`) to search across
+multiple collections.
 
 ### Lazy initialization and thread safety
 
@@ -483,7 +503,7 @@ def _get_embedder():
 
 ## Collections layer
 
-**Module:** `src/lore_mcp/collections.py`
+**Module:** `src/lorme/collections.py`
 
 See also: [`adr/004-multi-collection.md`](adr/004-multi-collection.md)
 
@@ -553,45 +573,67 @@ corrupt `.db` files are silently skipped.
 
 ## Preprocessing pipeline
 
-**Module:** `src/lore_mcp/preprocess/`
+**Module:** `src/lorme/preprocess/`
 
 The preprocess module converts raw sources to
-clean markdown and produces an enriched manifest.
+clean markdown and produces an enriched recipe.
 
 ### Modules
 
 | Module | Role |
 |--------|------|
 | `__init__.py` | Pipeline orchestration (`preprocess_sources`) |
-| `parse.py` | Format conversion: md passthrough, HTML (trafilatura), PDF/DOCX (Docling), CSV/JSON/XML (markitdown) |
+| `parse.py` | Format conversion: delegates to `FormatRegistry` for backend detection, routes to md passthrough, HTML (trafilatura), PDF/DOCX (Docling), CSV/JSON/XML (markitdown), code passthrough |
+| `narrate.py` | Structured data narration: JSON→headed sections, tables→heading injection, code→AST-based structural markdown (Python ast + tree-sitter multi-language) |
 | `clean.py` | Text normalization: NFC, HTML strip, NUL, images→alt |
 | `dedup.py` | Duplicate detection: SHA-256 exact + MinHash+LSH near-duplicate (datasketch). Report-only |
 | `pii.py` | PII detection: emails, IPs, API keys, internal domains. Report-only |
 | `validate.py` | Quality gate wrapping `lint.py`. Block poor files unless `--force` |
 | `enrich.py` | LLM enrichment: contextual retrieval, Q&A mode (OpenAI-compatible endpoint) |
 
+**Format detection** is centralized in
+`FormatRegistry` (`format_registry.py`). Seven
+backends: `markdown`, `html`, `docling`,
+`markitdown`, `code`, `audio`, `video`. The
+registry detects formats via content analysis
+(puremagic), extension mapping, and MIME type.
+Config overrides available via `parse.formats`
+in `config.yaml`. Code files (.py, .js, .ts,
+.java, .go, .c, etc.) use the `code` backend,
+which passes through the source then narrates
+it with AST-based headings at syntactic
+boundaries (function, class, method).
+
+Tree-sitter grammars are detected dynamically
+at startup — install `tree-sitter-<language>`
+to add structural parsing for a language.
+Python always uses stdlib `ast`.
+
 ### Pipeline flow
 
 ```
-resolve → fetch URL → parse → clean → enrich
-  → dedup (report) → validate → write manifest
+resolve → fetch URL → detect format (FormatRegistry)
+  → parse → narrate (JSON/tables/code) → clean
+  → enrich → dedup (report) → validate
+  → write recipe
 ```
 
 All parse dependencies (trafilatura, docling,
-markitdown) are optional. Install with
-`pip install lore-mcp[parse]`.
+markitdown, tree-sitter) are optional. Install
+with `pip install lorme[parse]`.
 
 ### Configuration
 
-**Module:** `src/lore_mcp/config.py`
+**Module:** `src/lorme/config.py`
 
-`LoreConfig` dataclass reads a single `config.yaml`
-replacing all former `LORE_*` environment variables.
-Loaded once at CLI startup, passed to all modules.
+`LormeConfig` dataclass reads a single `config.yaml`.
+No environment variable fallback — everything comes
+from the config file. Loaded once at CLI startup,
+passed to all modules.
 
 ## Ingestion pipeline
 
-**Module:** `src/lore_mcp/ingest.py`
+**Module:** `src/lorme/ingest.py`
 
 ### Pipeline stages
 
@@ -600,7 +642,7 @@ Files → Clean → Chunk → Embed → Store (vec + FTS5)
 ```
 
 1. **Traverse:** recursively find source files
-   listed in the manifest.
+   listed in the recipe.
 2. **Clean** (`preprocess/clean.py:clean_text()`):
    Unicode NFC normalization, strip HTML residual
    tags, strip NUL characters, replace images
@@ -609,22 +651,28 @@ Files → Clean → Chunk → Embed → Store (vec + FTS5)
    [`preprocessing.md`](preprocessing.md) for
    source preparation best practices.
 3. **Chunk** (`ingest.py:chunk_document()`):
-   `MarkdownTextSplitter` from langchain-text-
-   splitters. Tables, headings, and code blocks
-   are kept intact.
+   Docling HybridChunker (`docling_core`). All
+   input markdown is loaded via the Docling
+   Markdown backend into a `DoclingDocument`,
+   then chunked with heading context preserved.
+   Tables, headings, and code blocks are kept
+   intact (0 table splits, 100% heading context).
 4. **Embed:** batch embedding (configurable batch
    size) via the embedder.
 5. **Store:** batch insert into SQLite — both
    vector (`chunks_vec`) and full-text (`chunks_fts`)
    indexes.
 
-### Why MarkdownTextSplitter?
+### Why Docling HybridChunker?
 
+HybridChunker (from `docling-core`, MIT) is
+structure-aware: it preserves heading hierarchy
+as context metadata, never splits tables, and
+handles all formats that pass through the Docling
+pipeline natively. It replaced
 `MarkdownTextSplitter` (langchain-text-splitters)
-is structure-aware: it splits on markdown block
-boundaries (headings, code fences, tables) before
-falling back to paragraph and line separators.
-Tables are never split across chunks.
+in E12.99 with <0.3% quality loss and 2× fewer
+chunks. See `docs/studies/study-E12.98.md`.
 
 The defaults (1024 chars, 128 overlap) were
 validated by AutoRAG E1.08 benchmarks
@@ -671,11 +719,11 @@ item E6.03.
 
 ### Batch embedding
 
-Chunks are embedded in batches of 64
+Chunks are embedded in batches of 32
 (`EMBED_BATCH_SIZE`). This balances:
 - **GPU utilization** — batching amortizes the
   GPU kernel launch overhead
-- **Memory pressure** — 64 × 1024 chars ≈ 65 KB
+- **Memory pressure** — 32 × 1024 chars ≈ 32 KB
   of text per batch, well within GPU memory
 - **Progress granularity** — each batch produces
   a checkpoint (the store commits after each
@@ -694,8 +742,8 @@ decide whether the partial index is acceptable.
 
 ## Bibliographic metadata
 
-**Modules:** `src/lore_mcp/manifest.py`,
-`src/lore_mcp/metadata.py`
+**Modules:** `src/lorme/recipe.py`,
+`src/lorme/metadata.py`
 
 ### Why store metadata in the database?
 
@@ -731,12 +779,12 @@ CREATE TABLE sources (
 constraint, for backward compatibility with
 `.db` files created before E6.05).
 
-### Manifest-driven ingestion
+### Recipe-driven ingestion
 
-`manifest.yaml` is the primary input for
-the lore-mcp workflow. Sources are identified
+The recipe YAML file is the primary input for
+the lorme workflow. Sources are identified
 by their metadata (title, url, license, author).
-`orig` and `path` are operational details,
+`file` and `path` are operational details,
 generated if absent.
 
 ```yaml
@@ -745,25 +793,25 @@ level: libre
 sources:
   - title: "Introduction"
     license: "CC-BY-SA-4.0"
-    orig: intro.pdf
+    file: intro.pdf
   - title: "Configuration Guide"
-    orig: config.html
+    file: config.html
     path: configuration.md
 ```
 
-Field cascade (`manifest.py:resolve_source_fields`):
-`orig` from `url` basename if absent, `path` from
-`orig` with `.md` extension if absent. Biblio
+Field cascade (`recipe.py:resolve_source_fields`):
+`file` from `url` basename if absent, `path` from
+`file` with `.md` extension if absent. Biblio
 fields (title, author, license) extracted from
-document after conversion if not in the manifest.
+document after conversion if not in the recipe.
 
-`lore-mcp preprocess` reads the manifest, converts
+`lorme preprocess` reads the recipe, converts
 and cleans sources, extracts metadata, and writes
-an enriched manifest (`-prep` suffix). The enriched
-manifest is used by `lint` and `build`.
+an enriched recipe (`-prep` suffix). The enriched
+recipe is used by `lint` and `build`.
 
 See [`configuration.md`](configuration.md) for
-the full manifest field reference.
+the full recipe field reference.
 
 ### Output metadata files
 
@@ -807,7 +855,7 @@ See `server.py:format_search_results()`.
 
 ## RAG evaluation
 
-**Module:** `src/lore_mcp/eval.py`
+**Module:** `src/lorme/eval.py`
 
 ### Why integrated evaluation?
 
@@ -815,7 +863,7 @@ A Platform component should provide tools to
 validate its own output quality. Without
 integrated evaluation, consumers must build
 ad hoc pipelines with SDG Hub, RAGAS, and custom
-scripts. lore-mcp provides this as a built-in
+scripts. lorme provides this as a built-in
 capability. Note that source preprocessing has
 ~60% impact on quality — see
 [`preprocessing.md`](preprocessing.md).
@@ -853,13 +901,13 @@ Two strategies, in priority order
 
 ### Two modes
 
-**`lore-mcp eval`** — evaluate an existing index:
+**`lorme eval`** — evaluate an existing index:
 1. Generate N questions (heading-based or extractive)
 2. For each: embed query, search, score contexts
 3. Output JSON report with per-question and
    aggregate scores
 
-**`lore-mcp optimize`** — find optimal parameters:
+**`lorme optimize`** — find optimal parameters:
 1. Vary chunk_size (512, 1024, 2048), overlap
    (64, 128), top_k (3, 5, 10)
 2. For each config: index, retrieve, score
@@ -885,7 +933,7 @@ Relevance is determined by word overlap ≥
 `RELEVANCE_THRESHOLD` (0.3). This works without
 any LLM or external dependency.
 
-When RAGAS is installed (`pip install lore-mcp[eval]`),
+When RAGAS is installed (`pip install lorme[eval]`),
 LLM-based metrics (faithfulness, context_recall,
 answer_correctness) are available. A
 `_RagasEmbeddingsWrapper` adapts the current
@@ -894,20 +942,18 @@ answer_correctness) are available. A
 ### LLM configuration
 
 RAGAS metrics need a **chat-capable LLM** (not
-just an embedding model). Two env vars:
-
-- `LORE_LLM_URL` — vLLM/OpenAI-compatible chat
-  endpoint
-- `LORE_LLM_MODEL` — model name (e.g.
-  `granite-8b-instruct`)
+just an embedding model). The judge LLM is
+configured in the LLM registry (`llm:` section
+in `config.yaml`) and referenced by name in the
+`judge:` section.
 
 **Fail fast:** `check_ragas_guard()` validates
 prerequisites before starting optimization.
 `_probe_judge()` checks judge connectivity with
 an HTTP probe — raises `ConnectionError`
 immediately instead of failing 36× silently.
-`verify_ssl` is honored for self-signed endpoints
-(`judge.verify_ssl` in build config).
+`verify_ssl` is honored per model in the LLM
+registry.
 
 The judge LLM client uses `AsyncOpenAI` (RAGAS
 `score()` calls `ascore()` internally).
@@ -918,14 +964,14 @@ See [`configuration.md`](configuration.md).
 
 Evaluation and optimization results are
 **specific to the embedding model** used. A
-configuration optimal for bge-m3 1024d may not
-be optimal for a different model. Both `run_eval`
+configuration optimal for one embedding model
+may not be optimal for another. Both `run_eval`
 and `run_optimize` include `model_name` in the
 output report for traceability.
 
-### Optimize with manifest
+### Optimize with recipe
 
-`lore-mcp optimize --manifest manifest.yaml`
+`lorme optimize` with a recipe file
 uses `ingest_with_manifest` for each tested
 configuration, preserving bibliographic metadata
 (title, author, license) in the temporary `.db`
@@ -938,22 +984,20 @@ See `eval.py:run_optimize()` and
 
 ### Multi-model optimization
 
-`lore-mcp optimize --models "bge-m3,nomic-embed"`
-varies embedding models alongside chunk parameters.
-Each model gets its own Embedder and produces
-separate `.db` files. Results are compared across
-all (model × chunk_size × overlap × top_k)
+Multi-model optimization varies embedding models
+alongside chunk parameters. Each model gets its
+own Embedder and produces separate `.db` files.
+Results are compared across all
+(model × chunk_size × overlap × top_k)
 combinations.
 
-Models can be specified as:
-- CLI comma-separated names (local models)
-- YAML config file with per-model endpoints:
+Models are specified in `config.yaml`:
 
 ```yaml
 embedding:
-  - name: BAAI/bge-m3
-    mode: builtin
   - name: nomic-ai/nomic-embed-text-v2-moe
+    mode: builtin
+  - name: BAAI/bge-m3
     mode: api
     api_url: http://127.0.0.1:8081/v1/embeddings
 ```
@@ -983,15 +1027,15 @@ See `eval.py:compute_embedding_metrics()`,
 
 ## Build workflow
 
-**Module:** `src/lore_mcp/build.py`
+**Module:** `src/lorme/build.py`
 
 ### Single command pipeline
 
-`lore-mcp build` combines all components into
+`lorme build` combines all components into
 one command:
 
 ```
-manifest.yaml + models.yaml
+recipe.yaml + config.yaml
         ↓
 1. Pre-flight: validate all models
 2. Optimize: find best (model × params)
@@ -1027,7 +1071,7 @@ See `build.py:run_build()` and
 
 ## Output management
 
-**Module:** `src/lore_mcp/progress.py`
+**Module:** `src/lorme/progress.py`
 
 Five output levels, controlled by mutually
 exclusive CLI flags. `configure_logging()` sets
@@ -1039,7 +1083,7 @@ log levels accordingly.
 | progress | `--progress` | Single `\r` line: global %, ETA, phase n/total, phase %, model name |
 | default | *(none)* | Boxed header, sections, results table with ★, summary |
 | verbose | `--verbose` | Default + questions table (truncated), per-iteration milestones with scores |
-| debug | `--debug` | Verbose + HTTP request content (URL, model, batch, texts), search results, scores. Only `lore_mcp` loggers at DEBUG; httpx at INFO; httpcore and third-party libs at WARNING |
+| debug | `--debug` | Verbose + HTTP request content (URL, model, batch, texts), search results, scores. Only `lorme` loggers at DEBUG; httpx at INFO; httpcore and third-party libs at WARNING |
 
 ### ProgressReporter
 
@@ -1062,3 +1106,124 @@ The build workflow produces two blocks of output:
    summary with files/chunks/report path
 
 Each phase has its own debug output and summary.
+
+## Resumable pipeline (E12.63–67)
+
+**Module:** `src/lorme/checkpoint.py`
+
+Pipeline runs are checkpointed so they can
+resume after interruption (Ctrl+C, crash, reboot).
+
+### Checkpoint mechanism
+
+Each pipeline run creates a state directory in
+`~/.local/state/lorme/<hash>/` based on the
+recipe content hash. The `checkpoint.json`
+inside tracks:
+- Phase completion status (done/in_progress)
+- Per-source completion within each phase
+- Per-image captioning status (E12.64)
+- Phase hash for config change detection (E12.67)
+
+### Per-phase hash (E12.67)
+
+Each phase has a hash derived from its
+configuration dependencies:
+- Phase 1 (parse): ocr_engine, ocr_lang,
+  video_frame_strategy, frame_interval,
+  scene_threshold, ocr_change_threshold
+- Phase 2 (caption): caption models
+- Phase 3 (enrich): techniques, LLM model
+
+If the config changes (e.g. frame strategy from
+`scene` to `ocr`), the phase hash changes →
+the phase is automatically re-run. Upstream
+phases cascade: invalidating phase 1 also
+invalidates stt and frame_caption.
+
+### STT cache (E12.70)
+
+Video transcription is cached separately from
+frame extraction in `.stt.json` files. Changing
+the frame strategy does not require
+re-transcription — only frames are re-extracted.
+
+### Progressive report (E12.69)
+
+The `preprocess-report.json` is written after
+each source completes, not only at the end. On
+interrupt, the report reflects all completed work.
+
+### Output layout
+
+Preprocessing produces:
+```
+prep_base_dir/                 (--prep-dir)
+├── preprocess-report.json     (report)
+├── generated-recipe.yaml      (auto-recipe)
+├── <collection>/              (basename of docs-base-dir)
+│   ├── source1.md             (final files)
+│   └── source2.pdf.md
+~/.local/state/lorme/<hash>/  (intermediates)
+├── phase1-report.json
+├── source1.phase1-parse.md
+├── source1.stt.json
+└── source1.phase3-enrich.md
+```
+
+## Deferred embedding start (E12.68)
+
+When `build --preprocess` is used, the embedding
+service (TEI container) is not started until after
+preprocessing completes. This avoids GPU/container
+idle time during STT, VLM captioning, and LLM
+enrichment phases.
+
+## Smart frame captioning (E12.71)
+
+Before sending a video frame to the VLM for
+captioning, the frame is OCR'd with Tesseract. If
+the OCR text is less than 20 characters, the frame
+is skipped (no VLM call). This avoids spending
+~70s per frame on generic "a man at a podium"
+descriptions for conference footage.
+
+## STT post-correction (E12.72)
+
+The `stt_fix` enrichment technique uses an LLM to
+correct systematic STT transcription errors (e.g.
+"Asian" → "agent"). It runs before other
+enrichment techniques (context, qa, meta) so they
+work with corrected text. Applied only to STT
+content (detected by timestamp headings).
+
+## Video download (E12.73)
+
+For YouTube and platform URLs, `download_video()`
+uses yt-dlp (Unlicense, optional dependency) to:
+1. Check for available captions (manual > auto)
+2. If captions found → download them, skip STT
+3. Download video for frame extraction
+4. Extract metadata (title, author, duration)
+
+Files are named by video ID for filesystem safety.
+
+## Configurable prompts (E12.74)
+
+Enrichment prompts are loaded from a cascade:
+1. Inline config (`enrich.prompts.<lang>.<technique>`)
+2. Custom file (`enrich.prompts_file`)
+3. Distributed `prompts.yaml` (shipped with package)
+4. Minimal EN fallback
+
+See `src/lorme/prompts.yaml` for defaults.
+
+## Complementary with Codebase-Memory
+
+lorme handles document RAG (semantic search
+over text content). For source code intelligence,
+use [Codebase-Memory](https://github.com/DeusData/codebase-memory-mcp)
+(MIT) — a complementary MCP server that provides
+structural code queries (call graphs, dependencies,
+architecture). Both servers can be configured in
+the same MCP client. See `docs/multi-mcp.md`.

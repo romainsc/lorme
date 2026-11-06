@@ -6,13 +6,13 @@
 ## Problem
 
 The user must write a manifest before using
-lore-mcp. The primary use case is simpler:
-"I have a directory of files, lore-mcp does
+lorme. The primary use case is simpler:
+"I have a directory of files, lorme does
 everything."
 
 ## Solution
 
-Make manifest optional. If absent, lore-mcp
+Make manifest optional. If absent, lorme
 scans the directory, generates a manifest,
 preprocesses, and indexes.
 
@@ -20,13 +20,13 @@ preprocesses, and indexes.
 
 ```bash
 # Full auto — no manifest
-lore-mcp build \
+lorme build \
   --docs-dir /my/files/ \
   --output-dir /db/ \
   --config config.yaml
 
 # With manifest — existing behavior
-lore-mcp build manifest.yaml \
+lorme build manifest.yaml \
   --docs-dir /corpus/ \
   --output-dir /db/ \
   --config config.yaml

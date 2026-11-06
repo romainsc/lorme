@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lore_mcp.embedder import Embedder
+from lorme.embedder import Embedder
 
 
 def _make_api_embedder(batch_size=None):
@@ -30,7 +30,7 @@ class MockResponse:
 class TestConfigBatchSize:
     def test_batch_size_from_config(self, tmp_path):
         """batch_size in YAML config is read per model."""
-        from lore_mcp.eval import parse_model_configs
+        from lorme.eval import parse_model_configs
         f = tmp_path / "config.yaml"
         f.write_text("""
 embedding:
@@ -58,7 +58,7 @@ embedding:
 class TestSmartReduction:
     def test_finds_max_batch_size(self):
         """On 422, find the max accepted size (server accepts ≤16)."""
-        from lore_mcp.embedder import _embed_api_with_retry
+        from lorme.embedder import _embed_api_with_retry
         emb = _make_api_embedder()
         server_max = 16
 
@@ -78,7 +78,7 @@ class TestSmartReduction:
 
     def test_memoized_for_subsequent_calls(self):
         """Once discovered, the max is reused."""
-        from lore_mcp.embedder import _embed_api_with_retry
+        from lorme.embedder import _embed_api_with_retry
         emb = _make_api_embedder()
         server_max = 8
         call_count = [0]
@@ -105,7 +105,7 @@ class TestSmartReduction:
 
     def test_config_batch_size_prevents_422(self):
         """Pre-configured batch_size avoids any 422."""
-        from lore_mcp.embedder import _embed_api_with_retry
+        from lorme.embedder import _embed_api_with_retry
         emb = _make_api_embedder(batch_size=8)
         server_max = 8
 

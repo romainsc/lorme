@@ -6,7 +6,7 @@
 
 ## Context
 
-lore-mcp was originally designed around a single `.db` file (`LORE_DB_PATH`). The openshift workspace MVP1 requires indexing multiple corpora with different redistribution rights. A Red Hat documentation corpus under NDA cannot be stored in the same file as a freely licensed open-source corpus — they must be separable for independent distribution and access control.
+lorme was originally designed around a single `.db` file (`LORE_DB_PATH`). The openshift workspace MVP1 requires indexing multiple corpora with different redistribution rights. A Red Hat documentation corpus under NDA cannot be stored in the same file as a freely licensed open-source corpus — they must be separable for independent distribution and access control.
 
 Four license levels were identified:
 
@@ -43,7 +43,7 @@ The portability and access-control benefits are decisive. The naming convention 
 
 **Environment variable:** `LORE_DB_DIR` points to a directory of `.db` files. `LORE_DB_PATH` is kept for single-collection backward compatibility. When `LORE_DB_DIR` is set, it takes precedence.
 
-**Module:** `src/lore_mcp/collections.py`
+**Module:** `src/lorme/collections.py`
 
 - `discover_collections(db_dir)`: scan directory, parse theme/level from filenames, read chunk/file counts from each `.db`
 - `search_collection(db_dir, name, query_embedding, top_k)`: search within a single named collection
@@ -71,6 +71,6 @@ A more sophisticated merge (e.g. weighted by collection priority or Reciprocal R
 ## Consequences
 
 - The `.db` file remains the unit of distribution — consumers can receive individual collection files
-- NDA and restreint files are never committed to public repositories (enforced by `.gitignore` and convention, not by lore-mcp code)
-- The producer (openshift workspace / AI Serving session) is responsible for license classification, NOTICE files, and redistribution decisions — lore-mcp provides the tooling, not the policy
+- NDA and restreint files are never committed to public repositories (enforced by `.gitignore` and convention, not by lorme code)
+- The producer (openshift workspace / AI Serving session) is responsible for license classification, NOTICE files, and redistribution decisions — lorme provides the tooling, not the policy
 - All collections must use the same embedding model (enforced by `meta` table validation per `.db` file)

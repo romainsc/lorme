@@ -1,4 +1,4 @@
-# Contributing to lore-mcp
+# Contributing to lorme
 
 ## Rules
 
@@ -26,8 +26,8 @@ AI tools must not sign the DCO — only humans.
 ## Setup
 
 ```bash
-git clone https://github.com/romainsc/lore-mcp.git
-cd lore-mcp
+git clone https://github.com/romainsc/lorme.git
+cd lorme
 git config core.hooksPath .githooks
 python -m venv .venv
 source .venv/bin/activate

@@ -16,7 +16,7 @@ from conftest import DIMS, make_embedding
 
 
 def _make_mock_embedder(name="test-model"):
-    from lore_mcp.embedder import Embedder
+    from lorme.embedder import Embedder
     emb = Embedder(model_name=name, mode="builtin:cpu")
     mock_model = MagicMock()
     mock_model.get_embedding_dimension.return_value = DIMS
@@ -59,8 +59,8 @@ class TestE10_19_RagasGuardCalled:
     """E10.19: check_ragas_guard must be called in the pipeline."""
 
     def test_guard_called_in_run_eval(self, build_env):
-        from lore_mcp.eval import run_eval, EvalConfig
-        from lore_mcp.store import create_tables, insert_chunk, open_db
+        from lorme.eval import run_eval, EvalConfig
+        from lorme.store import create_tables, insert_chunk, open_db
 
         db_path = str(build_env["tmp_path"] / "eval.db")
         db = open_db(db_path)
@@ -71,7 +71,7 @@ class TestE10_19_RagasGuardCalled:
         emb = _make_mock_embedder()
         config = EvalConfig(llm_url="http://judge:11434/v1", llm_model="granite-8b")
 
-        with patch("lore_mcp.eval.check_ragas_guard") as mock_guard:
+        with patch("lorme.eval.check_ragas_guard") as mock_guard:
             run_eval(db_path, emb, config)
             mock_guard.assert_called_once()
 
@@ -80,11 +80,11 @@ class TestE10_20_ProgressReporterCalled:
     """E10.20: ProgressReporter must be used in run_optimize."""
 
     def test_reporter_used_in_optimize(self, build_env):
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         emb = _make_mock_embedder()
 
-        with patch("lore_mcp.eval.ProgressReporter") as MockReporter:
+        with patch("lorme.eval.ProgressReporter") as MockReporter:
             mock_instance = MagicMock()
             MockReporter.return_value = mock_instance
             run_optimize(
@@ -101,7 +101,7 @@ class TestE10_09_EmbeddingMetricsStored:
     """E10.09: compute_embedding_metrics result must be stored."""
 
     def test_embedding_metrics_in_results(self, build_env):
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         emb = _make_mock_embedder()
         results = run_optimize(
@@ -119,7 +119,7 @@ class TestE10_14_MetricsPassedThrough:
     """E10.14: BuildConfig metrics/judge must reach evaluate_retrieval."""
 
     def test_config_metrics_reach_evaluate(self, build_env):
-        from lore_mcp.eval import run_optimize
+        from lorme.eval import run_optimize
 
         config_path = build_env["tmp_path"] / "config.yaml"
         config_path.write_text("""
@@ -139,13 +139,13 @@ optimize:
 
         emb = _make_mock_embedder()
 
-        with patch("lore_mcp.eval._probe_judge"), \
-             patch("lore_mcp.eval.evaluate_retrieval", wraps=None) as mock_eval:
+        with patch("lorme.eval._probe_judge"), \
+             patch("lorme.eval.Evaluator.evaluate_retrieval", wraps=None) as mock_eval:
             mock_eval.return_value = {
                 "scores": {"mrr": 0.5}, "details": [],
                 "db_path": "", "model_name": "test", "num_questions": 2, "top_k": 3,
             }
-            from lore_mcp.build_config import BuildConfig
+            from lorme.build_config import BuildConfig
             bc = BuildConfig.from_file(str(config_path))
             run_optimize(
                 embedder=emb,
@@ -167,11 +167,11 @@ class TestE10_18_ConsecutiveThresholdUsed:
     """E10.18: ConsecutiveErrorThreshold must be used in ingest."""
 
     def test_threshold_used_in_ingest(self, build_env):
-        from lore_mcp.ingest import ingest_directory
+        from lorme.ingest import ingest_directory
 
         emb = _make_mock_embedder()
 
-        with patch("lore_mcp.ingest.ConsecutiveErrorThreshold") as MockThreshold:
+        with patch("lorme.ingest.ConsecutiveErrorThreshold") as MockThreshold:
             mock_instance = MagicMock()
             MockThreshold.return_value = mock_instance
             ingest_directory(
@@ -186,7 +186,7 @@ class TestE10_13_DefaultsUsed:
     """E10.13: BuildConfig defaults used in skip-optimize mode."""
 
     def test_defaults_used_when_skip_optimize(self, build_env):
-        from lore_mcp.build import run_build
+        from lorme.build import run_build
 
         config_path = build_env["tmp_path"] / "config.yaml"
         config_path.write_text("""
@@ -198,18 +198,23 @@ defaults:
   chunk_overlap: 32
 """)
 
-        from lore_mcp.build_config import BuildConfig
+        from lorme.build_config import BuildConfig
+        from lorme.config import LormeConfig
         bc = BuildConfig.from_file(str(config_path))
         emb = _make_mock_embedder()
 
-        result = run_build(
-            manifest_path=build_env["manifest"],
-            docs_dir=build_env["docs_dir"],
-            output_dir=build_env["output_dir"],
-            embedder=emb,
+        cfg = LormeConfig(
             skip_optimize=True,
-            chunk_sizes=[bc.default_chunk_size],
-            chunk_overlaps=[bc.default_chunk_overlap],
+            output_level="quiet",
+            chunk_size=bc.default_chunk_size,
+            chunk_overlap=bc.default_chunk_overlap,
+            optimize_chunk_sizes=[bc.default_chunk_size],
+            optimize_chunk_overlaps=[bc.default_chunk_overlap],
+        )
+        result = run_build(
+            build_env["manifest"], build_env["docs_dir"],
+            build_env["output_dir"], cfg,
+            embedder=emb,
         )
 
         assert result["chunk_size"] == 512
